@@ -4,15 +4,9 @@ title: About
 permalink: /about/
 ---
 
-This is the base Jekyll theme. You can find out more info about customizing your Jekyll theme, as well as basic Jekyll usage documentation at [jekyllrb.com](https://jekyllrb.com/)
+Hey there, I'm Sanketh, a software developer with three years of hands-on experience in the industry. Throughout my career, I've worked a variety of frontend and backend frameworks, though I've primarily specialized in backend development.
 
-You can find the source code for Minima at GitHub:
-[jekyll][jekyll-organization] /
-[minima](https://github.com/jekyll/minima)
+While my journey in application-side coding has been fulfilling, I've been feeling saturated in my learning journey. Feeling a bit stuck in my current routine, I'm eager to explore new, niche areas within software development. Uncertain of which direction to take, I've decided to dive deep into the fundamentals: operating systems, compilers, and databases. 
 
-You can find the source code for Jekyll at GitHub:
-[jekyll][jekyll-organization] /
-[jekyll](https://github.com/jekyll/jekyll)
+This blog is where I'll be documenting my learning journey and sharing my insights along the way. My aim is not only to document my personal growth but also to connect with a wider community of like-minded individuals. I hope you find something interesting here!
 
-
-[jekyll-organization]: https://github.com/jekyll
