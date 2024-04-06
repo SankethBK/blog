@@ -1,9 +1,9 @@
 ---
-layout: post
+layout: post_with_categories
 title:  "My Resources for Learning Operating Systems"
 date:   2024-04-06 20:33:25 +0530
 categories: operating-systems learning-resources
-permalink: operating-systems-resources
+author: Sanketh
 ---
 
 I have previously studied operating systems as a part of my university curriculum, i've realized it's time to revisit the fundamentals and go beyond. I have decided to start with some popular books. I will add more resources as i go along.
