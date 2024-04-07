@@ -1,0 +1,41 @@
+.categories {
+  margin-top: 20px;
+}
+
+.category-capsule {
+  display: inline-block;
+  padding: 6px 12px;
+  margin-right: 10px;
+  margin-bottom: 20px;
+  border-radius: 20px;
+  background-color: #f0f0f0; /* Default background color */
+  color: #333; /* Default text color */
+  text-decoration: none;
+}
+
+.category-capsule:hover {
+  background-color: #e0e0e0; /* Hover background color */
+}
+
+/* Define different colors for different categories */
+.category-capsule.category-1 {
+  background-color: #ffc107;
+  color: #333;
+}
+.category-capsule.category-2 {
+  background-color: #17a2b8;
+  color: #fff;
+}
+.category-capsule.category-3 {
+  background-color: #28a745;
+  color: #fff;
+}
+.category-capsule.category-4 {
+  background-color: #dc3545;
+  color: #fff;
+}
+.category-capsule.category-5 {
+  background-color: #007bff;
+  color: #fff;
+}
+/* Add more categories and colors as needed */
