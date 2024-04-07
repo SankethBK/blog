@@ -3,20 +3,13 @@ module Jekyll
     safe true
 
     def generate(site)
+
+      puts "Plugin Generate running"
       if site.layouts.key? 'category'
-        site.posts.each do |post|
-          post.categories.each do |category|
-            category_path = File.join('_site', 'categories', category)
-            FileUtils.mkdir_p(category_path)
-            category_file = File.join(category_path, 'index.html')
-            File.write(category_file, generate_category_page(site, category))
-          end
+        site.categories.keys.each do |category|
+          site.pages << CategoryPage.new(site, site.source, 'categories', category)
         end
       end
-    end
-
-    def generate_category_page(site, category)
-      site.pages << CategoryPage.new(site, site.source, 'categories', category)
     end
   end
 
@@ -25,10 +18,10 @@ module Jekyll
       @site = site
       @base = base
       @dir = dir
-      @name = 'index.html'
+      @name = "#{category}.html"
 
       self.process(@name)
-      self.read_yaml(File.join(base, '_layouts'), 'post_with_categories.html')
+      self.read_yaml(File.join(base, '_layouts'), 'category.html')
       self.data['category'] = category
     end
   end
