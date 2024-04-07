@@ -2,7 +2,7 @@
 layout: post_with_categories
 title:  "My Resources for Learning Operating Systems"
 date:   2024-04-06 20:33:25 +0530
-categories: operating-systems learning-resources test
+categories: operating-systems learning-resources
 author: Sanketh
 ---
 
