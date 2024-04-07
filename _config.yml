@@ -21,7 +21,7 @@
 title: Sanketh's Blog
 email: sankethbk.1611@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
-  Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science like operating systems, compilers, databases, distributed systems, etc. 
+  Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.
 baseurl: "/blog" # the subpath of your site, e.g. /blog
 url: "https://sankethbk.github.io/" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: Sankethbk
