@@ -14,3 +14,14 @@ I have previously studied operating systems as a part of my university curriculu
 2. Linux System Programming: Talking Directly to the Kernel and C Library by Robert Love
 
 There are some great resources mentioned in this [reddit thread](https://www.reddit.com/r/compsci/comments/7sdcaq/best_way_to_learn_os_concepts_properly_so_that_i/), i'll be exploring them as i progress
+
+**Update 13/05/2024**
+
+I have gone through the first section of OSTEP text book i.e., Virtualization. My goals before starting the next section (Concurrency):
+
+* Setup xv6 OS in QEMU.
+* Understand the topics of virtualization practically by reading and tweaking xv6 codebase. 
+* Read all the relevant references and complete homework sections of few chapters. 
+* Write a blog on all the independent topics covered so far.  
+
+ 
