@@ -22,6 +22,11 @@ I have gone through the first section of OSTEP text book i.e., Virtualization. M
 * Setup xv6 OS in QEMU.
 * Understand the topics of virtualization practically by reading and tweaking xv6 codebase. 
 * Read all the relevant references and complete homework sections of few chapters. 
-* Write a blog on all the topics covered so far.  
 
- 
+**Update 30/05/2024**
+
+I am going through some basic chapters of x86 and ARM Assembly to get better understanding of low level topics like system calls, interrupts, stack memory, etc. 
+
+1. Components of CPU
+2. 64 bit and 32 bit computer differences
+3. System calls and interrupts 
