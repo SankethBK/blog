@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-06-02T11:29:57+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Components of CPU</title><link href="http://localhost:4000/blog/cpu/components-of-cpu" rel="alternate" type="text/html" title="Components of CPU" /><published>2024-05-31T01:05:25+05:30</published><updated>2024-05-31T01:05:25+05:30</updated><id>http://localhost:4000/blog/cpu/components-of-cpu</id><content type="html" xml:base="http://localhost:4000/blog/cpu/components-of-cpu"><![CDATA[<p>Before learning Assembly, I think it would be useful to learn a bit about different components of CPU in general. If we think of CPU as a black box its main function is to fetch instructions from RAM which are in the form of <a href="https://en.wikipedia.org/wiki/Machine_code">machine code</a> and execute them.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-06-02T11:37:33+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Components of CPU</title><link href="http://localhost:4000/blog/cpu/components-of-cpu" rel="alternate" type="text/html" title="Components of CPU" /><published>2024-05-31T01:05:25+05:30</published><updated>2024-05-31T01:05:25+05:30</updated><id>http://localhost:4000/blog/cpu/components-of-cpu</id><content type="html" xml:base="http://localhost:4000/blog/cpu/components-of-cpu"><![CDATA[<p>Before learning Assembly, I think it would be useful to learn a bit about different components of CPU in general. If we think of CPU as a black box its main function is to fetch instructions from RAM which are in the form of <a href="https://en.wikipedia.org/wiki/Machine_code">machine code</a> and execute them.</p>
 
 <h2 id="components-of-cpu">Components of CPU</h2>
 
@@ -25,60 +25,45 @@
 <p>CU’s primary function is to direct the operations of the CPU by interpreting instructions and generating control signals to execute them.</p>
 
 <ol>
-  <li>Instruction Fetching:</li>
+  <li>Instruction Fetching:
+    <ul>
+      <li>The CU fetches instructions from the memory unit (RAM) based on the Program Counter (PC) value.</li>
+      <li>It reads the instruction from memory and stores it temporarily in the Instruction Register (IR) for decoding.</li>
+    </ul>
+  </li>
+  <li>Instruction Decoding:
+    <ul>
+      <li>The CU interprets the fetched instruction from the IR.</li>
+      <li>It breaks down the instruction into its constituent parts (opcode, operands) and sends control signals to other CPU components.</li>
+    </ul>
+  </li>
+  <li>Operand Fetching:
+    <ul>
+      <li>If the instruction requires operands from memory or registers, the CU initiates the necessary data transfers.</li>
+      <li>It interacts with the memory address register (MAR) and memory data register (MDR) to fetch data from memory.</li>
+    </ul>
+  </li>
+  <li>Execution Control:
+    <ul>
+      <li>The CU generates control signals to coordinate the execution of the instruction.</li>
+      <li>It activates specific functional units within the CPU, such as the ALU, to perform arithmetic, logic, or data manipulation operations.</li>
+    </ul>
+  </li>
+  <li>Exception Handling:
+    <ul>
+      <li>The CU detects and handles exceptions, interrupts, or other abnormal conditions that occur during program execution.</li>
+      <li>It may suspend the current instruction stream, save the current CPU state, and transfer control to an appropriate exception handler routine.</li>
+    </ul>
+  </li>
+  <li>Synchronization and Control:
+    <ul>
+      <li>The CU synchronizes the activities of different CPU components and ensures that instructions are executed in the correct sequence.</li>
+      <li>It generates timing signals, clock pulses, and control signals to coordinate the operation of the CPU and maintain system integrity.</li>
+    </ul>
+  </li>
 </ol>
 
-<ul>
-  <li>The CU fetches instructions from the memory unit (RAM) based on the Program Counter (PC) value.</li>
-  <li>It reads the instruction from memory and stores it temporarily in the Instruction Register (IR) for decoding.</li>
-</ul>
-
-<ol>
-  <li>Instruction Decoding:</li>
-</ol>
-
-<ul>
-  <li>The CU interprets the fetched instruction from the IR.</li>
-  <li>It breaks down the instruction into its constituent parts (opcode, operands) and sends control signals to other CPU components.</li>
-</ul>
-
-<ol>
-  <li>Operand Fetching:</li>
-</ol>
-
-<ul>
-  <li>If the instruction requires operands from memory or registers, the CU initiates the necessary data transfers.</li>
-  <li>It interacts with the memory address register (MAR) and memory data register (MDR) to fetch data from memory.</li>
-</ul>
-
-<ol>
-  <li>Execution Control:</li>
-</ol>
-
-<ul>
-  <li>The CU generates control signals to coordinate the execution of the instruction.</li>
-  <li>It activates specific functional units within the CPU, such as the ALU, to perform arithmetic, logic, or data manipulation operations.</li>
-</ul>
-
-<ol>
-  <li>Exception Handling:</li>
-</ol>
-
-<ul>
-  <li>The CU detects and handles exceptions, interrupts, or other abnormal conditions that occur during program execution.</li>
-  <li>It may suspend the current instruction stream, save the current CPU state, and transfer control to an appropriate exception handler routine.</li>
-</ul>
-
-<ol>
-  <li>Synchronization and Control:</li>
-</ol>
-
-<ul>
-  <li>The CU synchronizes the activities of different CPU components and ensures that instructions are executed in the correct sequence.</li>
-  <li>It generates timing signals, clock pulses, and control signals to coordinate the operation of the CPU and maintain system integrity.</li>
-</ul>
-
-<p>Purpose of IR, MAR and MDR registers</p>
+<h4 id="purpose-of-ir-mar-and-mdr-registers">Purpose of IR, MAR and MDR registers</h4>
 
 <p><strong>Instruction Register (IR):</strong></p>
 
