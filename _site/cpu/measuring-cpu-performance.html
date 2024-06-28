@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Measuring CPU Performance | Sanketh’s Blog</title>
+<meta name="generator" content="Jekyll v4.3.3" />
+<meta property="og:title" content="Measuring CPU Performance" />
+<meta name="author" content="Sanketh" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="CPU Manufacturers publish several metrics related to CPU like clock speed, number of cores, cache sizes, ISA, performance per Watt, number of transistors and more. Measuring CPU performance is complex, and it cannot be summarized by a single metric. In this post, I’ll explore each of these metrics and discuss some standard benchmarking software and their limitations." />
+<meta property="og:description" content="CPU Manufacturers publish several metrics related to CPU like clock speed, number of cores, cache sizes, ISA, performance per Watt, number of transistors and more. Measuring CPU performance is complex, and it cannot be summarized by a single metric. In this post, I’ll explore each of these metrics and discuss some standard benchmarking software and their limitations." />
+<link rel="canonical" href="http://localhost:4000/blog/cpu/measuring-cpu-performance" />
+<meta property="og:url" content="http://localhost:4000/blog/cpu/measuring-cpu-performance" />
+<meta property="og:site_name" content="Sanketh’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-06-21T01:14:25+05:30" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Measuring CPU Performance" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Sanketh"},"dateModified":"2024-06-21T01:14:25+05:30","datePublished":"2024-06-21T01:14:25+05:30","description":"CPU Manufacturers publish several metrics related to CPU like clock speed, number of cores, cache sizes, ISA, performance per Watt, number of transistors and more. Measuring CPU performance is complex, and it cannot be summarized by a single metric. In this post, I’ll explore each of these metrics and discuss some standard benchmarking software and their limitations.","headline":"Measuring CPU Performance","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/blog/cpu/measuring-cpu-performance"},"url":"http://localhost:4000/blog/cpu/measuring-cpu-performance"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/blog/feed.xml" title="Sanketh&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Sanketh&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script
+  id="MathJax-script"
+  async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+></script>
+
+<link rel="stylesheet" href="/blog/assets/custom.css" />
+
+<article class="post">
+  <header class="post-header">
+    <h1 class="post-title">Measuring CPU Performance</h1>
+  </header>
+
+  <div class="categories">
+    
+    <a
+      href="/blog/categories/cpu"
+      class="category-capsule"
+      >cpu</a
+    >
+    
+  </div>
+
+  <div class="post-content"><p>CPU Manufacturers publish several metrics related to CPU like clock speed, number of cores, cache sizes, ISA, performance per Watt, number of transistors and more. Measuring CPU performance is complex, and it cannot be summarized by a single metric. In this post, I’ll explore each of these metrics and discuss some standard benchmarking software and their limitations.</p>
+
+<h2 id="what-is-clock-speed-how-does-it-affects-cpu-performance">What is Clock Speed, How does it Affects CPU Performance?</h2>
+
+<p>All Synchronous digital electronic circuits require an externally generated time reference. This is usually a square wave signal provided to the circuit called as clock. A <strong>clock cycle</strong> is the fundamental unit of time measurement for a CPU. A clock cycle is a single electrical pulse in a CPU, during which the CPU can execute a fundamental operation such as accessing memory, writing data, or fetching a new set of instructions. A clock cycle is measured as the amount of time between two pulses of an oscillator. The clock speed of a CPU is measured in Hertz (Hz), which signifies the number of clock cycles it can complete in one second. Common units are Megahertz (MHz) and Gigahertz (GHz).</p>
+
+<h3 id="major-functionalities-of-cpu-clocks">Major functionalities of CPU clocks</h3>
+
+<ul>
+  <li>The clock signal ensures that all parts of the circuit change their state in a coordinated manner, ensuring reliable and predictable operation.</li>
+  <li>In sequential logic circuits, where the output depends not just on the current inputs but also on the history of inputs, a clock is necessary to sequence the operations correctly.</li>
+  <li>The clock signal allows precise control over the timing of data transfers between different parts of the circuit. The clock ensures that the data is stable and settled before being transferred to the next stage of the circuit.</li>
+</ul>
+
+<h3 id="does-higher-clock-speed-means-higher-cpu-performance">Does Higher Clock Speed Means Higher CPU Performance?</h3>
+
+<p>Let’s say we have 2 CPU’s with A and B with clock speed 3.4 GHz and 3.6 GHz respectively. While CPU B can generate more clock pulses compared to A, it does not necessarily mean that it has better performance than A. There are several other factors which come into play while determining the overall performance. If an instruction took “x” number of cycles in CPU A and if it takes same number of cycles in CPU B, then CPU B is indeed faster as it means that the instruction is taking less time to complete on CPU B. But in real life it’s difficult to decrease the time of instruction execution. Some things like register access are very fast but things like memory access, ALU operations, floating point operations are complex in nature and cannot be optimized by memrely increasing clock speed.</p>
+
+<p>Let’s say we have two CPUs, A and B, with clock speeds of 3.4 GHz and 3.6 GHz respectively. While CPU B can generate more clock pulses compared to CPU A, this doesn’t necessarily mean it has better performance. There are several other factors that determine overall performance.</p>
+
+<p>If an instruction takes the same number of cycles on both CPUs, CPU B will indeed execute it faster as it means that the instruction is taking less time to complete on CPU B. However, in real life, it’s difficult to decrease the time of instruction execution purely by increasing clock speed. Simple tasks like register access are very fast and can be optimized, but complex operations such as memory access, ALU operations, and floating-point calculations are more complex in nature and cannot be optimized by memrely increasing clock speed. Thus, comparing the clock speeds of two CPUs is only relevant if the CPUs belong to the same family, like Intel i5 and i7, or Mac M1 and M4.</p>
+
+<h3 id="why-cpu-clock-speed-has-barely-changed-in-past-two-decades">Why CPU Clock speed has barely changed in past two decades?</h3>
+
+<p>The clock speed of consumer-grade CPUs has barely changed in the past two decades. For example, the Intel Pentium 4, which came out in the early 2000s, achieved a clock speed of 3.8 GHz, while the recent Apple M3 released in 2023 runs at 4.05 GHz. Despite the similar clock speeds, the Apple M3 is far more powerful than the Intel Pentium 4.</p>
+
+<p>The primary reason manufacturers haven’t increased clock speed is that higher frequency CPUs consume more power and generate more heat. This can lead to thermal throttling, where the CPU reduces its frequency to prevent overheating, negating the benefits of the higher frequency. As a result, manufacturers have shifted focus to other parameters to enhance performance:</p>
+
+<ol>
+  <li>
+    <p><strong>Cycles per Instruction (CPI):</strong> Cycles per Instruction refers to the average number of cycles taken by a particular instruction to complete. Ideal value of CPI is 1, as each instruction needs at least one clock cycle to complete. But in real world scenario, even the simplest instruction will take at  cycles to complete, depending on the architecture. Techniques such as pipelining and out-of-order execution are used to optimize CPI and improve overall performance.</p>
+  </li>
+  <li>
+    <p><strong>Number of Cores and Threads:</strong> A multi-core CPU can perform several tasks in parallel, with each core functioning as an independent processing unit. Technologies like simultaneous multithreading (SMT), or Intel’s Hyper-Threading, allow a CPU core to support multiple hardware threads, each with its own Program Counter (PC) and registers allowing independent execution. Hyper-threading works by sharing functional units of a core among multiple hardware threads. Hardware threads are different from threads provided by OS which are known as software threads. In case of software threads, concurrency is achieved by context switching between multiple threads. In SMT, hardware threads may appear as independent cores to the operating system and applications, even though they share some physical resources.</p>
+  </li>
+  <li>
+    <p><strong>Instruction Set Architecture (ISA):</strong> ISA is a set of instructions that a processor can understand and execute. ISA are classified into two types: Reduced Instruction Set Computer (RISC) and Complex Instruction Set Computer (CISC). RISC architectures use a small, highly optimized set of instructions that are all of uniform length and are executed in a single clock cycle. This simplicity and efficiency make RISC architectures easier to pipeline and more power-efficient. Some examples RISC ISA’s are MIPS, ARM. CISC architectures have a large and complex set of instructions, some of which can execute multi-step operations in a single instruction. This allows for more functionality per instruction but often results in more complex hardware and potentially slower performance for individual instructions, example: x86.</p>
+  </li>
+  <li>
+    <p><strong>Dynamic Frequency Scaling:</strong> Dynamic frequency scaling allows the CPU to adjust its clock speed based on the current workload and thermal conditions. By lowering the clock speed when full performance is not needed, the CPU can save power and reduce heat generation, which helps in maintaining performance efficiency and longevity. In some modern day processors like Intel I7, it’s possible to increase the clock frequency beyond the base clock frequency. This will help in executing CPU intensive workloads efficiently provided there is enough thermal as well as power capacity. This is also known as overclocking.</p>
+  </li>
+</ol>
+
+<h2 id="the-cpu-performance-equation">The CPU Performance Equation</h2>
+
+<p>The CPU performance can be calculated using the equation</p>
+
+\[T = N_{\text{instr}} \cdot \text{CPI} \cdot t_{\text{cycle}}\]
+
+<p>where:</p>
+<ul>
+  <li>N<sub>instr</sub> = Number of instructions executed</li>
+  <li>CPI = Cycles per Instruction</li>
+  <li>t<sub>cycle</sub> = Duration of a clock cycle</li>
+  <li>T = CPU time consumed by the program</li>
+</ul>
+
+<p>Cycles per Instruction (CPI) is a critical metric in evaluating CPU performance. Different types of instructions take different numbers of cycles to complete, and even the same type of instruction can take varying numbers of cycles depending on factors like pipeline stalls or cache hits/misses. Because of this variability, CPI is often represented as an average value for each type of instruction. This average CPI helps in estimating the overall performance of a CPU when executing a mix of different instructions.</p>
+
+<p>From the above equation we can see that CPU time consumed by a program can be decreased by decreasing one of the three paramaters N<sub>instr</sub>, CPI or t<sub>cycle</sub>. However, these three parameters are not completely independent of each other. For example, if we try to reduce N<sub>instr</sub> by optimizing the Assembly code to produce fewer instructions, we may have to increase the complexity of instructions which would in turn increase CPI for those instructions.</p>
+
+<h2 id="historical-laws-related-to-cpu-performance">Historical Laws Related to CPU Performance</h2>
+
+<h3 id="amdahls-law">Amdahl’s Law</h3>
+
+<p>Amdahl’s law provides a formula to calculate maximum theoretical speedup that can be obtained by parallelizing the CPU workload on multiple processing units.</p>
+
+\[S = \frac{1}{(1 - P) + \frac{P}{N}}\]
+
+<p>where:</p>
+<ul>
+  <li>S is the theoretical speedup of the execution of the whole task;</li>
+  <li>P is the proportion of the program that can be parallelized;</li>
+  <li>N is the number of processors.</li>
+</ul>
+
+<p>Using Amdahl’s Law, we can calculate that if 50% of the total workload is parallelizable, then the maximum speedup achieved will be 2 no matter how many processors we use. This demonstrates the limitation of parallel processing, highlighting that the non-parallelizable portion of the task significantly impacts the overall speedup.</p>
+
+<h3 id="gustafsons-law">Gustafson’s Law</h3>
+
+<p>While Amdahl’s Law focuses on the limitations of parallelism for a fixed workload, Gustafson’s Law presents a less pessimistic view by considering the scalability of parallelism by allowing the problem size to grow with the number of processors. Gustafson’s Law is expressed as:</p>
+
+\[S = 1 + (N - 1)P\]
+
+<p>where:</p>
+<ul>
+  <li>S is the speedup,</li>
+  <li>N is the number of processors,</li>
+  <li>P is the proportion of the parallel part of the workload.</li>
+</ul>
+
+<p>Gustafson’s Law suggests that as we increase the number of processors, the overall problem size can increase proportionally, thus making better use of the additional computational power. This perspective is more optimistic because it implies that large-scale problems can achieve significant performance gains through parallel processing, provided there is sufficient parallelizable work.</p>
+
+<p>In essence, Amdahl’s Law highlights the diminishing returns of parallelism due to the serial portion of a task, while Gustafson’s Law emphasizes the potential for increased problem sizes to fully utilize the power of multiple processors. Together, these laws offer valuable insights into the challenges and opportunities of parallel computing.</p>
+
+</div>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Sanketh&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Sanketh B K</li><li><a class="u-email" href="mailto:sankethbk.1611@gmail.com">sankethbk.1611@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/Sankethbk"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">Sankethbk</span></a></li><li><a href="https://www.linkedin.com/in/sankethbk"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#linkedin"></use></svg> <span class="username">sankethbk</span></a></li><li><a href="https://www.twitter.com/Sankethbk"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">Sankethbk</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

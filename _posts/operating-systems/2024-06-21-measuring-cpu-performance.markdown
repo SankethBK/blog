@@ -61,3 +61,39 @@ Cycles per Instruction (CPI) is a critical metric in evaluating CPU performance.
 
 From the above equation we can see that CPU time consumed by a program can be decreased by decreasing one of the three paramaters N<sub>instr</sub>, CPI or t<sub>cycle</sub>. However, these three parameters are not completely independent of each other. For example, if we try to reduce N<sub>instr</sub> by optimizing the Assembly code to produce fewer instructions, we may have to increase the complexity of instructions which would in turn increase CPI for those instructions. 
 
+## Historical Laws Related to CPU Performance
+
+### Amdahl's Law
+
+Amdahl's law provides a formula to calculate maximum theoretical speedup that can be obtained by parallelizing the CPU workload on multiple processing units. 
+
+$$
+S = \frac{1}{(1 - P) + \frac{P}{N}}
+$$
+
+where:
+- S is the theoretical speedup of the execution of the whole task;
+- P is the proportion of the program that can be parallelized;
+- N is the number of processors.
+
+Using Amdahl's Law, we can calculate that if 50% of the total workload is parallelizable, then the maximum speedup achieved will be 2 no matter how many processors we use. This demonstrates the limitation of parallel processing, highlighting that the non-parallelizable portion of the task significantly impacts the overall speedup.
+
+### Gustafson's Law
+
+While Amdahl's Law focuses on the limitations of parallelism for a fixed workload, Gustafson's Law presents a less pessimistic view by considering the scalability of parallelism by allowing the problem size to grow with the number of processors. Gustafson's Law is expressed as:
+
+$$
+S = 1 + (N - 1)P
+$$
+
+
+where:
+- S is the speedup,
+- N is the number of processors,
+- P is the proportion of the parallel part of the workload.
+
+
+Gustafson's Law suggests that as we increase the number of processors, the overall problem size can increase proportionally, thus making better use of the additional computational power. This perspective is more optimistic because it implies that large-scale problems can achieve significant performance gains through parallel processing, provided there is sufficient parallelizable work.
+
+In essence, Amdahl's Law highlights the diminishing returns of parallelism due to the serial portion of a task, while Gustafson's Law emphasizes the potential for increased problem sizes to fully utilize the power of multiple processors. Together, these laws offer valuable insights into the challenges and opportunities of parallel computing.
+
