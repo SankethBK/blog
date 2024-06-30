@@ -74,6 +74,8 @@ where:
 - P is the proportion of the program that can be parallelized;
 - N is the number of processors.
 
+<a title="Daniels220 at English Wikipedia, CC BY-SA 3.0 &lt;https://creativecommons.org/licenses/by-sa/3.0&gt;, via Wikimedia Commons" href="https://commons.wikimedia.org/wiki/File:AmdahlsLaw.svg"><img width="512" alt="AmdahlsLaw" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/AmdahlsLaw.svg/512px-AmdahlsLaw.svg.png?20170324202600"></a>
+
 Using Amdahl's Law, we can calculate that if 50% of the total workload is parallelizable, then the maximum speedup achieved will be 2 no matter how many processors we use. This demonstrates the limitation of parallel processing, highlighting that the non-parallelizable portion of the task significantly impacts the overall speedup.
 
 ### Gustafson's Law
@@ -90,6 +92,7 @@ where:
 - N is the number of processors,
 - P is the proportion of the parallel part of the workload.
 
+<a title="Peahihawaii, CC BY-SA 3.0 &lt;https://creativecommons.org/licenses/by-sa/3.0&gt;, via Wikimedia Commons" href="https://commons.wikimedia.org/wiki/File:Gustafson.png"><img width="512" alt="Gustafson" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Gustafson.png/512px-Gustafson.png?20110108143519"></a>
 
 Gustafson's Law suggests that as we increase the number of processors, the overall problem size can increase proportionally, thus making better use of the additional computational power. This perspective is more optimistic because it implies that large-scale problems can achieve significant performance gains through parallel processing, provided there is sufficient parallelizable work.
 
