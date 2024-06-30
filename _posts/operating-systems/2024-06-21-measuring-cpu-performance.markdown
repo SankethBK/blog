@@ -98,3 +98,11 @@ Gustafson's Law suggests that as we increase the number of processors, the overa
 
 In essence, Amdahl's Law highlights the diminishing returns of parallelism due to the serial portion of a task, while Gustafson's Law emphasizes the potential for increased problem sizes to fully utilize the power of multiple processors. Together, these laws offer valuable insights into the challenges and opportunities of parallel computing.
 
+## CPU Benchmarking Softwares
+
+There are no universal benchmarks for measuring CPU performance. Over the past five decades, manufacturers and researchers have used various benchmarks to describe CPU performance. CPU benchmarks can be broadly classified into two types:
+
+**1. Synthetic Benchmarks:** Synthetic benchmarks emulate CPU-intensive workloads such as file compression, cryptography, floating-point operations, and 3D rendering. While they are not exact predictors of performance, synthetic benchmarks are useful for testing individual components and comparing specific aspects of CPU performance.
+
+**2. Application Benchmarks:** Application benchmarks run real-world programs that perform CPU-intensive workloads on the system. These benchmarks are less biased and provide a more accurate representation of CPU metrics, offering a clearer picture of how a CPU will perform in practical scenarios.
+
