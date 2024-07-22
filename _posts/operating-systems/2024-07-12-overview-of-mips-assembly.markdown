@@ -47,7 +47,7 @@ In MIPS, most registers are truly general-purpose, meaning they can be used for 
 | -------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | $0       | zero  | This register is hardwired to the value 0. It always returns 0 regardless of what is written to it.                                     | No                               |
 | $1       | at    | Reserved for the assembler. It is used for pseudo-instructions and not typically used by programmers.                                   | No                               |
-| $2-$3    | v0-v1 | Used to hold function return values.                                                                                                    | No                               |
+| $2-$3    | v0-v1 | Used to hold function return values.                                                                                                    | No      ****                         |
 | $4-$7    | a0-a3 | Used to pass the first four arguments to functions.                                                                                     | No                               |
 | $8-$15   | t0-t7 | Temporary registers used for holding intermediate values. They are not preserved across function calls.                                 | No                               |
 | $16-$23  | s0-s7 | Saved registers, which must be preserved across function calls. They are used to store values that should not be changed by a function. | Yes                              |
@@ -150,5 +150,127 @@ Endianness affects how data is interpreted and exchanged between systems. If two
 
 Most modern personal computers, including those using x86 and x86-64 architectures, use little-endian format. MIPS processors can operate in both big-endian (BE) and little-endian (LE) modes. The Status register in CP0 has a bit called RE (Reverse Endian) which, when set, changes the endianness mode for user mode, such processors are called Bi-endian processors, some other examples for Bi-endian processors are ARM, PowerPC, Alpha, SPARC V9, etc. 
 
-##
+## Instruction Formats in MIPS
+
+MIPS uses three main instruction formats: R-type, I-type, and J-type. Each format is designed to accommodate different types of instructions and their operands. 
+
+### 1. R-type
+
+R-type instructions are used for operations that involve only registers, such as arithmetic and logical operations.
+
+| 31-26  | 25-21 | 20-16 | 15-11 | 10-6  | 5-0    |
+| ------ | ----- | ----- | ----- | ----- | ------ |
+| opcode | rs    | rt    | rd    | shamt | funct  |
+
+- **Opcode: 6 bits** - The operation code that specifies the operation to be performed.
+- **rs: 5 bits** - The first source register.
+- **rt: 5 bits** - The second source register.
+- **rd: 5 bits** - The destination register.
+- **shamt: 5 bits**- The shift amount (used in shift instructions).
+- **funct: 6 bits** - The function code that specifies the exact operation (used in conjunction with the opcode).
+
+Each of the register field is 5 bits as there are 32 (2<sup>5</sup>) registers. 
+
+Eg: `add $t1, $t2, $t3` 
+
+### 2. I-type
+
+| 31-26  | 25-21 | 20-16 |  15-0      |
+| ------ | ----- | ----- | ---------- | 
+| opcode |   rs  |   rt  | immediate  |
+
+
+I-type instructions are used for operations that involve an immediate value (a constant), as well as for memory access and branches.
+
+- **Opcode: 6 bits** - The operation code.
+- **rs: 5 bits** - The source register.
+- **rt: 5 bits** - The destination register (or another source register for branches).
+- **Immediate: 16 bits** - The immediate value, which can be a constant, address offset, or immediate operand.
+
+Eg: 
+```
+addi $t1, $t2, 10    # $t1 = $t2 + 10
+lw $t0, 4($t1)       # $t0 = Memory[$t1 + 4]
+andi $t0, $t1, 0xFF  # $t0 = $t1 & 0xFF
+```
+
+### 3. J-type
+
+| 31-26 | 25-0    |
+| ----- | ------- |
+| opcode| address |                   
+
+J-type instructions are used for jump instructions that require a target address.
+
+- **Opcode: 6 bits** - The operation code.
+- **Address: 26 bits** - The target address for the jump. This address is combined with the upper bits of the program counter (PC) to form the full jump address.
+
+In MIPS32, we observe that only 26 bits are used for the target address of jump instructions, even though the address space of MIPS32 spans 4GB (2<sup>32</sup>). Because all MIPS instructions are 32 bits wide, they are word-aligned. This word alignment means the last 2 bits of any instruction address are always 00. Thus, only 28 bits are effectively used to form the target address. To construct the full 32-bit address, the upper 4 bits of the current program counter (PC) — which is the address of the instruction following the jump — are combined with the 28-bit target address. This results in a maximum addressable jump distance of 256MB (2<sup>28</sup>).
+
+However, within a 4GB address space, it’s possible that the target instruction may be farther away than this 256MB limit. Modern assemblers employ various strategies to address this limitation, some of which we will explore later.
+
+
+## Pros and Cons of Uniform Instruction Width and Dedicated Opcode Spots in MIPS
+
+### Pros
+
+1. **Simplicity in Instruction Fetching:** With a uniform instruction width (32 bits) for an implementation that fetches a single instruction per cycle, a single aligned memory/cache access of the fixed size is guaranteed to provide one (and only one) instruction, so no buffering or shifting is required. There is also no concern about crossing a cache line or page boundary within a single instruction.
+
+2. **Predictable Instruction Fetching:** With a uniform instruction width, the instruction pointer increments by a fixed amount (32 bits) for each instruction (except for control flow instructions like jumps and branches). This predictability allows the CPU to know the location of the next instruction early, reducing the need for partial decoding. It also simplifies the process of fetching and parsing multiple instructions per cycle, enhancing overall efficiency. (The need for partial decoding arises when the length of instructions varies. The CPU must determine the length of each instruction before it can identify where the next instruction begins. This requires the CPU to decode at least part of the current instruction to find out its length, a process known as partial decoding. This extra step can complicate the instruction fetching process and introduce additional overhead.)
+
+3. **Simplified Parsing and Early Register Reading:** The uniform instruction format in MIPS enables straightforward parsing of instruction components, such as immediate values, opcodes, and register names. This is particularly beneficial for timing-critical tasks like parsing source register names. With fixed positions for these components, the CPU can begin reading register values immediately after fetching the instruction, even before fully determining the instruction type. This speculative register reading does not require special recovery if incorrect, although it consumes extra energy. In the MIPS R2000's classic 5-stage pipeline, this approach allows register values to be read right after instruction fetch, providing ample time to compare values and resolve branches, thus avoiding stalls without needing branch prediction. Parsing out the opcode is slightly less timing-critical than parsing source register names, but extracting the opcode sooner accelerates the start of execution. Simple parsing of the destination register name facilitates dependency detection across instructions, particularly beneficial when executing multiple instructions per cycle. 
+
+4. **Usage of Fewer Bits for Target Addresses:** In uniform instruction sets, the alignment of instructions allows the use of fewer bits to specify target addresses. For example, in a 32-bit wide instruction set, the last 2 bits of any instruction address are always 0 due to word alignment. This means that only 30 bits are needed to represent the address instead of 32. This reduction in required bits can be exploited in certain ISAs, such as MIPS/MIPS16, to provide additional storage space for other purposes, like indicating a mode with smaller or variable-length instructions. This efficient use of addressing allows for more compact encoding of instructions and can enhance the flexibility of the instruction set by supporting different modes.
+
+## Cons
+
+1. **Low Code Density:** Uniform instruction width can lead to inefficient use of memory when instructions are shorter than the fixed width. For example, if you have a 32-bit instruction width but some instructions only require a few bits, the extra bits in each instruction are wasted. This can lead to larger code sizes and increased memory consumption.
+
+2. **Decreased Flexibility due to Implicity Operands:** Strict uniform formatting tends to exclude the use of implicit operands, which are operands not explicitly specified in the instruction but implied by the operation. For instance, even though MIPS mostly avoids implicit operands, it still uses an implicit destination register for the link register (\$ra), which stores the return address for function calls. (When a function call is made in MIPS, the jal (jump and link) instruction is used. This instruction not only jumps to the target function address but also implicitly stores the return address (the address of the instruction following the jal) in the link register \$ra (which is register $31). This behavior is implicit in the sense that the jal instruction does not need to specify that the return address should be stored in \$ra; it is automatically understood and handled by the instruction.)
+
+3. **Cannot Handle Large Values of Immediate:** Fixed-length instructions present challenges when dealing with large immediate values (constants embedded directly within instructions). In MIPS immediate values to 16 bits within a single instruction. If a constant exceeds this 16-bit limit, additional steps are required to handle the larger value.
+   1. **Loading as Data:** One method to handle large constants is to load them from memory. This approach involves:
+      - An extra load instruction.
+      - Overhead associated with address calculation, register usage, address translation, and tag checking.
+   2. **Multiple Instructions:** MIPS provides two instructions `lui` (load upper immediate) to load the upper 16 bits of a constant and `ori` (or immediate) which performs bitwise OR on lower 16 bits this effectively loading a 32-bit immediate. These instructions do not involve memory access. The 32-bit immediate value is constructed directly within the CPU using two instructions. This is faster and avoids the overhead of accessing memory. Using two instructions to handle a large immediate introduces more overhead compared to a single instruction. Modern processor designs can mitigate some of this overhead. For example, Intel's macro-op fusion combines certain pairs of instructions at the front-end of the pipeline, effectively reducing the execution overhead.
+
+4. **Challenges in Extending the ISA:** New features may require addition of new instructions to the ISA. Fixed-length instructions present a significant challenge when it comes to extending an instruction set. The number of distinct operations (opcodes) that can be represented is limited. For example, with a 6-bit opcode field (as in MIPS), there are only 64 possible opcodes. It also poses a challenge when we have to increase number of available registers as adding more registers requires more bits to encode the register addresses. To extend the instruction set without breaking compatibility, additional modes or instruction formats might be needed. This can complicate the CPU design and increase the complexity of the instruction decoder.
+
+5. **Limited Address Bound for Branching Instructions:** In MIPS, the jump instruction uses only 26 bits to specify the immediate target address. Due to memory alignment, the last 2 bits are always zero, effectively giving 28 bits for the target address. The upper 4 bits of the Program Counter (PC) are combined with these 28 bits to form a full 32-bit address, which limits the addressable range to 256 MB. Consequently, the assembly programmer or compiler must ensure that the target address of the jump instruction lies within this 256 MB boundary. If the target address exceeds this limit, other options must be employed, such as using the `jr` (jump to the address stored in register) instruction, which can specify a full 32-bit address by storing the address in a register. In some versions, the assembler will issue a warning if the target address of a `j` instruction exceeds the 256 MB bound. In other cases, the assembler might automatically replace the `j` instruction with a `jr` instruction to handle the full address space correctly.
+
+## Overview of MIPS Instructions
+
+### 1. Memory Access Instructions
+
+Memory access instructions in MIPS facilitate moving data between registers and memory, as well as between integer, floating-point (FP), or special registers. Most of the memory access instructions are I-type and use register indirect with displacement as addressing mode. 
+
+#### 1. Load Family of Instructions
+
+All of the load instructions in MIPS are I-type instructions, and they follow this general format:
+```
+LOAD <rt>, offset(base)
+```
+
+- **LOAD** is the opcode for the specific load instruction (e.g., LB, LBU, LH, LHU, LW, LWU, LD, L.S, L.D).
+- **<rt>** is the target register where the data will be loaded.
+- **offset** is a 16-bit signed immediate value representing the displacement.
+- **base** is the base register whose contents are added to the offset to form the effective memory address.
+
+
+| Instruction | Meaning                     | Description                                                                    |
+| ----------- | --------------------------- | ------------------------------------------------------------------------------ |
+| **LB**      | Load Byte                   | Loads a byte from memory into a register, sign-extended.                       |
+| **LBU**     | Load Byte Unsigned          | Loads a byte from memory into a register, zero-extended.                       |
+| **LH**      | Load Halfword               | Loads a halfword from memory into a register, sign-extended.                   |
+| **LHU**     | Load Halfword Unsigned      | Loads a halfword from memory into a register, zero-extended.                   |
+| **LW**      | Load Word                   | Loads a word from memory into a register.                                      |
+| **LWU**     | Load Word Unsigned          | Loads a word from memory into a register, zero-extended (MIPS64).              |
+| **LD**      | Load Doubleword             | Loads a doubleword from memory into a register (MIPS64).                       |
+| **L.S**     | Load Single Precision Float | Loads a single precision floating-point value from memory into an FP register. |
+| **L.D**     | Load Double Precision Float | Loads a double precision floating-point value from memory into an FP register. |
+
+
+
+
+
 

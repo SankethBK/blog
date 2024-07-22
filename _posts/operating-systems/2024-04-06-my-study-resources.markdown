@@ -14,6 +14,10 @@ I have previously studied operating systems as a part of my university curriculu
 2. Linux System Programming: Talking Directly to the Kernel and C Library by Robert Love
 3. [Computer Architecture A Quantitative Approach by Hennessy and Patterson](https://acs.pub.ro/~cpop/SMPA/Computer%20Architecture%20A%20Quantitative%20Approach%20(5th%20edition).pdf)
 
+#### Links
+
+1. [Overview of MIPS Assembly](https://www.comp.nus.edu.sg/~adi-yoga/CS2100/ch07/)
+
 There are some great resources mentioned in this [reddit thread](https://www.reddit.com/r/compsci/comments/7sdcaq/best_way_to_learn_os_concepts_properly_so_that_i/), i'll be exploring them as i progress
 
 #### Playlists
