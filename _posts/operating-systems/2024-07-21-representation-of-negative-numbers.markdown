@@ -11,6 +11,7 @@ references:
     - https://www.youtube.com/watch?v=lKTsv6iVxV4
     - https://en.wikipedia.org/wiki/Ones%27_complement
     - https://en.wikipedia.org/wiki/Two%27s_complement
+    - https://en.wikipedia.org/wiki/Offset_binary
 ---
 
 Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.
@@ -145,24 +146,25 @@ Two's complement is the most widely used method for representing signed integers
 For an n-bit number, the range of representable values is 
 $$ -2^{(n-1)} \text{ to } 2^{(n-1)} - 1 $$
 
-| Binary Representation | Decimal Value |
-| --------------------- | ------------- |
-| 1000                  | -8            |
-| 1001                  | -7            |
-| 1010                  | -6            |
-| 1011                  | -5            |
-| 1100                  | -4            |
-| 1101                  | -3            |
-| 1110                  | -2            |
-| 1111                  | -1            |
-| 0000                  | 0             |
-| 0001                  | 1             |
-| 0010                  | 2             |
-| 0011                  | 3             |
-| 0100                  | 4             |
-| 0101                  | 5             |
-| 0110                  | 6             |
-| 0111                  | 7             |
+| Binary Representation | Decimal Value (signed) | Decimal Value (unsigned) |
+| --------------------- | ---------------------- | ------------------------ |
+| 1000                  | -8                     | 8                        |
+| 1001                  | -7                     | 9                        |
+| 1010                  | -6                     | 10                       |
+| 1011                  | -5                     | 11                       |
+| 1100                  | -4                     | 12                       |
+| 1101                  | -3                     | 13                       |
+| 1110                  | -2                     | 14                       |
+| 1111                  | -1                     | 15                       |
+| 0000                  | 0                      | 0                        |
+| 0001                  | 1                      | 1                        |
+| 0010                  | 2                      | 2                        |
+| 0011                  | 3                      | 3                        |
+| 0100                  | 4                      | 4                        |
+| 0101                  | 5                      | 5                        |
+| 0110                  | 6                      | 6                        |
+| 0111                  | 7                      | 7                        |
+
 
 **Intuition Behind Two's Complement**
 
@@ -194,31 +196,82 @@ Adding `1` to the one's complement itself is called as two's complement as it in
 Any n-bit number + its two's complement = 0
 ```
 
+The rationale behind two's complement can be understood by comparing it with the unsigned binary interpretation:
+
+Taking an 8-bit value a<sub>7</sub> a<sub>6</sub> a<sub>5</sub> a<sub>4</sub> a<sub>3</sub> a<sub>2</sub> a<sub>1</sub> a<sub>0</sub>
+
+The usual unsigned binary interpretation is:
+
+$$ 2^7 \cdot a_7 + 2^6 \cdot a_6 + 2^5 \cdot a_5 + 2^4 \cdot a_4 + 2^3 \cdot a_3 + 2^2 \cdot a_2 + 2^1 \cdot a_1 + 2^0 \cdot a_0 $$
+
+```
+11111111 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1 = 255
+```
+
+In the two's complement representation, all negative numbers have the MSB set to 1. To get the negative number represented by the two's complement of a value, we need to multiply the MSB with -1. The formula for two's complement is:
+
+$$ -2^7 \cdot a_7 + 2^6 \cdot a_6 + 2^5 \cdot a_5 + 2^4 \cdot a_4 + 2^3 \cdot a_3 + 2^2 \cdot a_2 + 2^1 \cdot a_1 + 2^0 \cdot a_0 $$
+
+For eg: negative number represented by `11111111` is 
+
+```
+11111111 = -128 + 64 + 32 + 16 + 8 + 4 + 2 + 1 = -1
+```
+
+It's important to note that while `11111111` represents `-1` in the signed two's complement system, it can also be interpreted as `255` in unsigned integers, as the CPU does not enforce any restriction. The interpretation is determined by the compiler.
+
 **Pros**
 
 Two's complement solves all the limitations from sign and magnitude and one's complement representations:
 
 1. **Single Representation for Zero:** In two's complement, zero has only one unique representation. This eliminates the problem of having two distinct representations for zero, which was a limitation in the one's complement system. By having a single, consistent zero, two's complement simplifies arithmetic operations and avoids the issue of shifting results by one number.
 
-2. **Natural Support for Unsigned Integers:** Since MSB has no special significance and there is no change in the process of addition (unlike wrap around carry in one's complement). Two's complement naturally enables support for unsigned integers. 
+2. **Natural Support for Unsigned Integers:** Since MSB has no special significance and there is no change in the process of addition (unlike wrap around carry in one's complement). Two's complement naturally enables support for unsigned integers.
 
-```
-For example in C
+    ```c
+    For example in C
 
-unsigned int a = 2;                            0010
-unsigned int b = 9;                           +1001
-unsigned int c = a + b; // result is 11    ==  1011  
+    unsigned int a = 2;                             0010
+    unsigned int b = 9;                            +1001
+    unsigned int c = a + b; /* result is 11 */  ==  1011  
 
-int a = 2;                                     0010
-int b = -7;                                   +1001
-int c = a + b; // result is -5                 1011
-```
+    int a = 2;                                      0010
+    int b = -7;                                    +1001
+    int c = a + b; /* result is -5 */           ==  1011
+    ```
 
-We can see that even though result is `1011` in both cases. Compiler interprets it as `11` in first case and `-5` in second case. 
+    We can see that even though result is `1011` in both cases. Compiler interprets it as `11` in the first case and `-5` in the second case. 
 
-In both cases, the binary result is `1011`. However, the interpretation differs based on whether the numbers are treated as unsigned or signed. The compiler interprets `1011` as `11` when dealing with unsigned integers and as `-5` for signed integers. This flexibility is possible because the CPU treats the binary numbers uniformly without needing special handling for the sign. 
+    In both cases, the binary result is `1011`. However, the interpretation differs based on whether the numbers are treated as unsigned or signed. The compiler interprets `1011` as `11` when dealing with unsigned integers and as `-5` for signed integers. This flexibility is possible because the CPU treats the binary numbers uniformly without needing special handling for the sign.
 
-3. **Sign Extension in Two's Complement:** Two's complement numbers can be sign-extended to match the size of the storage medium while preserving their value. For example, consider the 4-bit representation `1110`, which corresponds to `-2`. To store this in a 32-bit register, we simply extend the MSB across the additional bits. The resulting 32-bit representation would be `1111 1111 1111 1110`. This extension ensures that the value `-2` is maintained accurately in arithmetic operations, regardless of the bit width of the register.
+3. **Sign Extension in Two's Complement:** Two's complement numbers can be sign-extended to match the size of the storage medium while preserving their value. For example, consider the 4-bit representation `1110`, which corresponds to `-2`. To store this in a 32-bit register, we simply extend the MSB across the additional bits. The resulting 32-bit representation would be `1111 1111 1111 1111 1111 1111 1111 1110`. This extension ensures that the value `-2` is maintained accurately in arithmetic operations, regardless of the bit width of the register.
 
+### 3. Excess-N (Offset Binary) Representation
 
+In excess-N notation, a fixed value, called the bias or offset (N), is added to the actual integer value to form the encoded value. This approach shifts the range of representable numbers, ensuring that all encoded values are non-negative. The value of bias K is usually choosen as 2<sup>n-1</sup> so that the representation is symmetric around 0. For example, with a bias = 3, the number -3 would be represented as 0, 0 would be represented as 3 and 3 would be represented as 6 and so on. 
 
+This representation simplifies certain types of arithmetic operations and is particularly useful in applications such as floating-point arithmetic and digital signal processing. Excess-N encoding simplifies comparison and subtraction operations, as the encoded values can be compared directly without considering the sign. This representation is widely used in the exponent field of IEEE 754 floating-point numbers, where it helps manage the range of representable exponents efficiently.
+
+| Binary Representation | Decimal Value (Excess-8) | Decimal Value (Unsigned) |
+| --------------------- | ------------------------ | ------------------------ |
+| 0000                  | -8                       | 0                        |
+| 0001                  | -7                       | 1                        |
+| 0010                  | -6                       | 2                        |
+| 0011                  | -5                       | 3                        |
+| 0100                  | -4                       | 4                        |
+| 0101                  | -3                       | 5                        |
+| 0110                  | -2                       | 6                        |
+| 0111                  | -1                       | 7                        |
+| 1000                  | 0                        | 8                        |
+| 1001                  | 1                        | 9                        |
+| 1010                  | 2                        | 10                       |
+| 1011                  | 3                        | 11                       |
+| 1100                  | 4                        | 12                       |
+| 1101                  | 5                        | 13                       |
+| 1110                  | 6                        | 14                       |
+| 1111                  | 7                        | 15                       |
+
+**Range of Representation**
+
+For an n-bit number with bias as K, range of representation can be given by 
+$$ -k \text{ to } (2^n - 1) - k.$$
