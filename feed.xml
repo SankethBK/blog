@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-07-30T12:27:09+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Representation of Negative Numbers in Hardware</title><link href="http://localhost:4000/blog/cpu/representation-of-negative-numbers" rel="alternate" type="text/html" title="Representation of Negative Numbers in Hardware" /><published>2024-07-21T20:51:00+05:30</published><updated>2024-07-21T20:51:00+05:30</updated><id>http://localhost:4000/blog/cpu/representation-of-negative-numbers</id><content type="html" xml:base="http://localhost:4000/blog/cpu/representation-of-negative-numbers"><![CDATA[<p>Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-07-31T01:44:29+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Representation of Negative Numbers in Hardware</title><link href="http://localhost:4000/blog/cpu/representation-of-negative-numbers" rel="alternate" type="text/html" title="Representation of Negative Numbers in Hardware" /><published>2024-07-21T20:51:00+05:30</published><updated>2024-07-21T20:51:00+05:30</updated><id>http://localhost:4000/blog/cpu/representation-of-negative-numbers</id><content type="html" xml:base="http://localhost:4000/blog/cpu/representation-of-negative-numbers"><![CDATA[<p>Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.</p>
 
 <h2 id="characteristics-of-an-ideal-representation">Characteristics of an Ideal Representation</h2>
 
@@ -252,72 +252,89 @@
   <thead>
     <tr>
       <th>Binary Representation</th>
-      <th>Decimal Value</th>
+      <th>Decimal Value (signed)</th>
+      <th>Decimal Value (unsigned)</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>1000</td>
       <td>-8</td>
+      <td>8</td>
     </tr>
     <tr>
       <td>1001</td>
       <td>-7</td>
+      <td>9</td>
     </tr>
     <tr>
       <td>1010</td>
       <td>-6</td>
+      <td>10</td>
     </tr>
     <tr>
       <td>1011</td>
       <td>-5</td>
+      <td>11</td>
     </tr>
     <tr>
       <td>1100</td>
       <td>-4</td>
+      <td>12</td>
     </tr>
     <tr>
       <td>1101</td>
       <td>-3</td>
+      <td>13</td>
     </tr>
     <tr>
       <td>1110</td>
       <td>-2</td>
+      <td>14</td>
     </tr>
     <tr>
       <td>1111</td>
       <td>-1</td>
+      <td>15</td>
     </tr>
     <tr>
       <td>0000</td>
+      <td>0</td>
       <td>0</td>
     </tr>
     <tr>
       <td>0001</td>
       <td>1</td>
+      <td>1</td>
     </tr>
     <tr>
       <td>0010</td>
+      <td>2</td>
       <td>2</td>
     </tr>
     <tr>
       <td>0011</td>
       <td>3</td>
+      <td>3</td>
     </tr>
     <tr>
       <td>0100</td>
+      <td>4</td>
       <td>4</td>
     </tr>
     <tr>
       <td>0101</td>
       <td>5</td>
+      <td>5</td>
     </tr>
     <tr>
       <td>0110</td>
       <td>6</td>
+      <td>6</td>
     </tr>
     <tr>
       <td>0111</td>
+      <td>7</td>
       <td>7</td>
     </tr>
   </tbody>
@@ -350,6 +367,28 @@ Any n-bit number + its one's complement + 1 = 0
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Any n-bit number + its two's complement = 0
 </code></pre></div></div>
 
+<p>The rationale behind two’s complement can be understood by comparing it with the unsigned binary interpretation:</p>
+
+<p>Taking an 8-bit value a<sub>7</sub> a<sub>6</sub> a<sub>5</sub> a<sub>4</sub> a<sub>3</sub> a<sub>2</sub> a<sub>1</sub> a<sub>0</sub></p>
+
+<p>The usual unsigned binary interpretation is:</p>
+
+\[2^7 \cdot a_7 + 2^6 \cdot a_6 + 2^5 \cdot a_5 + 2^4 \cdot a_4 + 2^3 \cdot a_3 + 2^2 \cdot a_2 + 2^1 \cdot a_1 + 2^0 \cdot a_0\]
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>11111111 = 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1 = 255
+</code></pre></div></div>
+
+<p>In the two’s complement representation, all negative numbers have the MSB set to 1. To get the negative number represented by the two’s complement of a value, we need to multiply the MSB with -1. The formula for two’s complement is:</p>
+
+\[-2^7 \cdot a_7 + 2^6 \cdot a_6 + 2^5 \cdot a_5 + 2^4 \cdot a_4 + 2^3 \cdot a_3 + 2^2 \cdot a_2 + 2^1 \cdot a_1 + 2^0 \cdot a_0\]
+
+<p>For eg: negative number represented by <code class="language-plaintext highlighter-rouge">11111111</code> is</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>11111111 = -128 + 64 + 32 + 16 + 8 + 4 + 2 + 1 = -1
+</code></pre></div></div>
+
+<p>It’s important to note that while <code class="language-plaintext highlighter-rouge">11111111</code> represents <code class="language-plaintext highlighter-rouge">-1</code> in the signed two’s complement system, it can also be interpreted as <code class="language-plaintext highlighter-rouge">255</code> in unsigned integers, as the CPU does not enforce any restriction. The interpretation is determined by the compiler.</p>
+
 <p><strong>Pros</strong></p>
 
 <p>Two’s complement solves all the limitations from sign and magnitude and one’s complement representations:</p>
@@ -360,27 +399,129 @@ Any n-bit number + its one's complement + 1 = 0
   </li>
   <li>
     <p><strong>Natural Support for Unsigned Integers:</strong> Since MSB has no special significance and there is no change in the process of addition (unlike wrap around carry in one’s complement). Two’s complement naturally enables support for unsigned integers.</p>
+
+    <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="n">For</span> <span class="n">example</span> <span class="n">in</span> <span class="n">C</span>
+
+ <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>                             <span class="mo">0010</span>
+ <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">b</span> <span class="o">=</span> <span class="mi">9</span><span class="p">;</span>                            <span class="o">+</span><span class="mi">1001</span>
+ <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span> <span class="cm">/* result is 11 */</span>  <span class="o">==</span>  <span class="mi">1011</span>  
+
+ <span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>                                      <span class="mo">0010</span>
+ <span class="kt">int</span> <span class="n">b</span> <span class="o">=</span> <span class="o">-</span><span class="mi">7</span><span class="p">;</span>                                    <span class="o">+</span><span class="mi">1001</span>
+ <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span> <span class="cm">/* result is -5 */</span>           <span class="o">==</span>  <span class="mi">1011</span>
+</code></pre></div>    </div>
+
+    <p>We can see that even though result is <code class="language-plaintext highlighter-rouge">1011</code> in both cases. Compiler interprets it as <code class="language-plaintext highlighter-rouge">11</code> in the first case and <code class="language-plaintext highlighter-rouge">-5</code> in the second case.</p>
+
+    <p>In both cases, the binary result is <code class="language-plaintext highlighter-rouge">1011</code>. However, the interpretation differs based on whether the numbers are treated as unsigned or signed. The compiler interprets <code class="language-plaintext highlighter-rouge">1011</code> as <code class="language-plaintext highlighter-rouge">11</code> when dealing with unsigned integers and as <code class="language-plaintext highlighter-rouge">-5</code> for signed integers. This flexibility is possible because the CPU treats the binary numbers uniformly without needing special handling for the sign.</p>
+  </li>
+  <li>
+    <p><strong>Sign Extension in Two’s Complement:</strong> Two’s complement numbers can be sign-extended to match the size of the storage medium while preserving their value. For example, consider the 4-bit representation <code class="language-plaintext highlighter-rouge">1110</code>, which corresponds to <code class="language-plaintext highlighter-rouge">-2</code>. To store this in a 32-bit register, we simply extend the MSB across the additional bits. The resulting 32-bit representation would be <code class="language-plaintext highlighter-rouge">1111 1111 1111 1111 1111 1111 1111 1110</code>. This extension ensures that the value <code class="language-plaintext highlighter-rouge">-2</code> is maintained accurately in arithmetic operations, regardless of the bit width of the register.</p>
   </li>
 </ol>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>For example in C
+<h3 id="3-excess-n-offset-binary-representation">3. Excess-N (Offset Binary) Representation</h3>
 
-unsigned int a = 2;                            0010
-unsigned int b = 9;                           +1001
-unsigned int c = a + b; // result is 11    ==  1011  
+<p>In excess-N notation, a fixed value, called the bias or offset (N), is added to the actual integer value to form the encoded value. This approach shifts the range of representable numbers, ensuring that all encoded values are non-negative. The value of bias K is usually choosen as 2<sup>n-1</sup> so that the representation is symmetric around 0. For example, with a bias = 3, the number -3 would be represented as 0, 0 would be represented as 3 and 3 would be represented as 6 and so on.</p>
 
-int a = 2;                                     0010
-int b = -7;                                   +1001
-int c = a + b; // result is -5                 1011
-</code></pre></div></div>
+<p>This representation simplifies certain types of arithmetic operations and is particularly useful in applications such as floating-point arithmetic and digital signal processing. Excess-N encoding simplifies comparison and subtraction operations, as the encoded values can be compared directly without considering the sign. This representation is widely used in the exponent field of IEEE 754 floating-point numbers, where it helps manage the range of representable exponents efficiently.</p>
 
-<p>We can see that even though result is <code class="language-plaintext highlighter-rouge">1011</code> in both cases. Compiler interprets it as <code class="language-plaintext highlighter-rouge">11</code> in first case and <code class="language-plaintext highlighter-rouge">-5</code> in second case.</p>
+<table>
+  <thead>
+    <tr>
+      <th>Binary Representation</th>
+      <th>Decimal Value (Excess-8)</th>
+      <th>Decimal Value (Unsigned)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0000</td>
+      <td>-8</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>0001</td>
+      <td>-7</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>0010</td>
+      <td>-6</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>0011</td>
+      <td>-5</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <td>0100</td>
+      <td>-4</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <td>0101</td>
+      <td>-3</td>
+      <td>5</td>
+    </tr>
+    <tr>
+      <td>0110</td>
+      <td>-2</td>
+      <td>6</td>
+    </tr>
+    <tr>
+      <td>0111</td>
+      <td>-1</td>
+      <td>7</td>
+    </tr>
+    <tr>
+      <td>1000</td>
+      <td>0</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>1001</td>
+      <td>1</td>
+      <td>9</td>
+    </tr>
+    <tr>
+      <td>1010</td>
+      <td>2</td>
+      <td>10</td>
+    </tr>
+    <tr>
+      <td>1011</td>
+      <td>3</td>
+      <td>11</td>
+    </tr>
+    <tr>
+      <td>1100</td>
+      <td>4</td>
+      <td>12</td>
+    </tr>
+    <tr>
+      <td>1101</td>
+      <td>5</td>
+      <td>13</td>
+    </tr>
+    <tr>
+      <td>1110</td>
+      <td>6</td>
+      <td>14</td>
+    </tr>
+    <tr>
+      <td>1111</td>
+      <td>7</td>
+      <td>15</td>
+    </tr>
+  </tbody>
+</table>
 
-<p>In both cases, the binary result is <code class="language-plaintext highlighter-rouge">1011</code>. However, the interpretation differs based on whether the numbers are treated as unsigned or signed. The compiler interprets <code class="language-plaintext highlighter-rouge">1011</code> as <code class="language-plaintext highlighter-rouge">11</code> when dealing with unsigned integers and as <code class="language-plaintext highlighter-rouge">-5</code> for signed integers. This flexibility is possible because the CPU treats the binary numbers uniformly without needing special handling for the sign.</p>
+<p><strong>Range of Representation</strong></p>
 
-<ol>
-  <li><strong>Sign Extension in Two’s Complement:</strong> Two’s complement numbers can be sign-extended to match the size of the storage medium while preserving their value. For example, consider the 4-bit representation <code class="language-plaintext highlighter-rouge">1110</code>, which corresponds to <code class="language-plaintext highlighter-rouge">-2</code>. To store this in a 32-bit register, we simply extend the MSB across the additional bits. The resulting 32-bit representation would be <code class="language-plaintext highlighter-rouge">1111 1111 1111 1110</code>. This extension ensures that the value <code class="language-plaintext highlighter-rouge">-2</code> is maintained accurately in arithmetic operations, regardless of the bit width of the register.</li>
-</ol>]]></content><author><name>Sanketh</name></author><category term="cpu" /><summary type="html"><![CDATA[Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.]]></summary></entry><entry><title type="html">Overview of MIPS Assembly</title><link href="http://localhost:4000/blog/cpu/assembly/overview-of-mips-assembly" rel="alternate" type="text/html" title="Overview of MIPS Assembly" /><published>2024-07-12T20:38:05+05:30</published><updated>2024-07-12T20:38:05+05:30</updated><id>http://localhost:4000/blog/cpu/assembly/overview-of-mips-assembly</id><content type="html" xml:base="http://localhost:4000/blog/cpu/assembly/overview-of-mips-assembly"><![CDATA[<p>MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA’s. It was developed in the early 1980s at Stanford University by Professor John L. Hennessy. MIPS is widely used in academic research and industry, particularly in computer architecture courses due to its straightforward design and in various embedded systems applications for its efficiency and performance.</p>
+<p>For an n-bit number with bias as K, range of representation can be given by 
+\(-k \text{ to } (2^n - 1) - k.\)</p>]]></content><author><name>Sanketh</name></author><category term="cpu" /><summary type="html"><![CDATA[Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.]]></summary></entry><entry><title type="html">Overview of MIPS Assembly</title><link href="http://localhost:4000/blog/cpu/assembly/overview-of-mips-assembly" rel="alternate" type="text/html" title="Overview of MIPS Assembly" /><published>2024-07-12T20:38:05+05:30</published><updated>2024-07-12T20:38:05+05:30</updated><id>http://localhost:4000/blog/cpu/assembly/overview-of-mips-assembly</id><content type="html" xml:base="http://localhost:4000/blog/cpu/assembly/overview-of-mips-assembly"><![CDATA[<p>MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA’s. It was developed in the early 1980s at Stanford University by Professor John L. Hennessy. MIPS is widely used in academic research and industry, particularly in computer architecture courses due to its straightforward design and in various embedded systems applications for its efficiency and performance.</p>
 
 <h2 id="history">History</h2>
 
