@@ -389,7 +389,7 @@
 
 <p><strong>Intuition Behind Two’s Complement</strong></p>
 
-<p>In one’s complement approach we saw that whenver a negative number is involved in addition the result could generate a carry which we have to wrap around to get correct answer. The reason for this is whenever result falls on positive side of the number line it has to cross zero’s. Because of this, the result will fall short by one number on the number line. Two’s complement solves this by adding <code class="language-plaintext highlighter-rouge">1</code> to the one’s complement of a number which effectively removes <code class="language-plaintext highlighter-rouge">-0</code> from the binary number line threby giving correct result.</p>
+<p>In one’s complement approach we saw that whenever a negative number is involved in addition the result could generate a carry which we have to wrap around to get correct answer. The reason for this is whenever result falls on positive side of the number line it has to cross two zero’s. Because of this, the result will fall short by one number on the number line. Two’s complement solves this by adding <code class="language-plaintext highlighter-rouge">1</code> to the one’s complement of a number which effectively removes <code class="language-plaintext highlighter-rouge">-0</code> from the binary number line threby giving correct result.</p>
 
 <p>Sum of any n-bit number and its one’s complement gives the highest possible number that can be represented by those n-bits. For eg:</p>
 
@@ -423,7 +423,7 @@ Any n-bit number + its one's complement + 1 = 0
     <p><strong>Single Representation for Zero:</strong> In two’s complement, zero has only one unique representation. This eliminates the problem of having two distinct representations for zero, which was a limitation in the one’s complement system. By having a single, consistent zero, two’s complement simplifies arithmetic operations and avoids the issue of shifting results by one number.</p>
   </li>
   <li>
-    <p><strong>Natural Support for Unsigned Integers:</strong> Since MSB has no special significance and there is no change in the process of addition (unlike wrap around carry in one’s complement). Two’s compelement naturally enables support for unsigned integers.</p>
+    <p><strong>Natural Support for Unsigned Integers:</strong> Since MSB has no special significance and there is no change in the process of addition (unlike wrap around carry in one’s complement). Two’s complement naturally enables support for unsigned integers.</p>
   </li>
 </ol>
 

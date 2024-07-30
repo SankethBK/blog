@@ -166,7 +166,7 @@ $$ -2^{(n-1)} \text{ to } 2^{(n-1)} - 1 $$
 
 **Intuition Behind Two's Complement**
 
-In one's complement approach we saw that whenver a negative number is involved in addition the result could generate a carry which we have to wrap around to get correct answer. The reason for this is whenever result falls on positive side of the number line it has to cross zero's. Because of this, the result will fall short by one number on the number line. Two's complement solves this by adding `1` to the one's complement of a number which effectively removes `-0` from the binary number line threby giving correct result.
+In one's complement approach we saw that whenever a negative number is involved in addition the result could generate a carry which we have to wrap around to get correct answer. The reason for this is whenever result falls on positive side of the number line it has to cross two zero's. Because of this, the result will fall short by one number on the number line. Two's complement solves this by adding `1` to the one's complement of a number which effectively removes `-0` from the binary number line threby giving correct result.
 
 Sum of any n-bit number and its one's complement gives the highest possible number that can be represented by those n-bits. For eg:
 
@@ -200,7 +200,7 @@ Two's complement solves all the limitations from sign and magnitude and one's co
 
 1. **Single Representation for Zero:** In two's complement, zero has only one unique representation. This eliminates the problem of having two distinct representations for zero, which was a limitation in the one's complement system. By having a single, consistent zero, two's complement simplifies arithmetic operations and avoids the issue of shifting results by one number.
 
-2. **Natural Support for Unsigned Integers:** Since MSB has no special significance and there is no change in the process of addition (unlike wrap around carry in one's complement). Two's compelement naturally enables support for unsigned integers. 
+2. **Natural Support for Unsigned Integers:** Since MSB has no special significance and there is no change in the process of addition (unlike wrap around carry in one's complement). Two's complement naturally enables support for unsigned integers. 
 
 ```
 For example in C
