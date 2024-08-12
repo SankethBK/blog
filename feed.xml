@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-07-31T01:44:29+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Representation of Negative Numbers in Hardware</title><link href="http://localhost:4000/blog/cpu/representation-of-negative-numbers" rel="alternate" type="text/html" title="Representation of Negative Numbers in Hardware" /><published>2024-07-21T20:51:00+05:30</published><updated>2024-07-21T20:51:00+05:30</updated><id>http://localhost:4000/blog/cpu/representation-of-negative-numbers</id><content type="html" xml:base="http://localhost:4000/blog/cpu/representation-of-negative-numbers"><![CDATA[<p>Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-08-13T01:29:51+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Representation of Negative Numbers in Hardware</title><link href="http://localhost:4000/blog/cpu/representation-of-negative-numbers" rel="alternate" type="text/html" title="Representation of Negative Numbers in Hardware" /><published>2024-07-21T20:51:00+05:30</published><updated>2024-07-21T20:51:00+05:30</updated><id>http://localhost:4000/blog/cpu/representation-of-negative-numbers</id><content type="html" xml:base="http://localhost:4000/blog/cpu/representation-of-negative-numbers"><![CDATA[<p>Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.</p>
 
 <h2 id="characteristics-of-an-ideal-representation">Characteristics of an Ideal Representation</h2>
 
@@ -532,11 +532,11 @@ Any n-bit number + its one's complement + 1 = 0
 <p>MIPS is built on RISC principles, which embrace simplicity and efficiency, making it an ideal choice for learning about CPU architecture in general. Some principles of RISC are:</p>
 
 <ol>
-  <li>Simple Instructions: RISC architectures use a small, highly optimized set of instructions. Each instruction is designed to be simple and execute in a single clock cycle (under ideal conditions in a pipelined processor).</li>
-  <li>Load/Store Architecture: RISC separates memory access and data processing instructions. Only load and store instructions can access memory, while all other operations are performed on registers. This simplifies the instruction set and execution.</li>
-  <li>Fixed-Length Instructions: Instructions in RISC architectures are of uniform length, typically 32 bits. This uniformity simplifies instruction decoding and pipeline design.</li>
-  <li>Simple Addressing Modes: RISC architectures use a small number of simple addressing modes to keep instruction execution fast and efficient. Common addressing modes include register, immediate, and displacement.</li>
-  <li>Pipelining: RISC architectures are designed to efficiently support pipelining. Instructions are broken down into stages (fetch, decode, execute, memory access, write-back) that can be processed simultaneously for different instructions.</li>
+  <li><strong>Simple Instructions:</strong> RISC architectures use a small, highly optimized set of instructions. Each instruction is designed to be simple and execute in a single clock cycle (under ideal conditions in a pipelined processor).</li>
+  <li><strong>Load/Store Architecture:</strong> RISC separates memory access and data processing instructions. Only load and store instructions can access memory, while all other operations are performed on registers. This simplifies the instruction set and execution.</li>
+  <li><strong>Fixed-Length Instructions:</strong> Instructions in RISC architectures are of uniform length, typically 32 bits. This uniformity simplifies instruction decoding and pipeline design.</li>
+  <li><strong>Simple Addressing Modes:</strong> RISC architectures use a small number of simple addressing modes to keep instruction execution fast and efficient. Common addressing modes include register, immediate, and displacement.</li>
+  <li><strong>Pipelining:</strong> RISC architectures are designed to efficiently support pipelining. Instructions are broken down into stages (fetch, decode, execute, memory access, write-back) that can be processed simultaneously for different instructions.</li>
 </ol>
 
 <h2 id="mips32-and-mips64">MIPS32 and MIPS64</h2>
@@ -551,11 +551,11 @@ Any n-bit number + its one's complement + 1 = 0
 
 <h3 id="general-purpose-registers">General Purpose Registers</h3>
 
-<p>General Purpose registers are meant to be used by programmers and compilers for whatver operations required and has no special meaning to CPU. General-purpose registers are versatile storage locations within the CPU used for a wide range of tasks like holding intermediate data, operands and results of computations, and store temporary values during program execution. They are meant to be utilized by programmers and compilers as needed, without any special significance to the CPU itself.</p>
+<p>General Purpose registers are meant to be used by programmers and compilers for whatever operations required and has no special meaning to CPU. General-purpose registers are versatile storage locations within the CPU used for a wide range of tasks like holding intermediate data, operands and results of computations, and store temporary values during program execution. They are meant to be utilized by programmers and compilers as needed, without any special significance to the CPU itself.</p>
 
 <p>MIPS has 32 general purpose registers (R0 - R31), 32 floating point registers (F0 - F31) that can hold either a 32-bit single-precision number or a 64-bit double-precision number. General Purpose Registers (GPRs) in MIPS architectures are used for storing immediate values, temporary data, function arguments, and return values. They also facilitate address calculation for memory operations and control flow in branching and jumping instructions.</p>
 
-<p>In MIPS, most registers are truly general-purpose, meaning they can be used for any purpose. MIPS programmers adhere to agreed-upon guidelines specifying how registers should be utilized. For instance, the stack pointer ($sp), global pointer ($gp), and frame pointer ($fp) are conventions rather than hardware-enforced roles, unlike in other Assembly languages like x86. The stack pointer is purely a software convention; no push instruction implicitly uses it. Using $t0 instead of $t3 as a temporary register isn’t inherently faster or better. However, there’s one notable exception: the jal instruction implicitly writes the return address to $31 (the link register).</p>
+<p>In MIPS, most registers are truly general-purpose, meaning they can be used for any purpose. MIPS programmers adhere to agreed-upon guidelines specifying how registers should be utilized. For instance, the stack pointer <code class="language-plaintext highlighter-rouge">($sp)</code>, global pointer <code class="language-plaintext highlighter-rouge">($gp)</code>, and frame pointer <code class="language-plaintext highlighter-rouge">($fp)</code> are conventions rather than hardware-enforced roles, unlike in other Assembly languages like x86. The stack pointer is purely a software convention; no push instruction implicitly uses it. Using <code class="language-plaintext highlighter-rouge">$t0</code> instead of <code class="language-plaintext highlighter-rouge">$t3</code> as a temporary register isn’t inherently faster or better. However, there’s one notable exception: the <code class="language-plaintext highlighter-rouge">jal</code> instruction implicitly writes the return address to <code class="language-plaintext highlighter-rouge">$31</code> (the link register).</p>
 
 <table>
   <thead>
@@ -583,7 +583,7 @@ Any n-bit number + its one's complement + 1 = 0
       <td>$2-$3</td>
       <td>v0-v1</td>
       <td>Used to hold function return values.</td>
-      <td>No      <em>**</em></td>
+      <td>No</td>
     </tr>
     <tr>
       <td>$4-$7</td>
@@ -642,7 +642,7 @@ Any n-bit number + its one's complement + 1 = 0
   </tbody>
 </table>
 
-<p>When we say that saved registers must be “preserved across function calls,” it means that the values in these registers should remain unchanged when a function (subroutine) returns to its caller. In other words, if a function uses these registers, it must ensure that any values stored in them before the function call are restored when the function completes. This is typically enforced through a process called “register saving” and “register restoring.”</p>
+<p>When we say that saved registers must be “preserved across function calls,” it means that the values in these registers should remain unchanged when a function (subroutine) returns to its caller. In other words, if a function uses these registers, it must ensure that any values stored in them before the function call are restored when the function completes. This is typically enforced through a process called “register saving” and “register restoring”. The callee function first identifies which registers it uses that need to be preserved across function calls. These are known as “callee-saved” or “non-volatile” registers. The callee then saves the values of these registers by pushing them onto the stack. After the callee subroutine completes its task, it pops the saved register values off the stack, restoring the registers to their original state before returning control to the caller.</p>
 
 <h3 id="special-purpose-registers">Special Purpose Registers</h3>
 
@@ -666,12 +666,12 @@ Any n-bit number + its one's complement + 1 = 0
 <h2 id="data-types-in-mips">Data Types in MIPS</h2>
 
 <ol>
-  <li><strong>Byte (8-bit):</strong> Represented as .byte in MIPS assembly. Each byte consists of 8 bits.</li>
-  <li><strong>Halfword (16-bit):</strong> Represented as .half or .hword in MIPS assembly. Each halfword consists of 16 bits or 2 bytes.</li>
-  <li><strong>Word (32-bit):</strong> Represented as .word in MIPS assembly. Each word consists of 32 bits or 4 bytes. This is the default data type for many operations in MIPS32.</li>
-  <li><strong>Doubleword (64-bit):</strong> Represented as .dword in MIPS assembly. Each doubleword consists of 64 bits or 8 bytes. This is especially relevant in MIPS64 architecture.</li>
-  <li><strong>Float (32-bit floating-point):</strong> Represented as .float in MIPS assembly. This follows the IEEE 754 standard for single-precision floating-point numbers.</li>
-  <li><strong>Double (64-bit floating-point):</strong> Represented as .double in MIPS assembly. This follows the IEEE 754 standard for double-precision floating-point numbers.</li>
+  <li><strong>Byte (8-bit):</strong> Represented as <code class="language-plaintext highlighter-rouge">.byte</code> in MIPS assembly. Each byte consists of 8 bits.</li>
+  <li><strong>Halfword (16-bit):</strong> Represented as <code class="language-plaintext highlighter-rouge">.half</code> or <code class="language-plaintext highlighter-rouge">.hword</code> in MIPS assembly. Each halfword consists of 16 bits or 2 bytes.</li>
+  <li><strong>Word (32-bit):</strong> Represented as <code class="language-plaintext highlighter-rouge">.word</code> in MIPS assembly. Each word consists of 32 bits or 4 bytes. This is the default data type for many operations in MIPS32.</li>
+  <li><strong>Doubleword (64-bit):</strong> Represented as <code class="language-plaintext highlighter-rouge">.dword</code> in MIPS assembly. Each doubleword consists of 64 bits or 8 bytes. This is especially relevant in MIPS64 architecture.</li>
+  <li><strong>Float (32-bit floating-point):</strong> Represented as <code class="language-plaintext highlighter-rouge">.float</code> in MIPS assembly. This follows the IEEE 754 standard for single-precision floating-point numbers.</li>
+  <li><strong>Double (64-bit floating-point):</strong> Represented as <code class="language-plaintext highlighter-rouge">.double</code> in MIPS assembly. This follows the IEEE 754 standard for double-precision floating-point numbers.</li>
 </ol>
 
 <h2 id="addressing-modes-in-mips">Addressing Modes in MIPS</h2>
@@ -874,9 +874,9 @@ andi $t0, $t1, 0xFF  # $t0 = $t1 &amp; 0xFF
     <p><strong>Low Code Density:</strong> Uniform instruction width can lead to inefficient use of memory when instructions are shorter than the fixed width. For example, if you have a 32-bit instruction width but some instructions only require a few bits, the extra bits in each instruction are wasted. This can lead to larger code sizes and increased memory consumption.</p>
   </li>
   <li>
-    <p><strong>Decreased Flexibility due to Implicity Operands:</strong> Strict uniform formatting tends to exclude the use of implicit operands, which are operands not explicitly specified in the instruction but implied by the operation. For instance, even though MIPS mostly avoids implicit operands, it still uses an implicit destination register for the link register ($ra), which stores the return address for function calls. (When a function call is made in MIPS, the jal (jump and link) instruction is used. This instruction not only jumps to the target function address but also implicitly stores the return address (the address of the instruction following the jal) in the link register $ra (which is register $31). This behavior is implicit in the sense that the jal instruction does not need to specify that the return address should be stored in $ra; it is automatically understood and handled by the instruction.)</p>
+    <p><strong>Decreased Flexibility due to Implicit Operands:</strong> Strict uniform formatting tends to exclude the use of implicit operands, which are operands not explicitly specified in the instruction but implied by the operation. For instance, even though MIPS mostly avoids implicit operands, it still uses an implicit destination register for the link register (<code class="language-plaintext highlighter-rouge">$ra</code>), which stores the return address for function calls. (When a function call is made in MIPS, the jal (jump and link) instruction is used. This instruction not only jumps to the target function address but also implicitly stores the return address (the address of the instruction following the <code class="language-plaintext highlighter-rouge">jal</code>) in the link register <code class="language-plaintext highlighter-rouge">$ra</code> (which is register <code class="language-plaintext highlighter-rouge">$31</code>). This behavior is implicit in the sense that the <code class="language-plaintext highlighter-rouge">jal</code> instruction does not need to specify that the return address should be stored in <code class="language-plaintext highlighter-rouge">$ra</code>; it is automatically understood and handled by the instruction.)</p>
   </li>
-  <li><strong>Cannot Handle Large Values of Immediate:</strong> Fixed-length instructions present challenges when dealing with large immediate values (constants embedded directly within instructions). In MIPS immediate values to 16 bits within a single instruction. If a constant exceeds this 16-bit limit, additional steps are required to handle the larger value.
+  <li><strong>Cannot Handle Large Values of Immediate:</strong> Fixed-length instructions present challenges when dealing with large immediate values (constants embedded directly within instructions). In MIPS immediate values can be upto 16-bits within a single instruction. If a constant exceeds this 16-bit limit, additional steps are required to handle the larger value.
     <ol>
       <li><strong>Loading as Data:</strong> One method to handle large constants is to load them from memory. This approach involves:
         <ul>
@@ -893,11 +893,27 @@ andi $t0, $t1, 0xFF  # $t0 = $t1 &amp; 0xFF
   <li><strong>Limited Address Bound for Branching Instructions:</strong> In MIPS, the jump instruction uses only 26 bits to specify the immediate target address. Due to memory alignment, the last 2 bits are always zero, effectively giving 28 bits for the target address. The upper 4 bits of the Program Counter (PC) are combined with these 28 bits to form a full 32-bit address, which limits the addressable range to 256 MB. Consequently, the assembly programmer or compiler must ensure that the target address of the jump instruction lies within this 256 MB boundary. If the target address exceeds this limit, other options must be employed, such as using the <code class="language-plaintext highlighter-rouge">jr</code> (jump to the address stored in register) instruction, which can specify a full 32-bit address by storing the address in a register. In some versions, the assembler will issue a warning if the target address of a <code class="language-plaintext highlighter-rouge">j</code> instruction exceeds the 256 MB bound. In other cases, the assembler might automatically replace the <code class="language-plaintext highlighter-rouge">j</code> instruction with a <code class="language-plaintext highlighter-rouge">jr</code> instruction to handle the full address space correctly.</li>
 </ol>
 
+<h2 id="coprocessors-in-mips">Coprocessors in MIPS</h2>
+
+<p>MIPS is a modular architecture supporting up to four coprocessors (CP0/1/2/3). Coprocessors are specialized processing units that work alongside the main CPU to handle specific types of operations, such as floating-point arithmetic, system control, or other specialized tasks. MIPS typically defines up to four coprocessors, though not all are always implemented in every MIPS processor. These coprocessors are numbered CP0 through CP3.</p>
+
+<ol>
+  <li>
+    <p><strong>Coprocessor 0 (CP0) - System Control Coprocessor:</strong> CP0 is responsible for managing system control functions, including exception handling, memory management, and processor status. It plays a critical role in configuring and controlling the behavior of the MIPS processor. CP0 contains a set of special-purpose registers used for various control tasks, such as the Status Register, Cause Register, EPC (Exception Program Counter), and TLB (Translation Lookaside Buffer) management registers.</p>
+  </li>
+  <li>
+    <p><strong>Coprocessor 1 (CP1) - Floating-Point Unit (FPU):</strong>  CP1 is dedicated to handling floating-point arithmetic operations, such as addition, subtraction, multiplication, division, and square root operations on floating-point numbers. This offloads complex calculations from the main CPU, improving overall performance for tasks requiring floating-point computations. CP1 includes 32 floating-point registers (<code class="language-plaintext highlighter-rouge">$f0</code> to <code class="language-plaintext highlighter-rouge">$f31</code>), which are used to store floating-point operands and results.</p>
+  </li>
+  <li>
+    <p><strong>Coprocessor 2 and 3 (Optional):</strong> CP2 and CP3 are optional coprocessors that can be used for application-specific purposes, such as vector processing, digital signal processing (DSP), or other specialized tasks. For example, in the PlayStation video game console, CP2 is the Geometry Transformation Engine (GTE), which accelerates the processing of geometry in 3D computer graphics.</p>
+  </li>
+</ol>
+
 <h2 id="overview-of-mips-instructions">Overview of MIPS Instructions</h2>
 
 <h3 id="1-memory-access-instructions">1. Memory Access Instructions</h3>
 
-<p>Memory access instructions in MIPS facilitate moving data between registers and memory, as well as between integer, floating-point (FP), or special registers. Most of the memory access instructions are I-type and use register indirect with displacement as addressing mode.</p>
+<p>Memory access instructions in MIPS facilitate moving data between registers and memory, as well as between general purpose, floating-point (FP), or special registers. Most of the memory access instructions are I-type and use register indirect with displacement as addressing mode.</p>
 
 <h4 id="1-load-family-of-instructions">1. Load Family of Instructions</h4>
 
@@ -907,7 +923,7 @@ andi $t0, $t1, 0xFF  # $t0 = $t1 &amp; 0xFF
 
 <ul>
   <li><strong>LOAD</strong> is the opcode for the specific load instruction (e.g., LB, LBU, LH, LHU, LW, LWU, LD, L.S, L.D).</li>
-  <li>**<rt>** is the target register where the data will be loaded.</rt></li>
+  <li><strong>&lt;rt&gt;</strong> is the target register where the data will be loaded.</li>
   <li><strong>offset</strong> is a 16-bit signed immediate value representing the displacement.</li>
   <li><strong>base</strong> is the base register whose contents are added to the offset to form the effective memory address.</li>
 </ul>
@@ -965,6 +981,551 @@ andi $t0, $t1, 0xFF  # $t0 = $t1 &amp; 0xFF
       <td><strong>L.D</strong></td>
       <td>Load Double Precision Float</td>
       <td>Loads a double precision floating-point value from memory into an FP register.</td>
+    </tr>
+    <tr>
+      <td><strong>LUI</strong></td>
+      <td>Load Upper Immediate</td>
+      <td>Loads a 16-bit immediate value into the upper 16 bits of a register, with the lower 16 bits set to zero. Unlike other load instructions, LUI does not interact with memory.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="2-store-family-of-instructions">2. Store Family of Instructions</h4>
+
+<p>The store family of instructions in MIPS transfers data from a register to a specified memory location. All of the store instructions in MIPS are I-type instructions, and they follow this general format:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>STORE &lt;rt&gt;, offset(base)
+</code></pre></div></div>
+
+<ul>
+  <li><strong>STORE</strong> is the opcode for the specific store instruction (e.g., SB, SH, SW, SD, S.S, S.D).</li>
+  <li><strong>&lt;rt&gt;</strong> is the source register whose data will be stored in memory.</li>
+  <li><strong>offset</strong> is a 16-bit signed immediate value representing the displacement.</li>
+  <li><strong>base</strong> is the base register whose contents are added to the offset to form the effective memory address.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>Instruction</th>
+      <th>Meaning</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>SB</strong></td>
+      <td>Store Byte</td>
+      <td>Stores a byte from a register into memory.</td>
+    </tr>
+    <tr>
+      <td><strong>SH</strong></td>
+      <td>Store Halfword</td>
+      <td>Stores a halfword from a register into memory.</td>
+    </tr>
+    <tr>
+      <td><strong>SW</strong></td>
+      <td>Store Word</td>
+      <td>Stores a word from a register into memory.</td>
+    </tr>
+    <tr>
+      <td><strong>SD</strong></td>
+      <td>Store Doubleword</td>
+      <td>Stores a doubleword from a register into memory (MIPS64).</td>
+    </tr>
+    <tr>
+      <td><strong>S.S</strong></td>
+      <td>Store Single Precision Float</td>
+      <td>Stores a single precision floating-point value from an FP register into memory.</td>
+    </tr>
+    <tr>
+      <td><strong>S.D</strong></td>
+      <td>Store Double Precision Float</td>
+      <td>Stores a double precision floating-point value from an FP register into memory.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="3-register-data-transfer-instructions">3. Register Data Transfer Instructions</h4>
+
+<p>These instructions facilitate the transfer of data between different types of registers, such as general-purpose registers (GPRs), floating-point registers (FPRs), and special-purpose registers. These instructions are critical in operations where data needs to be moved from one part of the CPU to another, enabling interaction between different processing units.</p>
+
+<p>These instructions facilitate the transfer of data between two general-purpose registers.</p>
+
+<ul>
+  <li><strong>MFHI:</strong> Move From HI register. Transfers the content from the HI special register to a GPR.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MFHI $d  # $d = HI
+</code></pre></div>    </div>
+  </li>
+  <li><strong>MFLO:</strong> Move From LO register. Transfers the content from the LO special register to a GPR.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MFLO $d  # $d = LO
+</code></pre></div>    </div>
+  </li>
+  <li><strong>MOV.S:</strong> Move single-precision floating-point value.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MOV.S $f1, $f2  # $f1 = $f2
+</code></pre></div>    </div>
+  </li>
+  <li><strong>MOV.D:</strong> Move double-precision floating-point value.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MOV.D $f1, $f2  # $f1 = $f2
+</code></pre></div>    </div>
+  </li>
+  <li><strong>MFC0 (Move From Coprocessor 0):</strong> This instruction moves data from a specific CP0 register to a general-purpose register (GPR). It’s often used to read system control information, such as the contents of the status register, exception handling registers, or memory management configuration.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MFC0 $t, $c0_reg, $sel
+</code></pre></div>    </div>
+  </li>
+  <li>$t: The destination general-purpose register.</li>
+  <li>$c0_reg: The CP0 register number.</li>
+  <li>$sel: The select field, which allows accessing different parts or subsets of the CP0 register.
+Example:
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MFC0 $t0, $12  # Move the contents of CP0 Status register (register 12) to $t0
+</code></pre></div>    </div>
+  </li>
+  <li><strong>MTC0 (Move To Coprocessor 0):</strong> This instruction moves data from a general-purpose register (GPR) to a specific CP0 register.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MTC0 $t0, $13  # Move the contents of $t0 into CP0 Cause register (register 13)
+</code></pre></div>    </div>
+  </li>
+  <li><strong>MFC1:</strong>  Move From Coprocessor 1 (FPR) to GPR.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MFC1 $t, $f  # $t = $f
+</code></pre></div>    </div>
+  </li>
+  <li><strong>MTC1:</strong> Move To Coprocessor 1 (FPR) from GPR.
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MTC1 $f, $t  # $f = $t
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<h3 id="2-arithmetic-instructions-integers">2. Arithmetic instructions (Integers)</h3>
+
+<p>Arithmetic instructions in MIPS perform basic mathematical operations such as addition, subtraction, multiplication, and division. These instructions operate on values stored in general-purpose registers (GPRs) and often involve signed and unsigned integers.</p>
+
+<p>Majority of arithmetic instructions are R-type, they follow this general format:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ARITHMETIC $rd, $rs, $rt
+</code></pre></div></div>
+<ul>
+  <li><strong>ARITHMETIC</strong> is the opcode for the specific arithmetic instruction (e.g., ADD, ADDU, SUB, MULT).</li>
+  <li><strong>$rd</strong> is the destination register where the result of the operation will be stored.</li>
+  <li><strong>$rs</strong> is the source register containing the first operand.</li>
+  <li><strong>$rt</strong> is the source register containing the second operand.</li>
+</ul>
+
+<p>(Note: The storage format for R-type instructions is <code class="language-plaintext highlighter-rouge">&lt;opcode&gt; &lt;rs&gt; &lt;rt&gt; &lt;rd&gt; &lt;shamt&gt; &lt;funct&gt;</code>. However, when writing the instruction in assembly language, it is written as <code class="language-plaintext highlighter-rouge">&lt;opcode&gt; $rd, $rs, $rt.</code>)</p>
+
+<p>Immediate operations follow I-type, the format is slightly different:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ARITHMETIC_IMM $rt, $rs, immediate
+</code></pre></div></div>
+
+<ul>
+  <li><strong>ARITHMETIC_IMM</strong> is the opcode for the specific arithmetic instruction that uses an immediate value (e.g., ADDI, ADDIU).</li>
+  <li><strong>$rt</strong> is the destination register where the result will be stored.</li>
+  <li><strong>$rs</strong> is the source register containing the first operand.</li>
+  <li><strong>immediate</strong> is a 16-bit signed value that is added to the contents of <code class="language-plaintext highlighter-rouge">$rs</code>.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>Instruction</th>
+      <th>Syntax</th>
+      <th>Description</th>
+      <th>Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>ADD</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">ADD $rd, $rs, $rt</code></td>
+      <td>Adds the contents of <code class="language-plaintext highlighter-rouge">$rs</code> and <code class="language-plaintext highlighter-rouge">$rt</code>, stores the result in <code class="language-plaintext highlighter-rouge">$rd</code>. Raises an exception on overflow.</td>
+      <td><code class="language-plaintext highlighter-rouge">ADD $t0, $t1, $t2  # $t0 = $t1 + $t2</code></td>
+    </tr>
+    <tr>
+      <td><strong>ADDU</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">ADDU $rd, $rs, $rt</code></td>
+      <td>Adds the contents of <code class="language-plaintext highlighter-rouge">$rs</code> and <code class="language-plaintext highlighter-rouge">$rt</code> without checking for overflow.</td>
+      <td><code class="language-plaintext highlighter-rouge">ADDU $t0, $t1, $t2  # $t0 = $t1 + $t2 (no overflow check)</code></td>
+    </tr>
+    <tr>
+      <td><strong>ADDI</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">ADDI $rt, $rs, immediate</code></td>
+      <td>Adds an immediate value to <code class="language-plaintext highlighter-rouge">$rs</code>, stores the result in <code class="language-plaintext highlighter-rouge">$rt</code>. Raises an exception on overflow.</td>
+      <td><code class="language-plaintext highlighter-rouge">ADDI $t0, $t1, 10  # $t0 = $t1 + 10</code></td>
+    </tr>
+    <tr>
+      <td><strong>ADDIU</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">ADDIU $rt, $rs, immediate</code></td>
+      <td>Adds an immediate value to <code class="language-plaintext highlighter-rouge">$rs</code> without checking for overflow.</td>
+      <td><code class="language-plaintext highlighter-rouge">ADDIU $t0, $t1, 10  # $t0 = $t1 + 10 (no overflow check)</code></td>
+    </tr>
+    <tr>
+      <td><strong>SUB</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">SUB $rd, $rs, $rt</code></td>
+      <td>Subtracts <code class="language-plaintext highlighter-rouge">$rt</code> from <code class="language-plaintext highlighter-rouge">$rs</code>, stores the result in <code class="language-plaintext highlighter-rouge">$rd</code>. Raises an exception on overflow.</td>
+      <td><code class="language-plaintext highlighter-rouge">SUB $t0, $t1, $t2  # $t0 = $t1 - $t2</code></td>
+    </tr>
+    <tr>
+      <td><strong>SUBU</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">SUBU $rd, $rs, $rt</code></td>
+      <td>Subtracts <code class="language-plaintext highlighter-rouge">$rt</code> from <code class="language-plaintext highlighter-rouge">$rs</code> without checking for overflow.</td>
+      <td><code class="language-plaintext highlighter-rouge">SUBU $t0, $t1, $t2  # $t0 = $t1 - $t2 (no overflow check)</code></td>
+    </tr>
+    <tr>
+      <td><strong>MULT</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">MULT $rs, $rt</code></td>
+      <td>Multiplies <code class="language-plaintext highlighter-rouge">$rs</code> and <code class="language-plaintext highlighter-rouge">$rt</code>, result stored in <code class="language-plaintext highlighter-rouge">HI</code> and <code class="language-plaintext highlighter-rouge">LO</code> registers.</td>
+      <td><code class="language-plaintext highlighter-rouge">MULT $t1, $t2  # Result in HI:LO = $t1 * $t2</code></td>
+    </tr>
+    <tr>
+      <td><strong>MULTU</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">MULTU $rs, $rt</code></td>
+      <td>Multiplies unsigned integers <code class="language-plaintext highlighter-rouge">$rs</code> and <code class="language-plaintext highlighter-rouge">$rt</code>, result stored in <code class="language-plaintext highlighter-rouge">HI</code> and <code class="language-plaintext highlighter-rouge">LO</code> registers.</td>
+      <td><code class="language-plaintext highlighter-rouge">MULTU $t1, $t2  # Unsigned result in HI:LO</code></td>
+    </tr>
+    <tr>
+      <td><strong>DIV</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">DIV $rs, $rt</code></td>
+      <td>Divides <code class="language-plaintext highlighter-rouge">$rs</code> by <code class="language-plaintext highlighter-rouge">$rt</code>, quotient stored in <code class="language-plaintext highlighter-rouge">LO</code>, remainder in <code class="language-plaintext highlighter-rouge">HI</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">DIV $t1, $t2  # LO = $t1 / $t2; HI = $t1 % $t2</code></td>
+    </tr>
+    <tr>
+      <td><strong>DIVU</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">DIVU $rs, $rt</code></td>
+      <td>Divides unsigned integers <code class="language-plaintext highlighter-rouge">$rs</code> by <code class="language-plaintext highlighter-rouge">$rt</code>, quotient stored in <code class="language-plaintext highlighter-rouge">LO</code>, remainder in <code class="language-plaintext highlighter-rouge">HI</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">DIVU $t1, $t2  # Unsigned LO = $t1 / $t2; HI = $t1 % $t2</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The above instructions are for MIPS32. MIPS64 has similar instructions with a prefix letter “D” added to each instruction. The “D” indicates “Doubleword,” e.g., DADD, DADDI, DADDU, DADDIU.</p>
+
+<h3 id="3-logical-instructions-integers">3. Logical instructions (Integers)</h3>
+
+<p>Logical instructions in MIPS are used to perform bitwise operations on the binary representations of data stored in registers.</p>
+
+<p>Logical Instructions follow the R-type format. In this format, the instructions operate on registers and involve three operands: two source registers and one destination register.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>LOGICAL $rd, $rs, $rt
+</code></pre></div></div>
+<ul>
+  <li><strong>LOGICAL:</strong> is the opcode for logical instruction (e.g., AND, OR, XOR, NOR)</li>
+  <li><strong>$rd</strong> is the destination register.</li>
+  <li><strong>$rs</strong> and <strong>$rt</strong> are the source registers.</li>
+</ul>
+
+<p>Some instructions have immediate variants as well, which follow the I-type format.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>LOGICAL_IMM $rd, $rs, $rt
+</code></pre></div></div>
+
+<ul>
+  <li><strong>LOGICAL_IMM:</strong> is the opcode for logical instruction (e.g., ANDI, ORI, XORI)</li>
+  <li><strong>$rd</strong> is the destination register.</li>
+  <li><strong>$rs</strong> and <strong>$rt</strong> are the source registers.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>Instruction</th>
+      <th>Meaning</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>AND</strong></td>
+      <td>Bitwise AND</td>
+      <td>Performs a bitwise AND operation between the values in <code class="language-plaintext highlighter-rouge">$rs</code> and <code class="language-plaintext highlighter-rouge">$rt</code>, and stores the result in <code class="language-plaintext highlighter-rouge">$rd</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>OR</strong></td>
+      <td>Bitwise OR</td>
+      <td>Performs a bitwise OR operation between the values in <code class="language-plaintext highlighter-rouge">$rs</code> and <code class="language-plaintext highlighter-rouge">$rt</code>, and stores the result in <code class="language-plaintext highlighter-rouge">$rd</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>XOR</strong></td>
+      <td>Bitwise XOR</td>
+      <td>Performs a bitwise XOR operation between the values in <code class="language-plaintext highlighter-rouge">$rs</code> and <code class="language-plaintext highlighter-rouge">$rt</code>, and stores the result in <code class="language-plaintext highlighter-rouge">$rd</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>NOR</strong></td>
+      <td>Bitwise NOR</td>
+      <td>Performs a bitwise NOR operation between the values in <code class="language-plaintext highlighter-rouge">$rs</code> and <code class="language-plaintext highlighter-rouge">$rt</code>, and stores the result in <code class="language-plaintext highlighter-rouge">$rd</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>ANDI</strong></td>
+      <td>Bitwise AND Immediate</td>
+      <td>Performs a bitwise AND operation between the value in <code class="language-plaintext highlighter-rouge">$rs</code> and an immediate value, and stores the result in <code class="language-plaintext highlighter-rouge">$rt</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>ORI</strong></td>
+      <td>Bitwise OR Immediate</td>
+      <td>Performs a bitwise OR operation between the value in <code class="language-plaintext highlighter-rouge">$rs</code> and an immediate value, and stores the result in <code class="language-plaintext highlighter-rouge">$rt</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>XORI</strong></td>
+      <td>Bitwise XOR Immediate</td>
+      <td>Performs a bitwise XOR operation between the value in <code class="language-plaintext highlighter-rouge">$rs</code> and an immediate value, and stores the result in <code class="language-plaintext highlighter-rouge">$rt</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="4-shift-instructions">4. Shift Instructions</h3>
+
+<p>Shift instructions in MIPS perform bitwise shifts on operands stored in registers. Shift instructions are all R-type and follow this general format:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>SHIFT $rd, $rt, shamt 
+</code></pre></div></div>
+
+<ul>
+  <li><strong>SHIFT</strong> is the opcode for the specific variable shift instruction (e.g., SLL, SRL, SRA).</li>
+  <li><strong>$rd</strong> is the destination register.</li>
+  <li><strong>$rt</strong> is the source register that contains the value to be shifted.</li>
+  <li><strong>shamt</strong> (shift amount) is the number of bit positions to shift the value in <code class="language-plaintext highlighter-rouge">$rt</code>.</li>
+</ul>
+
+<p>Another type of shift instruction follows this format:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>SHIFT $rd, $rt, $rs
+</code></pre></div></div>
+
+<ul>
+  <li><strong>SHIFT</strong> is the opcode for the specific variable shift instruction (e.g., SLLV, SRLV, SRAV).</li>
+  <li><strong>$rd</strong> is the destination register.</li>
+  <li><strong>$rt</strong> is the source register that contains the value to be shifted.</li>
+  <li><strong>$rs</strong> is the register that specifies the shift amount.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>Instruction</th>
+      <th>Syntax</th>
+      <th>Description</th>
+      <th>Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>SLL</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">SLL $rd, $rt, shamt</code></td>
+      <td>Shifts the contents of <code class="language-plaintext highlighter-rouge">$rt</code> left by <code class="language-plaintext highlighter-rouge">shamt</code> bits, stores the result in <code class="language-plaintext highlighter-rouge">$rd</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">SLL $t0, $t1, 2 # $t0 = $t1 &lt;&lt; 2</code></td>
+    </tr>
+    <tr>
+      <td><strong>SRL</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">SRL $rd, $rt, shamt</code></td>
+      <td>Shifts the contents of <code class="language-plaintext highlighter-rouge">$rt</code> right by <code class="language-plaintext highlighter-rouge">shamt</code> bits (logical), stores the result in <code class="language-plaintext highlighter-rouge">$rd</code>. It does not preserve the sign bit (MSB). It treats the value as an unsigned number, so the MSB is replaced with a zero.</td>
+      <td><code class="language-plaintext highlighter-rouge">SRL $t0, $t1, 2 # $t0 = $t1 &gt;&gt; 2</code></td>
+    </tr>
+    <tr>
+      <td><strong>SRA</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">SRA $rd, $rt, shamt</code></td>
+      <td>Shifts the contents of $rt right by shamt bits (arithmetic) and stores the result in $rd. It preserves the sign bit (MSB), meaning the sign bit remains unchanged during the shift operation.</td>
+      <td><code class="language-plaintext highlighter-rouge">SRA $t0, $t1, 2 # $t0 = $t1 &gt;&gt; 2</code></td>
+    </tr>
+    <tr>
+      <td><strong>SLLV</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">SLLV $rd, $rt, $rs</code></td>
+      <td>Shifts the contents of <code class="language-plaintext highlighter-rouge">$rt</code> left by the value in <code class="language-plaintext highlighter-rouge">$rs</code> (variable shift), stores the result in <code class="language-plaintext highlighter-rouge">$rd</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">SLLV $t0, $t1, $t2 # $t0 = $t1 &lt;&lt; $t2</code></td>
+    </tr>
+    <tr>
+      <td><strong>SRLV</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">SRLV $rd, $rt, $rs</code></td>
+      <td>Shifts the contents of <code class="language-plaintext highlighter-rouge">$rt</code> right by the value in <code class="language-plaintext highlighter-rouge">$rs</code> (logical, variable shift), stores the result in <code class="language-plaintext highlighter-rouge">$rd</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">SRLV $t0, $t1, $t2 # $t0 = $t1 &gt;&gt; $t2</code></td>
+    </tr>
+    <tr>
+      <td><strong>SRAV</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">SRAV $rd, $rt, $rs</code></td>
+      <td>Shifts the contents of <code class="language-plaintext highlighter-rouge">$rt</code> right by the value in <code class="language-plaintext highlighter-rouge">$rs</code> (arithmetic, variable shift), stores the result in <code class="language-plaintext highlighter-rouge">$rd</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">SRAV $t0, $t1, $t2 # $t0 = $t1 &gt;&gt; $t2</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>In a left shift operation, the sign bit (MSB) is treated like any other bit. The intuition behind a logical left shift is that each shift operation corresponds to multiplication by 2. For example: <code class="language-plaintext highlighter-rouge">0000 1111 &lt;&lt; 1 = 0001 1110</code>, which is 15 * 2 = 30.</p>
+
+<p>Similarly, a logical right shift corresponds to division by 2. For example: <code class="language-plaintext highlighter-rouge">0001 1110 &gt;&gt; 1 = 0000 1111</code>, which is 30 / 2 = 15. However, when applying logical right shift to negative numbers (in two’s complement representation), such as <code class="language-plaintext highlighter-rouge">1110 0010</code> (which represents -30), performing a logical right shift results in <code class="language-plaintext highlighter-rouge">0111 0001</code> (113), which is not intuitive. In contrast, applying an arithmetic right shift, which preserves the sign bit, results in <code class="language-plaintext highlighter-rouge">1111 0001</code> (-15), which is more intuitive and useful.</p>
+
+<h3 id="5-comparision-instruction">5. Comparision Instruction</h3>
+
+<p>These instructions compare the values in registers (or between a register and an immediate value) and set the destination register based on whether the condition is met.</p>
+
+<p>Comparision instructions follow the R-type format, they follow this general format:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>COMPARISION $rd, $rs, $rt
+</code></pre></div></div>
+<ul>
+  <li><strong>COMPARISION:</strong> is the opcode for logical instruction (e.g., SLT, SLTU)</li>
+  <li><strong>$rd:</strong> Destination register where the result (1 or 0) will be stored.</li>
+  <li><strong>$rs:</strong> First source register.</li>
+  <li><strong>$rt:</strong> Second source register.</li>
+</ul>
+
+<p>They also have I-type variants</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>COMPARISION_IMM $rt, $rs, immediate
+</code></pre></div></div>
+<ul>
+  <li><strong>COMPARISION_IMM:</strong> is the opcode for logical instruction (e.g., SLTI, SLTIU)</li>
+  <li><strong>$rt:</strong> Destination register where the result (1 or 0) will be stored</li>
+  <li><strong>$rs:</strong> Source register.</li>
+  <li><strong>immediate:</strong> 16-bit signed or unsigned immediate value.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th><strong>Instruction</strong></th>
+      <th><strong>Syntax</strong></th>
+      <th><strong>Description</strong></th>
+      <th><strong>Example</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>SLT</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">SLT $rd, $rs, $rt</code></td>
+      <td>Sets <code class="language-plaintext highlighter-rouge">$rd</code> to <code class="language-plaintext highlighter-rouge">1</code> if the value in <code class="language-plaintext highlighter-rouge">$rs</code> is less than the value in <code class="language-plaintext highlighter-rouge">$rt</code>, otherwise sets it to <code class="language-plaintext highlighter-rouge">0</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">SLT $t0, $t1, $t2</code>  # <code class="language-plaintext highlighter-rouge">$t0 = $t1 &lt; $t2</code></td>
+    </tr>
+    <tr>
+      <td><strong>SLTI</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">SLTI $rt, $rs, immediate</code></td>
+      <td>Sets <code class="language-plaintext highlighter-rouge">$rt</code> to <code class="language-plaintext highlighter-rouge">1</code> if the value in <code class="language-plaintext highlighter-rouge">$rs</code> is less than the immediate value, otherwise sets it to <code class="language-plaintext highlighter-rouge">0</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">SLTI $t0, $t1, 10</code>  # <code class="language-plaintext highlighter-rouge">$t0 = $t1 &lt; 10</code></td>
+    </tr>
+    <tr>
+      <td><strong>SLTU</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">SLTU $rd, $rs, $rt</code></td>
+      <td>Sets <code class="language-plaintext highlighter-rouge">$rd</code> to <code class="language-plaintext highlighter-rouge">1</code> if the unsigned value in <code class="language-plaintext highlighter-rouge">$rs</code> is less than the unsigned value in <code class="language-plaintext highlighter-rouge">$rt</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">SLTU $t0, $t1, $t2</code>  # <code class="language-plaintext highlighter-rouge">$t0 = $t1 &lt; $t2</code></td>
+    </tr>
+    <tr>
+      <td><strong>SLTIU</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">SLTIU $rt, $rs, immediate</code></td>
+      <td>Sets <code class="language-plaintext highlighter-rouge">$rt</code> to <code class="language-plaintext highlighter-rouge">1</code> if the unsigned value in <code class="language-plaintext highlighter-rouge">$rs</code> is less than the unsigned immediate value.</td>
+      <td><code class="language-plaintext highlighter-rouge">SLTIU $t0, $t1, 10</code>  # <code class="language-plaintext highlighter-rouge">$t0 = $t1 &lt; 10</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="6-control-instructions">6. Control Instructions</h3>
+
+<p>Control instructions in MIPS manage the flow of execution by altering the program counter (PC) based on conditions, performing unconditional jumps, and handling exceptions. These instructions are crucial for implementing loops, conditional execution, and function calls.</p>
+
+<p>Control instructions in MIPS can be either I-type or J-type and follow these general formats:</p>
+
+<p><strong>I-Type Branch Instructions</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>BRANCH $rs, $rt, offset
+</code></pre></div></div>
+<ul>
+  <li><strong>BRANCH:</strong> is the opcode for the specific branch instruction (e.g., <code class="language-plaintext highlighter-rouge">BEQ</code>, <code class="language-plaintext highlighter-rouge">BNE</code>, <code class="language-plaintext highlighter-rouge">BEQZ</code>, <code class="language-plaintext highlighter-rouge">BNEZ</code>).</li>
+  <li><strong>$rs:</strong> The first source register.</li>
+  <li><strong>$rt:</strong> The second source register (or immediate zero for <code class="language-plaintext highlighter-rouge">BEQZ</code>/<code class="language-plaintext highlighter-rouge">BNEZ</code>).</li>
+  <li><strong>offset:</strong> The 16-bit signed offset from <code class="language-plaintext highlighter-rouge">PC + 4</code> to which the program will branch if the condition is met.</li>
+</ul>
+
+<p><strong>J-Type Jump Instructions</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>JUMP target
+</code></pre></div></div>
+<ul>
+  <li><strong>JUMP:</strong> is the opcode for the specific jump instruction (e.g., <code class="language-plaintext highlighter-rouge">J</code>, <code class="language-plaintext highlighter-rouge">JAL</code>).</li>
+  <li><strong>target:</strong> The 26-bit immediate value specifying the address to jump to, relative to <code class="language-plaintext highlighter-rouge">PC + 4</code>. It can also be the source register containing the target address.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th><strong>Instruction</strong></th>
+      <th><strong>Syntax</strong></th>
+      <th><strong>Description</strong></th>
+      <th><strong>Example</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>BEQZ</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">BEQZ $rs, offset</code></td>
+      <td>Branches if the value in <code class="language-plaintext highlighter-rouge">$rs</code> is equal to zero. Offset is 16-bit signed and relative to <code class="language-plaintext highlighter-rouge">PC + 4</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">BEQZ $t0, label</code></td>
+    </tr>
+    <tr>
+      <td><strong>BNEZ</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">BNEZ $rs, offset</code></td>
+      <td>Branches if the value in <code class="language-plaintext highlighter-rouge">$rs</code> is not equal to zero. Offset is 16-bit signed and relative to <code class="language-plaintext highlighter-rouge">PC + 4</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">BNEZ $t0, label</code></td>
+    </tr>
+    <tr>
+      <td><strong>BEQ</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">BEQ $rs, $rt, offset</code></td>
+      <td>Branches if the values in <code class="language-plaintext highlighter-rouge">$rs</code> and <code class="language-plaintext highlighter-rouge">$rt</code> are equal. Offset is 16-bit signed and relative to <code class="language-plaintext highlighter-rouge">PC + 4</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">BEQ $t0, $t1, label</code></td>
+    </tr>
+    <tr>
+      <td><strong>BNE</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">BNE $rs, $rt, offset</code></td>
+      <td>Branches if the values in <code class="language-plaintext highlighter-rouge">$rs</code> and <code class="language-plaintext highlighter-rouge">$rt</code> are not equal. Offset is 16-bit signed and relative to <code class="language-plaintext highlighter-rouge">PC + 4</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">BNE $t0, $t1, label</code></td>
+    </tr>
+    <tr>
+      <td><strong>BC1T</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">BC1T offset</code></td>
+      <td>Branches if the floating-point comparison bit is true. Offset is 16-bit signed and relative to <code class="language-plaintext highlighter-rouge">PC + 4</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">BC1T label</code></td>
+    </tr>
+    <tr>
+      <td><strong>BC1F</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">BC1F offset</code></td>
+      <td>Branches if the floating-point comparison bit is false. Offset is 16-bit signed and relative to <code class="language-plaintext highlighter-rouge">PC + 4</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">BC1F label</code></td>
+    </tr>
+    <tr>
+      <td><strong>MOVN</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">MOVN $rd, $rs, $rt</code></td>
+      <td>Copies the value in <code class="language-plaintext highlighter-rouge">$rs</code> to <code class="language-plaintext highlighter-rouge">$rd</code> if the value in <code class="language-plaintext highlighter-rouge">$rt</code> is not zero.</td>
+      <td><code class="language-plaintext highlighter-rouge">MOVN $t0, $t1, $t2</code></td>
+    </tr>
+    <tr>
+      <td><strong>MOVZ</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">MOVZ $rd, $rs, $rt</code></td>
+      <td>Copies the value in <code class="language-plaintext highlighter-rouge">$rs</code> to <code class="language-plaintext highlighter-rouge">$rd</code> if the value in <code class="language-plaintext highlighter-rouge">$rt</code> is zero.</td>
+      <td><code class="language-plaintext highlighter-rouge">MOVZ $t0, $t1, $t2</code></td>
+    </tr>
+    <tr>
+      <td><strong>J</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">J target</code></td>
+      <td>Unconditionally jumps to the target address. The target is a 26-bit immediate value relative to <code class="language-plaintext highlighter-rouge">PC + 4</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">J label</code></td>
+    </tr>
+    <tr>
+      <td><strong>JR</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">JR $rs</code></td>
+      <td>Unconditionally jumps to the address contained in <code class="language-plaintext highlighter-rouge">$rs</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">JR $t0</code></td>
+    </tr>
+    <tr>
+      <td><strong>JAL</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">JAL target</code></td>
+      <td>Jumps to the target address and stores the return address (<code class="language-plaintext highlighter-rouge">PC + 4</code>) in <code class="language-plaintext highlighter-rouge">$ra</code> (register 31).</td>
+      <td><code class="language-plaintext highlighter-rouge">JAL label</code></td>
+    </tr>
+    <tr>
+      <td><strong>JALR</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">JALR $rd, $rs</code></td>
+      <td>Jumps to the address in <code class="language-plaintext highlighter-rouge">$rs</code> and stores the return address (<code class="language-plaintext highlighter-rouge">PC + 4</code>) in <code class="language-plaintext highlighter-rouge">$rd</code> (usually <code class="language-plaintext highlighter-rouge">$ra</code>).</td>
+      <td><code class="language-plaintext highlighter-rouge">JALR $ra, $t0</code></td>
+    </tr>
+    <tr>
+      <td><strong>TRAP</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">TRAP code</code></td>
+      <td>Triggers a software interrupt, transferring control to the operating system at a predefined vectored address.</td>
+      <td><code class="language-plaintext highlighter-rouge">TRAP 0x7</code></td>
+    </tr>
+    <tr>
+      <td><strong>ERET</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">ERET</code></td>
+      <td>Returns from an exception, restoring the state and returning to user mode.</td>
+      <td><code class="language-plaintext highlighter-rouge">ERET</code></td>
     </tr>
   </tbody>
 </table>]]></content><author><name>Sanketh</name></author><category term="cpu" /><category term="assembly" /><summary type="html"><![CDATA[MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA’s. It was developed in the early 1980s at Stanford University by Professor John L. Hennessy. MIPS is widely used in academic research and industry, particularly in computer architecture courses due to its straightforward design and in various embedded systems applications for its efficiency and performance.]]></summary></entry><entry><title type="html">The Fetch Decode Execute Cycle</title><link href="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle" rel="alternate" type="text/html" title="The Fetch Decode Execute Cycle" /><published>2024-06-30T19:32:40+05:30</published><updated>2024-06-30T19:32:40+05:30</updated><id>http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle</id><content type="html" xml:base="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle"><![CDATA[<p>The Fetch-decode-execute cycle or instruction cycle is how CPU executes programs. During this cycle, the CPU retrieves an instruction from memory (fetch), interprets what action is required (decode), and then carries out the necessary operations to complete the instruction (execute). This cycle is crucial for the CPU to perform any computational tasks, and it repeats continuously while the computer is powered on.</p>
