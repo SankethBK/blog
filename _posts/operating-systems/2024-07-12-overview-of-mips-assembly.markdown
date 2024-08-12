@@ -4,6 +4,19 @@ title:  "Overview of MIPS Assembly"
 date:   2024-07-12 20:38:05 +0530
 categories: cpu assembly
 author: Sanketh
+references: 
+   - https://en.wikipedia.org/wiki/MIPS_architecture
+   - https://mathcs.holycross.edu/~csci226/MIPS/summaryHO.pdf
+   - https://profile.iiita.ac.in/bibhas.ghoshal/COA_2021/lecture_slides/MIPS_Programming.pdf
+   - https://ablconnect.harvard.edu/files/ablconnect/files/mips_instruction_set.pdf
+   - https://www.comp.nus.edu.sg/~adi-yoga/CS2100/ch08/
+   - https://en.wikibooks.org/wiki/MIPS_Assembly/Instruction_Formats
+   - https://stackoverflow.com/questions/48509093/using-different-registers-in-mips
+   - https://stackoverflow.com/questions/18024672/what-registers-are-preserved-through-a-linux-x86-64-function-call
+   - https://stackoverflow.com/questions/9609721/how-far-can-the-jjump-instruction-jump-in-memory-mips
+   - https://electronics.stackexchange.com/questions/162976/range-of-mips-j-instruction
+   - https://stackoverflow.com/questions/6950230/how-to-calculate-jump-target-address-and-branch-target-address
+   - https://stackoverflow.com/questions/44694957/the-difference-between-logical-shift-right-arithmetic-shift-right-and-rotate-r
 ---
 
 MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA's. It was developed in the early 1980s at Stanford University by Professor John L. Hennessy. MIPS is widely used in academic research and industry, particularly in computer architecture courses due to its straightforward design and in various embedded systems applications for its efficiency and performance.
@@ -16,11 +29,11 @@ MIPS32 and MIPS64 are modern versions of the architecture, maintaining backward 
 
 MIPS is built on RISC principles, which embrace simplicity and efficiency, making it an ideal choice for learning about CPU architecture in general. Some principles of RISC are: 
 
-1. Simple Instructions: RISC architectures use a small, highly optimized set of instructions. Each instruction is designed to be simple and execute in a single clock cycle (under ideal conditions in a pipelined processor).
-2. Load/Store Architecture: RISC separates memory access and data processing instructions. Only load and store instructions can access memory, while all other operations are performed on registers. This simplifies the instruction set and execution.
-3. Fixed-Length Instructions: Instructions in RISC architectures are of uniform length, typically 32 bits. This uniformity simplifies instruction decoding and pipeline design.
-4. Simple Addressing Modes: RISC architectures use a small number of simple addressing modes to keep instruction execution fast and efficient. Common addressing modes include register, immediate, and displacement.
-5. Pipelining: RISC architectures are designed to efficiently support pipelining. Instructions are broken down into stages (fetch, decode, execute, memory access, write-back) that can be processed simultaneously for different instructions.
+1. **Simple Instructions:** RISC architectures use a small, highly optimized set of instructions. Each instruction is designed to be simple and execute in a single clock cycle (under ideal conditions in a pipelined processor).
+2. **Load/Store Architecture:** RISC separates memory access and data processing instructions. Only load and store instructions can access memory, while all other operations are performed on registers. This simplifies the instruction set and execution.
+3. **Fixed-Length Instructions:** Instructions in RISC architectures are of uniform length, typically 32 bits. This uniformity simplifies instruction decoding and pipeline design.
+4. **Simple Addressing Modes:** RISC architectures use a small number of simple addressing modes to keep instruction execution fast and efficient. Common addressing modes include register, immediate, and displacement.
+5. **Pipelining:** RISC architectures are designed to efficiently support pipelining. Instructions are broken down into stages (fetch, decode, execute, memory access, write-back) that can be processed simultaneously for different instructions.
 
 
 ## MIPS32 and MIPS64
@@ -36,18 +49,18 @@ Softwares written for MIPS32 can often run on MIPS64 processors without modifica
 
 ### General Purpose Registers
 
-General Purpose registers are meant to be used by programmers and compilers for whatver operations required and has no special meaning to CPU. General-purpose registers are versatile storage locations within the CPU used for a wide range of tasks like holding intermediate data, operands and results of computations, and store temporary values during program execution. They are meant to be utilized by programmers and compilers as needed, without any special significance to the CPU itself.
+General Purpose registers are meant to be used by programmers and compilers for whatever operations required and has no special meaning to CPU. General-purpose registers are versatile storage locations within the CPU used for a wide range of tasks like holding intermediate data, operands and results of computations, and store temporary values during program execution. They are meant to be utilized by programmers and compilers as needed, without any special significance to the CPU itself.
 
 MIPS has 32 general purpose registers (R0 - R31), 32 floating point registers (F0 - F31) that can hold either a 32-bit single-precision number or a 64-bit double-precision number. General Purpose Registers (GPRs) in MIPS architectures are used for storing immediate values, temporary data, function arguments, and return values. They also facilitate address calculation for memory operations and control flow in branching and jumping instructions.
 
-In MIPS, most registers are truly general-purpose, meaning they can be used for any purpose. MIPS programmers adhere to agreed-upon guidelines specifying how registers should be utilized. For instance, the stack pointer (\$sp), global pointer (\$gp), and frame pointer ($fp) are conventions rather than hardware-enforced roles, unlike in other Assembly languages like x86. The stack pointer is purely a software convention; no push instruction implicitly uses it. Using $t0 instead of $t3 as a temporary register isn't inherently faster or better. However, there's one notable exception: the jal instruction implicitly writes the return address to $31 (the link register).
+In MIPS, most registers are truly general-purpose, meaning they can be used for any purpose. MIPS programmers adhere to agreed-upon guidelines specifying how registers should be utilized. For instance, the stack pointer `($sp)`, global pointer `($gp)`, and frame pointer `($fp)` are conventions rather than hardware-enforced roles, unlike in other Assembly languages like x86. The stack pointer is purely a software convention; no push instruction implicitly uses it. Using `$t0` instead of `$t3` as a temporary register isn't inherently faster or better. However, there's one notable exception: the `jal` instruction implicitly writes the return address to `$31` (the link register).
 
 
 | Register | Name  | Description                                                                                                                             | Preserved Across Function Calls? |
 | -------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | $0       | zero  | This register is hardwired to the value 0. It always returns 0 regardless of what is written to it.                                     | No                               |
 | $1       | at    | Reserved for the assembler. It is used for pseudo-instructions and not typically used by programmers.                                   | No                               |
-| $2-$3    | v0-v1 | Used to hold function return values.                                                                                                    | No      ****                         |
+| $2-$3    | v0-v1 | Used to hold function return values.                                                                                                    | No                               |
 | $4-$7    | a0-a3 | Used to pass the first four arguments to functions.                                                                                     | No                               |
 | $8-$15   | t0-t7 | Temporary registers used for holding intermediate values. They are not preserved across function calls.                                 | No                               |
 | $16-$23  | s0-s7 | Saved registers, which must be preserved across function calls. They are used to store values that should not be changed by a function. | Yes                              |
@@ -59,7 +72,7 @@ In MIPS, most registers are truly general-purpose, meaning they can be used for 
 | $31      | ra    | Return address, used to store the return address for function calls.                                                                    | Yes                              |
 
 
-When we say that saved registers must be "preserved across function calls," it means that the values in these registers should remain unchanged when a function (subroutine) returns to its caller. In other words, if a function uses these registers, it must ensure that any values stored in them before the function call are restored when the function completes. This is typically enforced through a process called "register saving" and "register restoring."
+When we say that saved registers must be "preserved across function calls," it means that the values in these registers should remain unchanged when a function (subroutine) returns to its caller. In other words, if a function uses these registers, it must ensure that any values stored in them before the function call are restored when the function completes. This is typically enforced through a process called "register saving" and "register restoring". The callee function first identifies which registers it uses that need to be preserved across function calls. These are known as "callee-saved" or "non-volatile" registers. The callee then saves the values of these registers by pushing them onto the stack. After the callee subroutine completes its task, it pops the saved register values off the stack, restoring the registers to their original state before returning control to the caller.
 
 
 ### Special Purpose Registers
@@ -78,12 +91,12 @@ In MIPS architecture, several special registers play crucial roles in managing t
 
 ## Data Types in MIPS
 
-1. **Byte (8-bit):** Represented as .byte in MIPS assembly. Each byte consists of 8 bits.
-2. **Halfword (16-bit):** Represented as .half or .hword in MIPS assembly. Each halfword consists of 16 bits or 2 bytes.
-3. **Word (32-bit):** Represented as .word in MIPS assembly. Each word consists of 32 bits or 4 bytes. This is the default data type for many operations in MIPS32.
-4. **Doubleword (64-bit):** Represented as .dword in MIPS assembly. Each doubleword consists of 64 bits or 8 bytes. This is especially relevant in MIPS64 architecture.
-5. **Float (32-bit floating-point):** Represented as .float in MIPS assembly. This follows the IEEE 754 standard for single-precision floating-point numbers.
-6. **Double (64-bit floating-point):** Represented as .double in MIPS assembly. This follows the IEEE 754 standard for double-precision floating-point numbers.
+1. **Byte (8-bit):** Represented as `.byte` in MIPS assembly. Each byte consists of 8 bits.
+2. **Halfword (16-bit):** Represented as `.half` or `.hword` in MIPS assembly. Each halfword consists of 16 bits or 2 bytes.
+3. **Word (32-bit):** Represented as `.word` in MIPS assembly. Each word consists of 32 bits or 4 bytes. This is the default data type for many operations in MIPS32.
+4. **Doubleword (64-bit):** Represented as `.dword` in MIPS assembly. Each doubleword consists of 64 bits or 8 bytes. This is especially relevant in MIPS64 architecture.
+5. **Float (32-bit floating-point):** Represented as `.float` in MIPS assembly. This follows the IEEE 754 standard for single-precision floating-point numbers.
+6. **Double (64-bit floating-point):** Represented as `.double` in MIPS assembly. This follows the IEEE 754 standard for double-precision floating-point numbers.
 
 ## Addressing Modes in MIPS
 
@@ -226,9 +239,9 @@ However, within a 4GB address space, it’s possible that the target instruction
 
 1. **Low Code Density:** Uniform instruction width can lead to inefficient use of memory when instructions are shorter than the fixed width. For example, if you have a 32-bit instruction width but some instructions only require a few bits, the extra bits in each instruction are wasted. This can lead to larger code sizes and increased memory consumption.
 
-2. **Decreased Flexibility due to Implicity Operands:** Strict uniform formatting tends to exclude the use of implicit operands, which are operands not explicitly specified in the instruction but implied by the operation. For instance, even though MIPS mostly avoids implicit operands, it still uses an implicit destination register for the link register (\$ra), which stores the return address for function calls. (When a function call is made in MIPS, the jal (jump and link) instruction is used. This instruction not only jumps to the target function address but also implicitly stores the return address (the address of the instruction following the jal) in the link register \$ra (which is register $31). This behavior is implicit in the sense that the jal instruction does not need to specify that the return address should be stored in \$ra; it is automatically understood and handled by the instruction.)
+2. **Decreased Flexibility due to Implicit Operands:** Strict uniform formatting tends to exclude the use of implicit operands, which are operands not explicitly specified in the instruction but implied by the operation. For instance, even though MIPS mostly avoids implicit operands, it still uses an implicit destination register for the link register (`$ra`), which stores the return address for function calls. (When a function call is made in MIPS, the jal (jump and link) instruction is used. This instruction not only jumps to the target function address but also implicitly stores the return address (the address of the instruction following the `jal`) in the link register `$ra` (which is register `$31`). This behavior is implicit in the sense that the `jal` instruction does not need to specify that the return address should be stored in `$ra`; it is automatically understood and handled by the instruction.)
 
-3. **Cannot Handle Large Values of Immediate:** Fixed-length instructions present challenges when dealing with large immediate values (constants embedded directly within instructions). In MIPS immediate values to 16 bits within a single instruction. If a constant exceeds this 16-bit limit, additional steps are required to handle the larger value.
+3. **Cannot Handle Large Values of Immediate:** Fixed-length instructions present challenges when dealing with large immediate values (constants embedded directly within instructions). In MIPS immediate values can be upto 16-bits within a single instruction. If a constant exceeds this 16-bit limit, additional steps are required to handle the larger value.
    1. **Loading as Data:** One method to handle large constants is to load them from memory. This approach involves:
       - An extra load instruction.
       - Overhead associated with address calculation, register usage, address translation, and tag checking.
@@ -238,11 +251,22 @@ However, within a 4GB address space, it’s possible that the target instruction
 
 5. **Limited Address Bound for Branching Instructions:** In MIPS, the jump instruction uses only 26 bits to specify the immediate target address. Due to memory alignment, the last 2 bits are always zero, effectively giving 28 bits for the target address. The upper 4 bits of the Program Counter (PC) are combined with these 28 bits to form a full 32-bit address, which limits the addressable range to 256 MB. Consequently, the assembly programmer or compiler must ensure that the target address of the jump instruction lies within this 256 MB boundary. If the target address exceeds this limit, other options must be employed, such as using the `jr` (jump to the address stored in register) instruction, which can specify a full 32-bit address by storing the address in a register. In some versions, the assembler will issue a warning if the target address of a `j` instruction exceeds the 256 MB bound. In other cases, the assembler might automatically replace the `j` instruction with a `jr` instruction to handle the full address space correctly.
 
+## Coprocessors in MIPS
+
+MIPS is a modular architecture supporting up to four coprocessors (CP0/1/2/3). Coprocessors are specialized processing units that work alongside the main CPU to handle specific types of operations, such as floating-point arithmetic, system control, or other specialized tasks. MIPS typically defines up to four coprocessors, though not all are always implemented in every MIPS processor. These coprocessors are numbered CP0 through CP3.
+
+1. **Coprocessor 0 (CP0) - System Control Coprocessor:** CP0 is responsible for managing system control functions, including exception handling, memory management, and processor status. It plays a critical role in configuring and controlling the behavior of the MIPS processor. CP0 contains a set of special-purpose registers used for various control tasks, such as the Status Register, Cause Register, EPC (Exception Program Counter), and TLB (Translation Lookaside Buffer) management registers.
+
+2. **Coprocessor 1 (CP1) - Floating-Point Unit (FPU):**  CP1 is dedicated to handling floating-point arithmetic operations, such as addition, subtraction, multiplication, division, and square root operations on floating-point numbers. This offloads complex calculations from the main CPU, improving overall performance for tasks requiring floating-point computations. CP1 includes 32 floating-point registers (`$f0` to `$f31`), which are used to store floating-point operands and results. 
+
+3. **Coprocessor 2 and 3 (Optional):** CP2 and CP3 are optional coprocessors that can be used for application-specific purposes, such as vector processing, digital signal processing (DSP), or other specialized tasks. For example, in the PlayStation video game console, CP2 is the Geometry Transformation Engine (GTE), which accelerates the processing of geometry in 3D computer graphics.
+
+
 ## Overview of MIPS Instructions
 
 ### 1. Memory Access Instructions
 
-Memory access instructions in MIPS facilitate moving data between registers and memory, as well as between integer, floating-point (FP), or special registers. Most of the memory access instructions are I-type and use register indirect with displacement as addressing mode. 
+Memory access instructions in MIPS facilitate moving data between registers and memory, as well as between general purpose, floating-point (FP), or special registers. Most of the memory access instructions are I-type and use register indirect with displacement as addressing mode. 
 
 #### 1. Load Family of Instructions
 
@@ -252,7 +276,7 @@ LOAD <rt>, offset(base)
 ```
 
 - **LOAD** is the opcode for the specific load instruction (e.g., LB, LBU, LH, LHU, LW, LWU, LD, L.S, L.D).
-- **<rt>** is the target register where the data will be loaded.
+- **\<rt\>** is the target register where the data will be loaded.
 - **offset** is a 16-bit signed immediate value representing the displacement.
 - **base** is the base register whose contents are added to the offset to form the effective memory address.
 
@@ -268,9 +292,267 @@ LOAD <rt>, offset(base)
 | **LD**      | Load Doubleword             | Loads a doubleword from memory into a register (MIPS64).                       |
 | **L.S**     | Load Single Precision Float | Loads a single precision floating-point value from memory into an FP register. |
 | **L.D**     | Load Double Precision Float | Loads a double precision floating-point value from memory into an FP register. |
+| **LUI**     | Load Upper Immediate        | Loads a 16-bit immediate value into the upper 16 bits of a register, with the lower 16 bits set to zero. Unlike other load instructions, LUI does not interact with memory. |
+
+
+#### 2. Store Family of Instructions
+
+The store family of instructions in MIPS transfers data from a register to a specified memory location. All of the store instructions in MIPS are I-type instructions, and they follow this general format:
+
+```
+STORE <rt>, offset(base)
+```
+
+- **STORE** is the opcode for the specific store instruction (e.g., SB, SH, SW, SD, S.S, S.D).
+- **\<rt\>** is the source register whose data will be stored in memory.
+- **offset** is a 16-bit signed immediate value representing the displacement.
+- **base** is the base register whose contents are added to the offset to form the effective memory address.
+
+
+| Instruction | Meaning                      | Description                                                                     |
+| ----------- | ---------------------------- | ------------------------------------------------------------------------------- |
+| **SB**      | Store Byte                   | Stores a byte from a register into memory.                                      |
+| **SH**      | Store Halfword               | Stores a halfword from a register into memory.                                  |
+| **SW**      | Store Word                   | Stores a word from a register into memory.                                      |
+| **SD**      | Store Doubleword             | Stores a doubleword from a register into memory (MIPS64).                       |
+| **S.S**     | Store Single Precision Float | Stores a single precision floating-point value from an FP register into memory. |
+| **S.D**     | Store Double Precision Float | Stores a double precision floating-point value from an FP register into memory. |
+
+#### 3. Register Data Transfer Instructions
+
+These instructions facilitate the transfer of data between different types of registers, such as general-purpose registers (GPRs), floating-point registers (FPRs), and special-purpose registers. These instructions are critical in operations where data needs to be moved from one part of the CPU to another, enabling interaction between different processing units.
+
+
+These instructions facilitate the transfer of data between two general-purpose registers.
+
+- **MFHI:** Move From HI register. Transfers the content from the HI special register to a GPR.
+```
+MFHI $d  # $d = HI
+```
+
+- **MFLO:** Move From LO register. Transfers the content from the LO special register to a GPR.
+```
+MFLO $d  # $d = LO
+```
+
+- **MOV.S:** Move single-precision floating-point value.
+```
+MOV.S $f1, $f2  # $f1 = $f2
+```
+
+- **MOV.D:** Move double-precision floating-point value.
+```
+MOV.D $f1, $f2  # $f1 = $f2
+```
+
+
+- **MFC0 (Move From Coprocessor 0):** This instruction moves data from a specific CP0 register to a general-purpose register (GPR). It's often used to read system control information, such as the contents of the status register, exception handling registers, or memory management configuration.
+```
+MFC0 $t, $c0_reg, $sel
+```
+
+- $t: The destination general-purpose register.
+- $c0_reg: The CP0 register number.
+- $sel: The select field, which allows accessing different parts or subsets of the CP0 register.
+Example:
+```
+MFC0 $t0, $12  # Move the contents of CP0 Status register (register 12) to $t0
+```
+
+- **MTC0 (Move To Coprocessor 0):** This instruction moves data from a general-purpose register (GPR) to a specific CP0 register. 
+```
+MTC0 $t0, $13  # Move the contents of $t0 into CP0 Cause register (register 13)
+```
+
+- **MFC1:**  Move From Coprocessor 1 (FPR) to GPR.
+```
+MFC1 $t, $f  # $t = $f
+```
+
+- **MTC1:** Move To Coprocessor 1 (FPR) from GPR.
+```
+MTC1 $f, $t  # $f = $t
+```
+
+### 2. Arithmetic instructions (Integers)
+
+Arithmetic instructions in MIPS perform basic mathematical operations such as addition, subtraction, multiplication, and division. These instructions operate on values stored in general-purpose registers (GPRs) and often involve signed and unsigned integers.
+
+Majority of arithmetic instructions are R-type, they follow this general format: 
+
+```
+ARITHMETIC $rd, $rs, $rt
+```
+- **ARITHMETIC** is the opcode for the specific arithmetic instruction (e.g., ADD, ADDU, SUB, MULT).
+- **$rd** is the destination register where the result of the operation will be stored.
+- **$rs** is the source register containing the first operand.
+- **$rt** is the source register containing the second operand.
+
+(Note: The storage format for R-type instructions is `<opcode> <rs> <rt> <rd> <shamt> <funct>`. However, when writing the instruction in assembly language, it is written as `<opcode> $rd, $rs, $rt.`)
+
+Immediate operations follow I-type, the format is slightly different:
+
+```
+ARITHMETIC_IMM $rt, $rs, immediate
+```
+
+- **ARITHMETIC_IMM** is the opcode for the specific arithmetic instruction that uses an immediate value (e.g., ADDI, ADDIU).
+- **$rt** is the destination register where the result will be stored.
+- **$rs** is the source register containing the first operand.
+- **immediate** is a 16-bit signed value that is added to the contents of `$rs`.
 
 
 
+| Instruction | Syntax                      | Description                                                                                        | Example                                                     |
+| ----------- | --------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **ADD**     | `ADD $rd, $rs, $rt`         | Adds the contents of `$rs` and `$rt`, stores the result in `$rd`. Raises an exception on overflow. | `ADD $t0, $t1, $t2  # $t0 = $t1 + $t2`                      |
+| **ADDU**    | `ADDU $rd, $rs, $rt`        | Adds the contents of `$rs` and `$rt` without checking for overflow.                                | `ADDU $t0, $t1, $t2  # $t0 = $t1 + $t2 (no overflow check)` |
+| **ADDI**    | `ADDI $rt, $rs, immediate`  | Adds an immediate value to `$rs`, stores the result in `$rt`. Raises an exception on overflow.     | `ADDI $t0, $t1, 10  # $t0 = $t1 + 10`                       |
+| **ADDIU**   | `ADDIU $rt, $rs, immediate` | Adds an immediate value to `$rs` without checking for overflow.                                    | `ADDIU $t0, $t1, 10  # $t0 = $t1 + 10 (no overflow check)`  |
+| **SUB**     | `SUB $rd, $rs, $rt`         | Subtracts `$rt` from `$rs`, stores the result in `$rd`. Raises an exception on overflow.           | `SUB $t0, $t1, $t2  # $t0 = $t1 - $t2`                      |
+| **SUBU**    | `SUBU $rd, $rs, $rt`        | Subtracts `$rt` from `$rs` without checking for overflow.                                          | `SUBU $t0, $t1, $t2  # $t0 = $t1 - $t2 (no overflow check)` |
+| **MULT**    | `MULT $rs, $rt`             | Multiplies `$rs` and `$rt`, result stored in `HI` and `LO` registers.                              | `MULT $t1, $t2  # Result in HI:LO = $t1 * $t2`              |
+| **MULTU**   | `MULTU $rs, $rt`            | Multiplies unsigned integers `$rs` and `$rt`, result stored in `HI` and `LO` registers.            | `MULTU $t1, $t2  # Unsigned result in HI:LO`                |
+| **DIV**     | `DIV $rs, $rt`              | Divides `$rs` by `$rt`, quotient stored in `LO`, remainder in `HI`.                                | `DIV $t1, $t2  # LO = $t1 / $t2; HI = $t1 % $t2`            |
+| **DIVU**    | `DIVU $rs, $rt`             | Divides unsigned integers `$rs` by `$rt`, quotient stored in `LO`, remainder in `HI`.              | `DIVU $t1, $t2  # Unsigned LO = $t1 / $t2; HI = $t1 % $t2`  |
+
+The above instructions are for MIPS32. MIPS64 has similar instructions with a prefix letter "D" added to each instruction. The "D" indicates "Doubleword," e.g., DADD, DADDI, DADDU, DADDIU.
+
+### 3. Logical instructions (Integers)
+
+Logical instructions in MIPS are used to perform bitwise operations on the binary representations of data stored in registers. 
+
+Logical Instructions follow the R-type format. In this format, the instructions operate on registers and involve three operands: two source registers and one destination register.
+
+```
+LOGICAL $rd, $rs, $rt
+```
+- **LOGICAL:** is the opcode for logical instruction (e.g., AND, OR, XOR, NOR)
+- **$rd** is the destination register.
+- **$rs** and **$rt** are the source registers.
 
 
+Some instructions have immediate variants as well, which follow the I-type format.
+```
+LOGICAL_IMM $rd, $rs, $rt
+```
 
+- **LOGICAL_IMM:** is the opcode for logical instruction (e.g., ANDI, ORI, XORI)
+- **$rd** is the destination register.
+- **$rs** and **$rt** are the source registers.
+
+| Instruction | Meaning     | Description                                                                                             |
+| ----------- | ----------- | ------------------------------------------------------------------------------------------------------- |
+| **AND**     | Bitwise AND | Performs a bitwise AND operation between the values in `$rs` and `$rt`, and stores the result in `$rd`. |
+| **OR**      | Bitwise OR  | Performs a bitwise OR operation between the values in `$rs` and `$rt`, and stores the result in `$rd`.  |
+| **XOR**     | Bitwise XOR | Performs a bitwise XOR operation between the values in `$rs` and `$rt`, and stores the result in `$rd`. |
+| **NOR**     | Bitwise NOR | Performs a bitwise NOR operation between the values in `$rs` and `$rt`, and stores the result in `$rd`. |
+| **ANDI**     | Bitwise AND Immediate | Performs a bitwise AND operation between the value in `$rs` and an immediate value, and stores the result in `$rt`. |
+| **ORI**      | Bitwise OR Immediate  | Performs a bitwise OR operation between the value in `$rs` and an immediate value, and stores the result in `$rt`.  |
+| **XORI**     | Bitwise XOR Immediate | Performs a bitwise XOR operation between the value in `$rs` and an immediate value, and stores the result in `$rt`. |
+
+### 4. Shift Instructions
+
+Shift instructions in MIPS perform bitwise shifts on operands stored in registers. Shift instructions are all R-type and follow this general format:
+
+```
+SHIFT $rd, $rt, shamt 
+```
+
+- **SHIFT** is the opcode for the specific variable shift instruction (e.g., SLL, SRL, SRA).
+- **$rd** is the destination register.
+- **$rt** is the source register that contains the value to be shifted.
+- **shamt** (shift amount) is the number of bit positions to shift the value in `$rt`.
+
+Another type of shift instruction follows this format:
+
+```
+SHIFT $rd, $rt, $rs
+```
+
+- **SHIFT** is the opcode for the specific variable shift instruction (e.g., SLLV, SRLV, SRAV).
+- **$rd** is the destination register.
+- **$rt** is the source register that contains the value to be shifted.
+- **$rs** is the register that specifies the shift amount.
+
+
+| Instruction | Syntax                | Description                                                                                                        | Example                                  |
+| ----------- | --------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| **SLL**     | `SLL $rd, $rt, shamt` | Shifts the contents of `$rt` left by `shamt` bits, stores the result in `$rd`.                                     | `SLL $t0, $t1, 2 # $t0 = $t1 << 2`      |
+| **SRL**     | `SRL $rd, $rt, shamt` | Shifts the contents of `$rt` right by `shamt` bits (logical), stores the result in `$rd`. It does not preserve the sign bit (MSB). It treats the value as an unsigned number, so the MSB is replaced with a zero.                          | `SRL $t0, $t1, 2 # $t0 = $t1 >> 2`      |
+| **SRA**     | `SRA $rd, $rt, shamt` | Shifts the contents of $rt right by shamt bits (arithmetic) and stores the result in $rd. It preserves the sign bit (MSB), meaning the sign bit remains unchanged during the shift operation. | `SRA $t0, $t1, 2 # $t0 = $t1 >> 2`      |
+| **SLLV**    | `SLLV $rd, $rt, $rs`  | Shifts the contents of `$rt` left by the value in `$rs` (variable shift), stores the result in `$rd`.              | `SLLV $t0, $t1, $t2 # $t0 = $t1 << $t2` |
+| **SRLV**    | `SRLV $rd, $rt, $rs`  | Shifts the contents of `$rt` right by the value in `$rs` (logical, variable shift), stores the result in `$rd`.    | `SRLV $t0, $t1, $t2 # $t0 = $t1 >> $t2` |
+| **SRAV**    | `SRAV $rd, $rt, $rs`  | Shifts the contents of `$rt` right by the value in `$rs` (arithmetic, variable shift), stores the result in `$rd`. | `SRAV $t0, $t1, $t2 # $t0 = $t1 >> $t2` |
+
+In a left shift operation, the sign bit (MSB) is treated like any other bit. The intuition behind a logical left shift is that each shift operation corresponds to multiplication by 2. For example: `0000 1111 << 1 = 0001 1110`, which is 15 * 2 = 30.
+
+Similarly, a logical right shift corresponds to division by 2. For example: `0001 1110 >> 1 = 0000 1111`, which is 30 / 2 = 15. However, when applying logical right shift to negative numbers (in two's complement representation), such as `1110 0010` (which represents -30), performing a logical right shift results in `0111 0001` (113), which is not intuitive. In contrast, applying an arithmetic right shift, which preserves the sign bit, results in `1111 0001` (-15), which is more intuitive and useful.
+
+### 5. Comparision Instruction
+
+These instructions compare the values in registers (or between a register and an immediate value) and set the destination register based on whether the condition is met.
+
+Comparision instructions follow the R-type format, they follow this general format:
+```
+COMPARISION $rd, $rs, $rt
+```
+- **COMPARISION:** is the opcode for logical instruction (e.g., SLT, SLTU)
+- **$rd:** Destination register where the result (1 or 0) will be stored.
+- **$rs:** First source register.
+- **$rt:** Second source register.
+
+They also have I-type variants
+```
+COMPARISION_IMM $rt, $rs, immediate
+```
+- **COMPARISION_IMM:** is the opcode for logical instruction (e.g., SLTI, SLTIU)
+- **$rt:** Destination register where the result (1 or 0) will be stored
+- **$rs:** Source register.
+- **immediate:** 16-bit signed or unsigned immediate value.
+
+| **Instruction** | **Syntax**                  | **Description**                                                                                     | **Example**                               |
+| --------------- | --------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **SLT**         | `SLT $rd, $rs, $rt`         | Sets `$rd` to `1` if the value in `$rs` is less than the value in `$rt`, otherwise sets it to `0`.  | `SLT $t0, $t1, $t2`  # `$t0 = $t1 < $t2`  |
+| **SLTI**        | `SLTI $rt, $rs, immediate`  | Sets `$rt` to `1` if the value in `$rs` is less than the immediate value, otherwise sets it to `0`. | `SLTI $t0, $t1, 10`  # `$t0 = $t1 < 10`   |
+| **SLTU**        | `SLTU $rd, $rs, $rt`        | Sets `$rd` to `1` if the unsigned value in `$rs` is less than the unsigned value in `$rt`.          | `SLTU $t0, $t1, $t2`  # `$t0 = $t1 < $t2` |
+| **SLTIU**       | `SLTIU $rt, $rs, immediate` | Sets `$rt` to `1` if the unsigned value in `$rs` is less than the unsigned immediate value.         | `SLTIU $t0, $t1, 10`  # `$t0 = $t1 < 10`  |
+
+### 6. Control Instructions
+
+Control instructions in MIPS manage the flow of execution by altering the program counter (PC) based on conditions, performing unconditional jumps, and handling exceptions. These instructions are crucial for implementing loops, conditional execution, and function calls. 
+
+Control instructions in MIPS can be either I-type or J-type and follow these general formats:
+
+**I-Type Branch Instructions**
+```
+BRANCH $rs, $rt, offset
+```
+- **BRANCH:** is the opcode for the specific branch instruction (e.g., `BEQ`, `BNE`, `BEQZ`, `BNEZ`).
+- **$rs:** The first source register.
+- **$rt:** The second source register (or immediate zero for `BEQZ`/`BNEZ`).
+- **offset:** The 16-bit signed offset from `PC + 4` to which the program will branch if the condition is met.
+
+**J-Type Jump Instructions**
+```
+JUMP target
+```
+- **JUMP:** is the opcode for the specific jump instruction (e.g., `J`, `JAL`).
+- **target:** The 26-bit immediate value specifying the address to jump to, relative to `PC + 4`. It can also be the source register containing the target address.
+
+| **Instruction** | **Syntax**             | **Description**                                                                                               | **Example**           |
+| --------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------- |
+| **BEQZ**        | `BEQZ $rs, offset`     | Branches if the value in `$rs` is equal to zero. Offset is 16-bit signed and relative to `PC + 4`.            | `BEQZ $t0, label`     |
+| **BNEZ**        | `BNEZ $rs, offset`     | Branches if the value in `$rs` is not equal to zero. Offset is 16-bit signed and relative to `PC + 4`.        | `BNEZ $t0, label`     |
+| **BEQ**         | `BEQ $rs, $rt, offset` | Branches if the values in `$rs` and `$rt` are equal. Offset is 16-bit signed and relative to `PC + 4`.        | `BEQ $t0, $t1, label` |
+| **BNE**         | `BNE $rs, $rt, offset` | Branches if the values in `$rs` and `$rt` are not equal. Offset is 16-bit signed and relative to `PC + 4`.    | `BNE $t0, $t1, label` |
+| **BC1T**        | `BC1T offset`          | Branches if the floating-point comparison bit is true. Offset is 16-bit signed and relative to `PC + 4`.      | `BC1T label`          |
+| **BC1F**        | `BC1F offset`          | Branches if the floating-point comparison bit is false. Offset is 16-bit signed and relative to `PC + 4`.     | `BC1F label`          |
+| **MOVN**        | `MOVN $rd, $rs, $rt`   | Copies the value in `$rs` to `$rd` if the value in `$rt` is not zero.                                         | `MOVN $t0, $t1, $t2`  |
+| **MOVZ**        | `MOVZ $rd, $rs, $rt`   | Copies the value in `$rs` to `$rd` if the value in `$rt` is zero.                                             | `MOVZ $t0, $t1, $t2`  |
+| **J**           | `J target`             | Unconditionally jumps to the target address. The target is a 26-bit immediate value relative to `PC + 4`.     | `J label`             |
+| **JR**          | `JR $rs`               | Unconditionally jumps to the address contained in `$rs`.                                                      | `JR $t0`              |
+| **JAL**         | `JAL target`           | Jumps to the target address and stores the return address (`PC + 4`) in `$ra` (register 31).                  | `JAL label`           |
+| **JALR**        | `JALR $rd, $rs`        | Jumps to the address in `$rs` and stores the return address (`PC + 4`) in `$rd` (usually `$ra`).              | `JALR $ra, $t0`       |
+| **TRAP**        | `TRAP code`            | Triggers a software interrupt, transferring control to the operating system at a predefined vectored address. | `TRAP 0x7`            |
+| **ERET**        | `ERET`                 | Returns from an exception, restoring the state and returning to user mode.                                    | `ERET`                |
