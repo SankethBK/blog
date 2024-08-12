@@ -257,7 +257,8 @@ MIPS is a modular architecture supporting up to four coprocessors (CP0/1/2/3). C
 
 1. **Coprocessor 0 (CP0) - System Control Coprocessor:** CP0 is responsible for managing system control functions, including exception handling, memory management, and processor status. It plays a critical role in configuring and controlling the behavior of the MIPS processor. CP0 contains a set of special-purpose registers used for various control tasks, such as the Status Register, Cause Register, EPC (Exception Program Counter), and TLB (Translation Lookaside Buffer) management registers.
 
-2. **Coprocessor 1 (CP1) - Floating-Point Unit (FPU):**  CP1 is dedicated to handling floating-point arithmetic operations, such as addition, subtraction, multiplication, division, and square root operations on floating-point numbers. This offloads complex calculations from the main CPU, improving overall performance for tasks requiring floating-point computations. CP1 includes 32 floating-point registers (`$f0` to `$f31`), which are used to store floating-point operands and results. 
+2. **Coprocessor 1 (CP1) - Floating-Point Unit (FPU)**: CP1 is dedicated to handling floating-point arithmetic operations, such as addition, subtraction, multiplication, division, and square root operations on floating-point numbers. This offloads complex calculations from the main CPU, improving overall performance for tasks requiring floating-point computations. CP1 includes 32 floating-point registers (`$f0` to `$f31`), which are used to store floating-point operands and results. Additionally, CP1 contains the Floating-Point Control and Status Register (FCSR), which holds various status flags and control bits related to floating-point operations. The FCSR also contains the comparison bit, which is set by floating-point comparison instructions and can be used for conditional branching.
+
 
 3. **Coprocessor 2 and 3 (Optional):** CP2 and CP3 are optional coprocessors that can be used for application-specific purposes, such as vector processing, digital signal processing (DSP), or other specialized tasks. For example, in the PlayStation video game console, CP2 is the Geometry Transformation Engine (GTE), which accelerates the processing of geometry in 3D computer graphics.
 
@@ -546,7 +547,7 @@ JUMP target
 | **BNEZ**        | `BNEZ $rs, offset`     | Branches if the value in `$rs` is not equal to zero. Offset is 16-bit signed and relative to `PC + 4`.        | `BNEZ $t0, label`     |
 | **BEQ**         | `BEQ $rs, $rt, offset` | Branches if the values in `$rs` and `$rt` are equal. Offset is 16-bit signed and relative to `PC + 4`.        | `BEQ $t0, $t1, label` |
 | **BNE**         | `BNE $rs, $rt, offset` | Branches if the values in `$rs` and `$rt` are not equal. Offset is 16-bit signed and relative to `PC + 4`.    | `BNE $t0, $t1, label` |
-| **BC1T**        | `BC1T offset`          | Branches if the floating-point comparison bit is true. Offset is 16-bit signed and relative to `PC + 4`.      | `BC1T label`          |
+| **BC1T**        | `BC1T offset`          | Branches if the floating-point comparison bit is true. The comparison bit is located in the Floating-Point Control and Status Register (FCSR) in Coprocessor 1 (CP1). This bit is set by floating-point comparison instructions. The offset is 16-bit signed and relative to `PC + 4`.      | `BC1T label`          |
 | **BC1F**        | `BC1F offset`          | Branches if the floating-point comparison bit is false. Offset is 16-bit signed and relative to `PC + 4`.     | `BC1F label`          |
 | **MOVN**        | `MOVN $rd, $rs, $rt`   | Copies the value in `$rs` to `$rd` if the value in `$rt` is not zero.                                         | `MOVN $t0, $t1, $t2`  |
 | **MOVZ**        | `MOVZ $rd, $rs, $rt`   | Copies the value in `$rs` to `$rd` if the value in `$rt` is zero.                                             | `MOVZ $t0, $t1, $t2`  |
@@ -556,3 +557,34 @@ JUMP target
 | **JALR**        | `JALR $rd, $rs`        | Jumps to the address in `$rs` and stores the return address (`PC + 4`) in `$rd` (usually `$ra`).              | `JALR $ra, $t0`       |
 | **TRAP**        | `TRAP code`            | Triggers a software interrupt, transferring control to the operating system at a predefined vectored address. | `TRAP 0x7`            |
 | **ERET**        | `ERET`                 | Returns from an exception, restoring the state and returning to user mode.                                    | `ERET`                |
+
+Note: The relative offset for branching is considered from `PC + 4` instead of `PC` because, in MIPS, the Program Counter (PC) is incremented by 4 immediately after fetching the current instruction. This means that by the time the branch or jump instruction is executed, the PC already points to the next instruction.
+
+**Translation of Labels in Machine Code**
+
+When writing assembly code, we often use labels as targets for jumps or branches. These labels are symbolic names representing memory addresses. During the assembly process, the assembler converts these labels into actual memory locations. This allows the code to be more readable and maintainable, as labels can be used instead of hard-coded memory addresses.
+
+For e.g., if the assembly code is 
+
+```assembly
+start:
+    ADD $t0, $t1, $t2
+    BEQ $t0, $zero, end
+    SUB $t3, $t4, $t5
+end:
+    NOP
+```
+
+when it's converted to machine code by the assembler, it will be like this (except everything including opcodes will be binary numbers)
+
+```
+    ADD $t0, $t1, $t2
+    BEQ $t0, $zero, 0x00400010  # The label 'end' is converted to the memory address 0x00400010
+    SUB $t3, $t4, $t5
+    NOP
+```
+
+During assembly, the assembler replaces each referenced label with the corresponding memory location of the code associated with that label. The assembler can calculate these addresses even before the program is loaded into memory for execution because they are virtual addresses, not physical addresses. In fact, a program does not need to be concerned with physical addresses, as the Memory Management Unit (MMU) handles the translation of virtual addresses to physical addresses.
+
+The assembler assumes a starting address for the program (often specified by the operating system or a linker script). As it processes the code, it assigns virtual memory addresses to each instruction and data element, incrementing the address by the size of each instruction or data element. These addresses are used for the purposes of assembly and linking, not for direct physical memory access.
+
