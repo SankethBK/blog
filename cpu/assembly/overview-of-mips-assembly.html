@@ -449,7 +449,7 @@ andi $t0, $t1, 0xFF  # $t0 = $t1 &amp; 0xFF
     <p><strong>Coprocessor 0 (CP0) - System Control Coprocessor:</strong> CP0 is responsible for managing system control functions, including exception handling, memory management, and processor status. It plays a critical role in configuring and controlling the behavior of the MIPS processor. CP0 contains a set of special-purpose registers used for various control tasks, such as the Status Register, Cause Register, EPC (Exception Program Counter), and TLB (Translation Lookaside Buffer) management registers.</p>
   </li>
   <li>
-    <p><strong>Coprocessor 1 (CP1) - Floating-Point Unit (FPU):</strong>  CP1 is dedicated to handling floating-point arithmetic operations, such as addition, subtraction, multiplication, division, and square root operations on floating-point numbers. This offloads complex calculations from the main CPU, improving overall performance for tasks requiring floating-point computations. CP1 includes 32 floating-point registers (<code class="language-plaintext highlighter-rouge">$f0</code> to <code class="language-plaintext highlighter-rouge">$f31</code>), which are used to store floating-point operands and results.</p>
+    <p><strong>Coprocessor 1 (CP1) - Floating-Point Unit (FPU)</strong>: CP1 is dedicated to handling floating-point arithmetic operations, such as addition, subtraction, multiplication, division, and square root operations on floating-point numbers. This offloads complex calculations from the main CPU, improving overall performance for tasks requiring floating-point computations. CP1 includes 32 floating-point registers (<code class="language-plaintext highlighter-rouge">$f0</code> to <code class="language-plaintext highlighter-rouge">$f31</code>), which are used to store floating-point operands and results. Additionally, CP1 contains the Floating-Point Control and Status Register (FCSR), which holds various status flags and control bits related to floating-point operations. The FCSR also contains the comparison bit, which is set by floating-point comparison instructions and can be used for conditional branching.</p>
   </li>
   <li>
     <p><strong>Coprocessor 2 and 3 (Optional):</strong> CP2 and CP3 are optional coprocessors that can be used for application-specific purposes, such as vector processing, digital signal processing (DSP), or other specialized tasks. For example, in the PlayStation video game console, CP2 is the Geometry Transformation Engine (GTE), which accelerates the processing of geometry in 3D computer graphics.</p>
@@ -1017,7 +1017,7 @@ Example:
     <tr>
       <td><strong>BC1T</strong></td>
       <td><code class="language-plaintext highlighter-rouge">BC1T offset</code></td>
-      <td>Branches if the floating-point comparison bit is true. Offset is 16-bit signed and relative to <code class="language-plaintext highlighter-rouge">PC + 4</code>.</td>
+      <td>Branches if the floating-point comparison bit is true. The comparison bit is located in the Floating-Point Control and Status Register (FCSR) in Coprocessor 1 (CP1). This bit is set by floating-point comparison instructions. The offset is 16-bit signed and relative to <code class="language-plaintext highlighter-rouge">PC + 4</code>.</td>
       <td><code class="language-plaintext highlighter-rouge">BC1T label</code></td>
     </tr>
     <tr>
@@ -1076,6 +1076,35 @@ Example:
     </tr>
   </tbody>
 </table>
+
+<p>Note: The relative offset for branching is considered from <code class="language-plaintext highlighter-rouge">PC + 4</code> instead of <code class="language-plaintext highlighter-rouge">PC</code> because, in MIPS, the Program Counter (PC) is incremented by 4 immediately after fetching the current instruction. This means that by the time the branch or jump instruction is executed, the PC already points to the next instruction.</p>
+
+<p><strong>Translation of Labels in Machine Code</strong></p>
+
+<p>When writing assembly code, we often use labels as targets for jumps or branches. These labels are symbolic names representing memory addresses. During the assembly process, the assembler converts these labels into actual memory locations. This allows the code to be more readable and maintainable, as labels can be used instead of hard-coded memory addresses.</p>
+
+<p>For e.g., if the assembly code is</p>
+
+<pre><code class="language-assembly">start:
+    ADD $t0, $t1, $t2
+    BEQ $t0, $zero, end
+    SUB $t3, $t4, $t5
+end:
+    NOP
+</code></pre>
+
+<p>when it’s converted to machine code by the assembler, it will be like this (except everything including opcodes will be binary numbers)</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    ADD $t0, $t1, $t2
+    BEQ $t0, $zero, 0x00400010  # The label 'end' is converted to the memory address 0x00400010
+    SUB $t3, $t4, $t5
+    NOP
+</code></pre></div></div>
+
+<p>During assembly, the assembler replaces each referenced label with the corresponding memory location of the code associated with that label. The assembler can calculate these addresses even before the program is loaded into memory for execution because they are virtual addresses, not physical addresses. In fact, a program does not need to be concerned with physical addresses, as the Memory Management Unit (MMU) handles the translation of virtual addresses to physical addresses.</p>
+
+<p>The assembler assumes a starting address for the program (often specified by the operating system or a linker script). As it processes the code, it assigns virtual memory addresses to each instruction and data element, incrementing the address by the size of each instruction or data element. These addresses are used for the purposes of assembly and linking, not for direct physical memory access.</p>
+
 </div>
 
   
