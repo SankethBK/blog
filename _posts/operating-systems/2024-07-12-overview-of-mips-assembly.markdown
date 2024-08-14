@@ -555,8 +555,8 @@ JUMP target
 | **JR**          | `JR $rs`               | Unconditionally jumps to the address contained in `$rs`.                                                      | `JR $t0`              |
 | **JAL**         | `JAL target`           | Jumps to the target address and stores the return address (`PC + 4`) in `$ra` (register 31).                  | `JAL label`           |
 | **JALR**        | `JALR $rd, $rs`        | Jumps to the address in `$rs` and stores the return address (`PC + 4`) in `$rd` (usually `$ra`).              | `JALR $ra, $t0`       |
-| **TRAP**        | `TRAP code`            | Triggers a software interrupt, transferring control to the operating system at a predefined vectored address. | `TRAP 0x7`            |
-| **ERET**        | `ERET`                 | Returns from an exception, restoring the state and returning to user mode.                                    | `ERET`                |
+| **TRAP**        | `TRAP code`            | Triggers a software interrupt, transferring control to the operating system at a predefined vectored address. This instruction is used for implementing system calls or exceptions where the program needs to request services from the operating system or handle specific conditions. The code parameter is a 16-bit immediate value called system call number, it specifies the type of service or the particular action to be performed by the operating system. | `TRAP 0x7`            |
+| **ERET**        | `ERET`                 | Returns from an exception, restoring the state and returning to user mode. An "exception" generally refers to any condition that disrupts the normal execution flow of a program and requires special handling by the operating system or the CPU. These can include both software interrupt which are intentional exceptions triggered by the program, often using a TRAP instruction, to request a service from the operating system or hardware exceptions like a program tries to divide a number by zero, triggering a divide-by-zero exception. The CPU catches this, and the operating system's exception handler is invoked. After handling the exception (perhaps by terminating the program or skipping the instruction), ERET is used to return control to the next appropriate point in the program.                                | `ERET`                |
 
 Note: The relative offset for branching is considered from `PC + 4` instead of `PC` because, in MIPS, the Program Counter (PC) is incremented by 4 immediately after fetching the current instruction. This means that by the time the branch or jump instruction is executed, the PC already points to the next instruction.
 
@@ -588,3 +588,19 @@ During assembly, the assembler replaces each referenced label with the correspon
 
 The assembler assumes a starting address for the program (often specified by the operating system or a linker script). As it processes the code, it assigns virtual memory addresses to each instruction and data element, incrementing the address by the size of each instruction or data element. These addresses are used for the purposes of assembly and linking, not for direct physical memory access.
 
+### 7. Floating-Point Instructions
+
+In MIPS, floating-point operations are performed using the Floating-Point Unit (FPU), also known as Coprocessor 1 (CP1). The FPU handles calculations on floating-point numbers in three formats: single-precision (SP), double-precision (DP), and paired-single (PS). These operations can involve basic arithmetic like addition, subtraction, multiplication, and division, as well as more complex operations like multiply-add and conversion between different data types.
+- **Single-Precision (SP):** 32-bit floating-point numbers.
+- **Double-Precision (DP):** 64-bit floating-point numbers.
+- **Paired-Single (PS):** Two 32-bit floating-point values packed into a single 64-bit register. This format allows SIMD (Single Instruction, Multiple Data) operations, enabling parallel processing of the two 32-bit values.
+
+| Instruction Group  | Syntax                      | Description                                                                                                                            | Example                |
+| ------------------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| **Addition**       | ADD.[D/S/PS] $fd, $fs, $ft  | Adds the values in $fs and $ft, storing the result in $fd. Supports DP, SP, and PS formats.                                            | `ADD.D $f0, $f1, $f2`  |
+| **Subtraction**    | SUB.[D/S/PS] $fd, $fs, $ft  | Subtracts the value in $ft from $fs, storing the result in $fd. Supports DP, SP, and PS formats.                                       | `SUB.S $f0, $f1, $f2`  |
+| **Multiplication** | MUL.[D/S/PS] $fd, $fs, $ft  | Multiplies the values in $fs and $ft, storing the result in $fd. Supports DP, SP, and PS formats.                                      | `MUL.PS $f0, $f1, $f2` |
+| **Multiply-Add**   | MADD.[D/S/PS] $fd, $fs, $ft | Multiplies $fs and $ft, then adds the result to $fd. Supports DP, SP, and PS formats.                                                  | `MADD.D $f0, $f1, $f2` |
+| **Division**       | DIV.[D/S/PS] $fd, $fs, $ft  | Divides the value in $fs by $ft, storing the result in $fd. Supports DP, SP, and PS formats.                                           | `DIV.S $f0, $f1, $f2`  |
+| **Conversion**     | CVT.[x].[y] $fd, $fs        | Converts the value in $fs from format x to format y, storing the result in $fd. Formats include L, W, D, and S.                        | `CVT.S.D $f0, $f1`     |
+| **Comparison**     | C.[cond].[D/S] $fs, $ft     | Compares the values in $fs and $ft. The condition (cond) can be LT, GT, LE, GE, EQ, or NE. Sets a bit in the FCSR based on the result. | `C.LE.S $f0, $f1`      |

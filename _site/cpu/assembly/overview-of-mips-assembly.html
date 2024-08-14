@@ -1065,13 +1065,13 @@ Example:
     <tr>
       <td><strong>TRAP</strong></td>
       <td><code class="language-plaintext highlighter-rouge">TRAP code</code></td>
-      <td>Triggers a software interrupt, transferring control to the operating system at a predefined vectored address.</td>
+      <td>Triggers a software interrupt, transferring control to the operating system at a predefined vectored address. This instruction is used for implementing system calls or exceptions where the program needs to request services from the operating system or handle specific conditions. The code parameter is a 16-bit immediate value called system call number, it specifies the type of service or the particular action to be performed by the operating system.</td>
       <td><code class="language-plaintext highlighter-rouge">TRAP 0x7</code></td>
     </tr>
     <tr>
       <td><strong>ERET</strong></td>
       <td><code class="language-plaintext highlighter-rouge">ERET</code></td>
-      <td>Returns from an exception, restoring the state and returning to user mode.</td>
+      <td>Returns from an exception, restoring the state and returning to user mode. An “exception” generally refers to any condition that disrupts the normal execution flow of a program and requires special handling by the operating system or the CPU. These can include both software interrupt which are intentional exceptions triggered by the program, often using a TRAP instruction, to request a service from the operating system or hardware exceptions like a program tries to divide a number by zero, triggering a divide-by-zero exception. The CPU catches this, and the operating system’s exception handler is invoked. After handling the exception (perhaps by terminating the program or skipping the instruction), ERET is used to return control to the next appropriate point in the program.</td>
       <td><code class="language-plaintext highlighter-rouge">ERET</code></td>
     </tr>
   </tbody>
@@ -1105,6 +1105,69 @@ end:
 
 <p>The assembler assumes a starting address for the program (often specified by the operating system or a linker script). As it processes the code, it assigns virtual memory addresses to each instruction and data element, incrementing the address by the size of each instruction or data element. These addresses are used for the purposes of assembly and linking, not for direct physical memory access.</p>
 
+<h3 id="7-floating-point-instructions">7. Floating-Point Instructions</h3>
+
+<p>In MIPS, floating-point operations are performed using the Floating-Point Unit (FPU), also known as Coprocessor 1 (CP1). The FPU handles calculations on floating-point numbers in three formats: single-precision (SP), double-precision (DP), and paired-single (PS). These operations can involve basic arithmetic like addition, subtraction, multiplication, and division, as well as more complex operations like multiply-add and conversion between different data types.</p>
+<ul>
+  <li><strong>Single-Precision (SP):</strong> 32-bit floating-point numbers.</li>
+  <li><strong>Double-Precision (DP):</strong> 64-bit floating-point numbers.</li>
+  <li><strong>Paired-Single (PS):</strong> Two 32-bit floating-point values packed into a single 64-bit register. This format allows SIMD (Single Instruction, Multiple Data) operations, enabling parallel processing of the two 32-bit values.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>Instruction Group</th>
+      <th>Syntax</th>
+      <th>Description</th>
+      <th>Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Addition</strong></td>
+      <td>ADD.[D/S/PS] $fd, $fs, $ft</td>
+      <td>Adds the values in $fs and $ft, storing the result in $fd. Supports DP, SP, and PS formats.</td>
+      <td><code class="language-plaintext highlighter-rouge">ADD.D $f0, $f1, $f2</code></td>
+    </tr>
+    <tr>
+      <td><strong>Subtraction</strong></td>
+      <td>SUB.[D/S/PS] $fd, $fs, $ft</td>
+      <td>Subtracts the value in $ft from $fs, storing the result in $fd. Supports DP, SP, and PS formats.</td>
+      <td><code class="language-plaintext highlighter-rouge">SUB.S $f0, $f1, $f2</code></td>
+    </tr>
+    <tr>
+      <td><strong>Multiplication</strong></td>
+      <td>MUL.[D/S/PS] $fd, $fs, $ft</td>
+      <td>Multiplies the values in $fs and $ft, storing the result in $fd. Supports DP, SP, and PS formats.</td>
+      <td><code class="language-plaintext highlighter-rouge">MUL.PS $f0, $f1, $f2</code></td>
+    </tr>
+    <tr>
+      <td><strong>Multiply-Add</strong></td>
+      <td>MADD.[D/S/PS] $fd, $fs, $ft</td>
+      <td>Multiplies $fs and $ft, then adds the result to $fd. Supports DP, SP, and PS formats.</td>
+      <td><code class="language-plaintext highlighter-rouge">MADD.D $f0, $f1, $f2</code></td>
+    </tr>
+    <tr>
+      <td><strong>Division</strong></td>
+      <td>DIV.[D/S/PS] $fd, $fs, $ft</td>
+      <td>Divides the value in $fs by $ft, storing the result in $fd. Supports DP, SP, and PS formats.</td>
+      <td><code class="language-plaintext highlighter-rouge">DIV.S $f0, $f1, $f2</code></td>
+    </tr>
+    <tr>
+      <td><strong>Conversion</strong></td>
+      <td>CVT.[x].[y] $fd, $fs</td>
+      <td>Converts the value in $fs from format x to format y, storing the result in $fd. Formats include L, W, D, and S.</td>
+      <td><code class="language-plaintext highlighter-rouge">CVT.S.D $f0, $f1</code></td>
+    </tr>
+    <tr>
+      <td><strong>Comparison</strong></td>
+      <td>C.[cond].[D/S] $fs, $ft</td>
+      <td>Compares the values in $fs and $ft. The condition (cond) can be LT, GT, LE, GE, EQ, or NE. Sets a bit in the FCSR based on the result.</td>
+      <td><code class="language-plaintext highlighter-rouge">C.LE.S $f0, $f1</code></td>
+    </tr>
+  </tbody>
+</table>
 </div>
 
   
