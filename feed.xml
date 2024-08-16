@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-08-15T12:57:09+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Representation of Negative Numbers in Hardware</title><link href="http://localhost:4000/blog/cpu/representation-of-negative-numbers" rel="alternate" type="text/html" title="Representation of Negative Numbers in Hardware" /><published>2024-07-21T20:51:00+05:30</published><updated>2024-07-21T20:51:00+05:30</updated><id>http://localhost:4000/blog/cpu/representation-of-negative-numbers</id><content type="html" xml:base="http://localhost:4000/blog/cpu/representation-of-negative-numbers"><![CDATA[<p>Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-08-16T12:21:02+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Representation of Negative Numbers in Hardware</title><link href="http://localhost:4000/blog/cpu/representation-of-negative-numbers" rel="alternate" type="text/html" title="Representation of Negative Numbers in Hardware" /><published>2024-07-21T20:51:00+05:30</published><updated>2024-07-21T20:51:00+05:30</updated><id>http://localhost:4000/blog/cpu/representation-of-negative-numbers</id><content type="html" xml:base="http://localhost:4000/blog/cpu/representation-of-negative-numbers"><![CDATA[<p>Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.</p>
 
 <h2 id="characteristics-of-an-ideal-representation">Characteristics of an Ideal Representation</h2>
 
@@ -1620,7 +1620,87 @@ end:
       <td><code class="language-plaintext highlighter-rouge">C.LE.S $f0, $f1</code></td>
     </tr>
   </tbody>
-</table>]]></content><author><name>Sanketh</name></author><category term="cpu" /><category term="assembly" /><summary type="html"><![CDATA[MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA’s. It was developed in the early 1980s at Stanford University by Professor John L. Hennessy. MIPS is widely used in academic research and industry, particularly in computer architecture courses due to its straightforward design and in various embedded systems applications for its efficiency and performance.]]></summary></entry><entry><title type="html">The Fetch Decode Execute Cycle</title><link href="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle" rel="alternate" type="text/html" title="The Fetch Decode Execute Cycle" /><published>2024-06-30T19:32:40+05:30</published><updated>2024-06-30T19:32:40+05:30</updated><id>http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle</id><content type="html" xml:base="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle"><![CDATA[<p>The Fetch-decode-execute cycle or instruction cycle is how CPU executes programs. During this cycle, the CPU retrieves an instruction from memory (fetch), interprets what action is required (decode), and then carries out the necessary operations to complete the instruction (execute). This cycle is crucial for the CPU to perform any computational tasks, and it repeats continuously while the computer is powered on.</p>
+</table>
+
+<h2 id="pseudo-instructions-in-mips">Pseudo-Instructions in MIPS</h2>
+
+<p>Pseudo-instructions are higher-level assembly language instructions that simplify coding for the programmer. These pseudo-instructions are not actual MIPS machine instructions but are translated by the assembler into one or more real MIPS instructions during assembly. This translation helps make the code more readable and easier to write without worrying about the specific details of the underlying machine instructions.</p>
+
+<p>Some of the commonly used pseudo-instructions in MIPS are</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Pseudo-Instruction</th>
+      <th>Description</th>
+      <th>Actual Instructions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">move $rd, $rs</code></td>
+      <td>Copy the value from register <code class="language-plaintext highlighter-rouge">$rs</code> to <code class="language-plaintext highlighter-rouge">$rd</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">add $rd, $rs, $zero</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">li $rd, imm</code></td>
+      <td>Load an immediate value <code class="language-plaintext highlighter-rouge">imm</code> into register <code class="language-plaintext highlighter-rouge">$rd</code>.</td>
+      <td>If <code class="language-plaintext highlighter-rouge">imm</code> is small: <code class="language-plaintext highlighter-rouge">addi $rd, $zero, imm</code><br />If <code class="language-plaintext highlighter-rouge">imm</code> is large: <code class="language-plaintext highlighter-rouge">lui $rd, upper(imm)</code> + <code class="language-plaintext highlighter-rouge">ori $rd, $rd, lower(imm)</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">la $rd, label</code></td>
+      <td>Load the address of <code class="language-plaintext highlighter-rouge">label</code> into register <code class="language-plaintext highlighter-rouge">$rd</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">lui $rd, upper(label)</code> + <code class="language-plaintext highlighter-rouge">ori $rd, $rd, lower(label)</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">b label</code></td>
+      <td>Unconditional branch to <code class="language-plaintext highlighter-rouge">label</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">beq $zero, $zero, label</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">blt $rs, $rt, label</code></td>
+      <td>Branch to <code class="language-plaintext highlighter-rouge">label</code> if <code class="language-plaintext highlighter-rouge">$rs</code> is less than <code class="language-plaintext highlighter-rouge">$rt</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">slt $at, $rs, $rt</code> + <code class="language-plaintext highlighter-rouge">bne $at, $zero, label</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">bgt $rs, $rt, label</code></td>
+      <td>Branch to <code class="language-plaintext highlighter-rouge">label</code> if <code class="language-plaintext highlighter-rouge">$rs</code> is greater than <code class="language-plaintext highlighter-rouge">$rt</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">slt $at, $rt, $rs</code> + <code class="language-plaintext highlighter-rouge">bne $at, $zero, label</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">bge $rs, $rt, label</code></td>
+      <td>Branch to <code class="language-plaintext highlighter-rouge">label</code> if <code class="language-plaintext highlighter-rouge">$rs</code> is greater than or equal to <code class="language-plaintext highlighter-rouge">$rt</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">slt $at, $rs, $rt</code> + <code class="language-plaintext highlighter-rouge">beq $at, $zero, label</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">ble $rs, $rt, label</code></td>
+      <td>Branch to <code class="language-plaintext highlighter-rouge">label</code> if <code class="language-plaintext highlighter-rouge">$rs</code> is less than or equal to <code class="language-plaintext highlighter-rouge">$rt</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">slt $at, $rt, $rs</code> + <code class="language-plaintext highlighter-rouge">beq $at, $zero, label</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nop</code></td>
+      <td>No operation; does nothing for one cycle.</td>
+      <td><code class="language-plaintext highlighter-rouge">sll $zero, $zero, 0</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">li $rd, 0ximm</code></td>
+      <td>Load an immediate hexadecimal value into <code class="language-plaintext highlighter-rouge">$rd</code>.</td>
+      <td><code class="language-plaintext highlighter-rouge">lui $rd, high(imm)</code> + <code class="language-plaintext highlighter-rouge">ori $rd, $rd, low(imm)</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The register <code class="language-plaintext highlighter-rouge">$1</code> (also known as <code class="language-plaintext highlighter-rouge">$at</code>, short for “assembler temporary”) is used by the assembler as a temporary register to hold intermediate values. Many pseudo-instructions require multiple steps to achieve the desired result. For example, the pseudo-instruction <code class="language-plaintext highlighter-rouge">bgt</code> (branch if greater than) is not a real MIPS instruction and needs to be translated into a combination of other instructions like <code class="language-plaintext highlighter-rouge">slt</code> (set less than) and <code class="language-plaintext highlighter-rouge">bne</code> (branch if not equal). The assembler uses <code class="language-plaintext highlighter-rouge">$at</code> to temporarily hold values during this process.</p>
+
+<p>For eg: the pseudo-instruction</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>bgt $t0, $t1, label
+</code></pre></div></div>
+
+<p>needs to be translated by the assembler because there is no direct <code class="language-plaintext highlighter-rouge">bgt</code> instruction in MIPS. The assembler expands it as follows:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>slt $at, $t1, $t0      # Set $at to 1 if $t1 &lt; $t0
+bne $at, $zero, label  # Branch to label if $at is not zero
+</code></pre></div></div>]]></content><author><name>Sanketh</name></author><category term="cpu" /><category term="assembly" /><summary type="html"><![CDATA[MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA’s. It was developed in the early 1980s at Stanford University by Professor John L. Hennessy. MIPS is widely used in academic research and industry, particularly in computer architecture courses due to its straightforward design and in various embedded systems applications for its efficiency and performance.]]></summary></entry><entry><title type="html">The Fetch Decode Execute Cycle</title><link href="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle" rel="alternate" type="text/html" title="The Fetch Decode Execute Cycle" /><published>2024-06-30T19:32:40+05:30</published><updated>2024-06-30T19:32:40+05:30</updated><id>http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle</id><content type="html" xml:base="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle"><![CDATA[<p>The Fetch-decode-execute cycle or instruction cycle is how CPU executes programs. During this cycle, the CPU retrieves an instruction from memory (fetch), interprets what action is required (decode), and then carries out the necessary operations to complete the instruction (execute). This cycle is crucial for the CPU to perform any computational tasks, and it repeats continuously while the computer is powered on.</p>
 
 <h2 id="what-is-machine-code">What is Machine Code?</h2>
 
