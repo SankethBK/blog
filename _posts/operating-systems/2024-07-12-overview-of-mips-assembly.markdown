@@ -17,6 +17,7 @@ references:
    - https://electronics.stackexchange.com/questions/162976/range-of-mips-j-instruction
    - https://stackoverflow.com/questions/6950230/how-to-calculate-jump-target-address-and-branch-target-address
    - https://stackoverflow.com/questions/44694957/the-difference-between-logical-shift-right-arithmetic-shift-right-and-rotate-r
+   - https://www.d.umn.edu/~gshute/mips/directives-registers.pdf
 ---
 
 MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA's. It was developed in the early 1980s at Stanford University by Professor John L. Hennessy. MIPS is widely used in academic research and industry, particularly in computer architecture courses due to its straightforward design and in various embedded systems applications for its efficiency and performance.
@@ -637,3 +638,32 @@ needs to be translated by the assembler because there is no direct `bgt` instruc
 slt $at, $t1, $t0      # Set $at to 1 if $t1 < $t0
 bne $at, $zero, label  # Branch to label if $at is not zero
 ```
+
+## Directives in MIPS
+
+Directives in MIPS are special instructions that guide the assembler during the assembly process. Unlike typical assembly instructions, directives do not correspond to machine instructions; instead, they control the organization and management of the code and data. These directives help define the structure of the program, allocate memory, and manage sections within the assembly code.
+
+**Directives are used for following:**
+
+1. **Introducing Sections:** A process in operating system consists of following segments: **text**, **data**, **heap** and **stack**. The **text** segment contains the executable instructions of a program, which are the compiled code that the CPU executes. It is typically marked as read-only to prevent accidental or malicious modifications.  The **data** segment stores global and static variables that are initialized before the program starts. It has separate sub-segments for storing initialized and uninitialized data (BSS). It is a read-write segment, allowing variables to be modified during execution.. Directives like `.data` and `.text` introduce the data and text sections of the program, respectively. The `.data` section is for declaring variables and data, while the `.text` section contains the actual code (instructions). A MIPS program can have multiple .data and .text sections. These sections can be defined at different points in the source code to organize data and instructions. The assembler processes these sections and groups all the .data sections into a single data segment and all the .text sections into a single text segment in the final binary.
+
+2. **Assembling Values:** Assembling refers to the process of initializing and placing specific values into the memory sections of the program. Directives like `.byte`, `.half`, `.word`, `.ascii`, and `.double` assemble specific values into the current section. For example, `.byte` and `.half` store 8-bit and 16-bit values, respectively, while `.double` calculates and stores IEEE 64-bit double-precision floating-point values.
+
+
+    | **Directive** | **Data Type**                          | **Size** | **Memory Alignment**             | **Example**                                       |
+    | ------------- | -------------------------------------- | -------- | -------------------------------- | ------------------------------------------------- |
+    | `.byte`       | 8-bit integer                          | 1 byte   | None (can be at any address)     | `.data` <br> `val4: .byte 0x12`                                |
+    | `.half`       | 16-bit integer                         | 2 bytes  | Even addresses (2-byte boundary) | `.data` <br> `.align 1` <br> `val3: .half 0x1234`              |
+    | `.word`       | 32-bit integer                         | 4 bytes  | 4-byte boundary                  | `.data` <br> `.align 2` <br> `val1: .word 0x12345678`          |
+    | `.double`     | 64-bit double-precision floating point | 8 bytes  | 8-byte boundary                  | `.data` <br> `.align 3` <br> `val2: .double 3.141592653589793` |
+    | `.space`      | Reserved memory space                  | N/A      | N/A                              | `.data` <br> `buffer: .space 64` (reserves 64 bytes of space)      |
+    | `.ascii`      | ASCII string without null terminator   | Variable | None (can be at any address)     | `.data` <br> `val5: .ascii "hello"`                            |
+    | `.asciiz`     | ASCII string with null terminator      | Variable | None (can be at any address)     | `.data` <br> `val6: .asciiz "world"`                           |
+
+3. **Global and External Symbols:** Directives like `.globl` and `.extern` are used to manage symbol visibility and accessibility across multiple assembly files or modules. These directives are essential in modular programming, allowing different parts of a program to share and link symbols.
+
+   - `.globl sym:` Declares the label `sym` as global, making it accessible from other assembly files or modules. This ensures that the label can be referenced during the linking process, enabling inter-file communication.
+   - `.extern sym size:` Declares the label `sym` as an external symbol, indicating that it is defined in another file or module. The `size` parameter specifies the symbol's size in bytes. This directive is used to reference symbols that are not defined within the current assembly file but are needed for linking.
+
+4. **Memory Alignment:** The MIPS assembler automatically aligns data in memory according to the data type's natural alignment requirements.The `.align` directive is used to ensure that the data in memory is aligned on a specific boundary, which can be critical for performance or correctness in certain architectures. The directive takes an argument that specifies the power of two for the alignment (e.g., `.align` 2 aligns the data on a 4-byte boundary). This is particularly useful when dealing with data types that require specific alignment for efficient access. The `.align 0` directive can be used to turn off automatic alignment. 
+For example: `.align 3` aligns the data on an 8-byte boundary, suitable for 64-bit data types.
