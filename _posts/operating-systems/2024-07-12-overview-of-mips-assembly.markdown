@@ -605,3 +605,35 @@ In MIPS, floating-point operations are performed using the Floating-Point Unit (
 | **Conversion**     | CVT.[x].[y] $fd, $fs        | Converts the value in $fs from format x to format y, storing the result in $fd. Formats include L, W, D, and S.                        | `CVT.S.D $f0, $f1`     |
 | **Comparison**     | C.[cond].[D/S] $fs, $ft     | Compares the values in $fs and $ft. The condition (cond) can be LT, GT, LE, GE, EQ, or NE. Sets a bit in the FCSR based on the result. | `C.LE.S $f0, $f1`      |
 
+## Pseudo-Instructions in MIPS
+
+Pseudo-instructions are higher-level assembly language instructions that simplify coding for the programmer. These pseudo-instructions are not actual MIPS machine instructions but are translated by the assembler into one or more real MIPS instructions during assembly. This translation helps make the code more readable and easier to write without worrying about the specific details of the underlying machine instructions.
+
+Some of the commonly used pseudo-instructions in MIPS are
+
+| Pseudo-Instruction    | Description                                                   | Actual Instructions                                                                                                |
+| --------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `move $rd, $rs`       | Copy the value from register `$rs` to `$rd`.                  | `add $rd, $rs, $zero`                                                                                              |
+| `li $rd, imm`         | Load an immediate value `imm` into register `$rd`.            | If `imm` is small: `addi $rd, $zero, imm`<br>If `imm` is large: `lui $rd, upper(imm)` + `ori $rd, $rd, lower(imm)` |
+| `la $rd, label`       | Load the address of `label` into register `$rd`.              | `lui $rd, upper(label)` + `ori $rd, $rd, lower(label)`                                                             |
+| `b label`             | Unconditional branch to `label`.                              | `beq $zero, $zero, label`                                                                                          |
+| `blt $rs, $rt, label` | Branch to `label` if `$rs` is less than `$rt`.                | `slt $at, $rs, $rt` + `bne $at, $zero, label`                                                                      |
+| `bgt $rs, $rt, label` | Branch to `label` if `$rs` is greater than `$rt`.             | `slt $at, $rt, $rs` + `bne $at, $zero, label`                                                                      |
+| `bge $rs, $rt, label` | Branch to `label` if `$rs` is greater than or equal to `$rt`. | `slt $at, $rs, $rt` + `beq $at, $zero, label`                                                                      |
+| `ble $rs, $rt, label` | Branch to `label` if `$rs` is less than or equal to `$rt`.    | `slt $at, $rt, $rs` + `beq $at, $zero, label`                                                                      |
+| `nop`                 | No operation; does nothing for one cycle.                     | `sll $zero, $zero, 0`                                                                                              |
+| `li $rd, 0ximm`       | Load an immediate hexadecimal value into `$rd`.               | `lui $rd, high(imm)` + `ori $rd, $rd, low(imm)`                                                                    |
+
+The register `$1` (also known as `$at`, short for "assembler temporary") is used by the assembler as a temporary register to hold intermediate values. Many pseudo-instructions require multiple steps to achieve the desired result. For example, the pseudo-instruction `bgt` (branch if greater than) is not a real MIPS instruction and needs to be translated into a combination of other instructions like `slt` (set less than) and `bne` (branch if not equal). The assembler uses `$at` to temporarily hold values during this process.
+
+For eg: the pseudo-instruction
+```
+bgt $t0, $t1, label
+```
+
+needs to be translated by the assembler because there is no direct `bgt` instruction in MIPS. The assembler expands it as follows:
+
+```
+slt $at, $t1, $t0      # Set $at to 1 if $t1 < $t0
+bne $at, $zero, label  # Branch to label if $at is not zero
+```
