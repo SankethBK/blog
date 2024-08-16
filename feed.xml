@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-08-16T12:21:02+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Representation of Negative Numbers in Hardware</title><link href="http://localhost:4000/blog/cpu/representation-of-negative-numbers" rel="alternate" type="text/html" title="Representation of Negative Numbers in Hardware" /><published>2024-07-21T20:51:00+05:30</published><updated>2024-07-21T20:51:00+05:30</updated><id>http://localhost:4000/blog/cpu/representation-of-negative-numbers</id><content type="html" xml:base="http://localhost:4000/blog/cpu/representation-of-negative-numbers"><![CDATA[<p>Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-08-16T19:34:21+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Representation of Negative Numbers in Hardware</title><link href="http://localhost:4000/blog/cpu/representation-of-negative-numbers" rel="alternate" type="text/html" title="Representation of Negative Numbers in Hardware" /><published>2024-07-21T20:51:00+05:30</published><updated>2024-07-21T20:51:00+05:30</updated><id>http://localhost:4000/blog/cpu/representation-of-negative-numbers</id><content type="html" xml:base="http://localhost:4000/blog/cpu/representation-of-negative-numbers"><![CDATA[<p>Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.</p>
 
 <h2 id="characteristics-of-an-ideal-representation">Characteristics of an Ideal Representation</h2>
 
@@ -1700,7 +1700,97 @@ end:
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>slt $at, $t1, $t0      # Set $at to 1 if $t1 &lt; $t0
 bne $at, $zero, label  # Branch to label if $at is not zero
-</code></pre></div></div>]]></content><author><name>Sanketh</name></author><category term="cpu" /><category term="assembly" /><summary type="html"><![CDATA[MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA’s. It was developed in the early 1980s at Stanford University by Professor John L. Hennessy. MIPS is widely used in academic research and industry, particularly in computer architecture courses due to its straightforward design and in various embedded systems applications for its efficiency and performance.]]></summary></entry><entry><title type="html">The Fetch Decode Execute Cycle</title><link href="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle" rel="alternate" type="text/html" title="The Fetch Decode Execute Cycle" /><published>2024-06-30T19:32:40+05:30</published><updated>2024-06-30T19:32:40+05:30</updated><id>http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle</id><content type="html" xml:base="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle"><![CDATA[<p>The Fetch-decode-execute cycle or instruction cycle is how CPU executes programs. During this cycle, the CPU retrieves an instruction from memory (fetch), interprets what action is required (decode), and then carries out the necessary operations to complete the instruction (execute). This cycle is crucial for the CPU to perform any computational tasks, and it repeats continuously while the computer is powered on.</p>
+</code></pre></div></div>
+
+<h2 id="directives-in-mips">Directives in MIPS</h2>
+
+<p>Directives in MIPS are special instructions that guide the assembler during the assembly process. Unlike typical assembly instructions, directives do not correspond to machine instructions; instead, they control the organization and management of the code and data. These directives help define the structure of the program, allocate memory, and manage sections within the assembly code.</p>
+
+<p><strong>Directives are used for following:</strong></p>
+
+<ol>
+  <li>
+    <p><strong>Introducing Sections:</strong> A process in operating system consists of following segments: <strong>text</strong>, <strong>data</strong>, <strong>heap</strong> and <strong>stack</strong>. The <strong>text</strong> segment contains the executable instructions of a program, which are the compiled code that the CPU executes. It is typically marked as read-only to prevent accidental or malicious modifications.  The <strong>data</strong> segment stores global and static variables that are initialized before the program starts. It has separate sub-segments for storing initialized and uninitialized data (BSS). It is a read-write segment, allowing variables to be modified during execution.. Directives like <code class="language-plaintext highlighter-rouge">.data</code> and <code class="language-plaintext highlighter-rouge">.text</code> introduce the data and text sections of the program, respectively. The <code class="language-plaintext highlighter-rouge">.data</code> section is for declaring variables and data, while the <code class="language-plaintext highlighter-rouge">.text</code> section contains the actual code (instructions). A MIPS program can have multiple .data and .text sections. These sections can be defined at different points in the source code to organize data and instructions. The assembler processes these sections and groups all the .data sections into a single data segment and all the .text sections into a single text segment in the final binary.</p>
+  </li>
+  <li>
+    <p><strong>Assembling Values:</strong> Assembling refers to the process of initializing and placing specific values into the memory sections of the program. Directives like <code class="language-plaintext highlighter-rouge">.byte</code>, <code class="language-plaintext highlighter-rouge">.half</code>, <code class="language-plaintext highlighter-rouge">.word</code>, <code class="language-plaintext highlighter-rouge">.ascii</code>, and <code class="language-plaintext highlighter-rouge">.double</code> assemble specific values into the current section. For example, <code class="language-plaintext highlighter-rouge">.byte</code> and <code class="language-plaintext highlighter-rouge">.half</code> store 8-bit and 16-bit values, respectively, while <code class="language-plaintext highlighter-rouge">.double</code> calculates and stores IEEE 64-bit double-precision floating-point values.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th><strong>Directive</strong></th>
+          <th><strong>Data Type</strong></th>
+          <th><strong>Size</strong></th>
+          <th><strong>Memory Alignment</strong></th>
+          <th><strong>Example</strong></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.byte</code></td>
+          <td>8-bit integer</td>
+          <td>1 byte</td>
+          <td>None (can be at any address)</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">val4: .byte 0x12</code></td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.half</code></td>
+          <td>16-bit integer</td>
+          <td>2 bytes</td>
+          <td>Even addresses (2-byte boundary)</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">.align 1</code> <br /> <code class="language-plaintext highlighter-rouge">val3: .half 0x1234</code></td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.word</code></td>
+          <td>32-bit integer</td>
+          <td>4 bytes</td>
+          <td>4-byte boundary</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">.align 2</code> <br /> <code class="language-plaintext highlighter-rouge">val1: .word 0x12345678</code></td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.double</code></td>
+          <td>64-bit double-precision floating point</td>
+          <td>8 bytes</td>
+          <td>8-byte boundary</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">.align 3</code> <br /> <code class="language-plaintext highlighter-rouge">val2: .double 3.141592653589793</code></td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.space</code></td>
+          <td>Reserved memory space</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">buffer: .space 64</code> (reserves 64 bytes of space)</td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.ascii</code></td>
+          <td>ASCII string without null terminator</td>
+          <td>Variable</td>
+          <td>None (can be at any address)</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">val5: .ascii "hello"</code></td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.asciiz</code></td>
+          <td>ASCII string with null terminator</td>
+          <td>Variable</td>
+          <td>None (can be at any address)</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">val6: .asciiz "world"</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </li>
+  <li>
+    <p><strong>Global and External Symbols:</strong> Directives like <code class="language-plaintext highlighter-rouge">.globl</code> and <code class="language-plaintext highlighter-rouge">.extern</code> are used to manage symbol visibility and accessibility across multiple assembly files or modules. These directives are essential in modular programming, allowing different parts of a program to share and link symbols.</p>
+
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">.globl sym:</code> Declares the label <code class="language-plaintext highlighter-rouge">sym</code> as global, making it accessible from other assembly files or modules. This ensures that the label can be referenced during the linking process, enabling inter-file communication.</li>
+      <li><code class="language-plaintext highlighter-rouge">.extern sym size:</code> Declares the label <code class="language-plaintext highlighter-rouge">sym</code> as an external symbol, indicating that it is defined in another file or module. The <code class="language-plaintext highlighter-rouge">size</code> parameter specifies the symbol’s size in bytes. This directive is used to reference symbols that are not defined within the current assembly file but are needed for linking.</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Memory Alignment:</strong> The MIPS assembler automatically aligns data in memory according to the data type’s natural alignment requirements.The <code class="language-plaintext highlighter-rouge">.align</code> directive is used to ensure that the data in memory is aligned on a specific boundary, which can be critical for performance or correctness in certain architectures. The directive takes an argument that specifies the power of two for the alignment (e.g., <code class="language-plaintext highlighter-rouge">.align</code> 2 aligns the data on a 4-byte boundary). This is particularly useful when dealing with data types that require specific alignment for efficient access. The <code class="language-plaintext highlighter-rouge">.align 0</code> directive can be used to turn off automatic alignment. 
+For example: <code class="language-plaintext highlighter-rouge">.align 3</code> aligns the data on an 8-byte boundary, suitable for 64-bit data types.</p>
+  </li>
+</ol>]]></content><author><name>Sanketh</name></author><category term="cpu" /><category term="assembly" /><summary type="html"><![CDATA[MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA’s. It was developed in the early 1980s at Stanford University by Professor John L. Hennessy. MIPS is widely used in academic research and industry, particularly in computer architecture courses due to its straightforward design and in various embedded systems applications for its efficiency and performance.]]></summary></entry><entry><title type="html">The Fetch Decode Execute Cycle</title><link href="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle" rel="alternate" type="text/html" title="The Fetch Decode Execute Cycle" /><published>2024-06-30T19:32:40+05:30</published><updated>2024-06-30T19:32:40+05:30</updated><id>http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle</id><content type="html" xml:base="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle"><![CDATA[<p>The Fetch-decode-execute cycle or instruction cycle is how CPU executes programs. During this cycle, the CPU retrieves an instruction from memory (fetch), interprets what action is required (decode), and then carries out the necessary operations to complete the instruction (execute). This cycle is crucial for the CPU to perform any computational tasks, and it repeats continuously while the computer is powered on.</p>
 
 <h2 id="what-is-machine-code">What is Machine Code?</h2>
 

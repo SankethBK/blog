@@ -1248,6 +1248,96 @@ end:
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>slt $at, $t1, $t0      # Set $at to 1 if $t1 &lt; $t0
 bne $at, $zero, label  # Branch to label if $at is not zero
 </code></pre></div></div>
+
+<h2 id="directives-in-mips">Directives in MIPS</h2>
+
+<p>Directives in MIPS are special instructions that guide the assembler during the assembly process. Unlike typical assembly instructions, directives do not correspond to machine instructions; instead, they control the organization and management of the code and data. These directives help define the structure of the program, allocate memory, and manage sections within the assembly code.</p>
+
+<p><strong>Directives are used for following:</strong></p>
+
+<ol>
+  <li>
+    <p><strong>Introducing Sections:</strong> A process in operating system consists of following segments: <strong>text</strong>, <strong>data</strong>, <strong>heap</strong> and <strong>stack</strong>. The <strong>text</strong> segment contains the executable instructions of a program, which are the compiled code that the CPU executes. It is typically marked as read-only to prevent accidental or malicious modifications.  The <strong>data</strong> segment stores global and static variables that are initialized before the program starts. It has separate sub-segments for storing initialized and uninitialized data (BSS). It is a read-write segment, allowing variables to be modified during execution.. Directives like <code class="language-plaintext highlighter-rouge">.data</code> and <code class="language-plaintext highlighter-rouge">.text</code> introduce the data and text sections of the program, respectively. The <code class="language-plaintext highlighter-rouge">.data</code> section is for declaring variables and data, while the <code class="language-plaintext highlighter-rouge">.text</code> section contains the actual code (instructions). A MIPS program can have multiple .data and .text sections. These sections can be defined at different points in the source code to organize data and instructions. The assembler processes these sections and groups all the .data sections into a single data segment and all the .text sections into a single text segment in the final binary.</p>
+  </li>
+  <li>
+    <p><strong>Assembling Values:</strong> Assembling refers to the process of initializing and placing specific values into the memory sections of the program. Directives like <code class="language-plaintext highlighter-rouge">.byte</code>, <code class="language-plaintext highlighter-rouge">.half</code>, <code class="language-plaintext highlighter-rouge">.word</code>, <code class="language-plaintext highlighter-rouge">.ascii</code>, and <code class="language-plaintext highlighter-rouge">.double</code> assemble specific values into the current section. For example, <code class="language-plaintext highlighter-rouge">.byte</code> and <code class="language-plaintext highlighter-rouge">.half</code> store 8-bit and 16-bit values, respectively, while <code class="language-plaintext highlighter-rouge">.double</code> calculates and stores IEEE 64-bit double-precision floating-point values.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th><strong>Directive</strong></th>
+          <th><strong>Data Type</strong></th>
+          <th><strong>Size</strong></th>
+          <th><strong>Memory Alignment</strong></th>
+          <th><strong>Example</strong></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.byte</code></td>
+          <td>8-bit integer</td>
+          <td>1 byte</td>
+          <td>None (can be at any address)</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">val4: .byte 0x12</code></td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.half</code></td>
+          <td>16-bit integer</td>
+          <td>2 bytes</td>
+          <td>Even addresses (2-byte boundary)</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">.align 1</code> <br /> <code class="language-plaintext highlighter-rouge">val3: .half 0x1234</code></td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.word</code></td>
+          <td>32-bit integer</td>
+          <td>4 bytes</td>
+          <td>4-byte boundary</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">.align 2</code> <br /> <code class="language-plaintext highlighter-rouge">val1: .word 0x12345678</code></td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.double</code></td>
+          <td>64-bit double-precision floating point</td>
+          <td>8 bytes</td>
+          <td>8-byte boundary</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">.align 3</code> <br /> <code class="language-plaintext highlighter-rouge">val2: .double 3.141592653589793</code></td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.space</code></td>
+          <td>Reserved memory space</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">buffer: .space 64</code> (reserves 64 bytes of space)</td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.ascii</code></td>
+          <td>ASCII string without null terminator</td>
+          <td>Variable</td>
+          <td>None (can be at any address)</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">val5: .ascii "hello"</code></td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">.asciiz</code></td>
+          <td>ASCII string with null terminator</td>
+          <td>Variable</td>
+          <td>None (can be at any address)</td>
+          <td><code class="language-plaintext highlighter-rouge">.data</code> <br /> <code class="language-plaintext highlighter-rouge">val6: .asciiz "world"</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </li>
+  <li>
+    <p><strong>Global and External Symbols:</strong> Directives like <code class="language-plaintext highlighter-rouge">.globl</code> and <code class="language-plaintext highlighter-rouge">.extern</code> are used to manage symbol visibility and accessibility across multiple assembly files or modules. These directives are essential in modular programming, allowing different parts of a program to share and link symbols.</p>
+
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">.globl sym:</code> Declares the label <code class="language-plaintext highlighter-rouge">sym</code> as global, making it accessible from other assembly files or modules. This ensures that the label can be referenced during the linking process, enabling inter-file communication.</li>
+      <li><code class="language-plaintext highlighter-rouge">.extern sym size:</code> Declares the label <code class="language-plaintext highlighter-rouge">sym</code> as an external symbol, indicating that it is defined in another file or module. The <code class="language-plaintext highlighter-rouge">size</code> parameter specifies the symbol’s size in bytes. This directive is used to reference symbols that are not defined within the current assembly file but are needed for linking.</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Memory Alignment:</strong> The MIPS assembler automatically aligns data in memory according to the data type’s natural alignment requirements.The <code class="language-plaintext highlighter-rouge">.align</code> directive is used to ensure that the data in memory is aligned on a specific boundary, which can be critical for performance or correctness in certain architectures. The directive takes an argument that specifies the power of two for the alignment (e.g., <code class="language-plaintext highlighter-rouge">.align</code> 2 aligns the data on a 4-byte boundary). This is particularly useful when dealing with data types that require specific alignment for efficient access. The <code class="language-plaintext highlighter-rouge">.align 0</code> directive can be used to turn off automatic alignment. 
+For example: <code class="language-plaintext highlighter-rouge">.align 3</code> aligns the data on an 8-byte boundary, suitable for 64-bit data types.</p>
+  </li>
+</ol>
 </div>
 
   
@@ -1278,6 +1368,8 @@ bne $at, $zero, label  # Branch to label if $at is not zero
       <li><a href="https://stackoverflow.com/questions/6950230/how-to-calculate-jump-target-address-and-branch-target-address" target="_blank">https://stackoverflow.com/questions/6950230/how-to-calculate-jump-target-address-and-branch-target-address</a></li>
       
       <li><a href="https://stackoverflow.com/questions/44694957/the-difference-between-logical-shift-right-arithmetic-shift-right-and-rotate-r" target="_blank">https://stackoverflow.com/questions/44694957/the-difference-between-logical-shift-right-arithmetic-shift-right-and-rotate-r</a></li>
+      
+      <li><a href="https://www.d.umn.edu/~gshute/mips/directives-registers.pdf" target="_blank">https://www.d.umn.edu/~gshute/mips/directives-registers.pdf</a></li>
       
     </ul>
   </footer>
