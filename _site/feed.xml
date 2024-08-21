@@ -1,4 +1,99 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-08-16T19:34:21+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Representation of Negative Numbers in Hardware</title><link href="http://localhost:4000/blog/cpu/representation-of-negative-numbers" rel="alternate" type="text/html" title="Representation of Negative Numbers in Hardware" /><published>2024-07-21T20:51:00+05:30</published><updated>2024-07-21T20:51:00+05:30</updated><id>http://localhost:4000/blog/cpu/representation-of-negative-numbers</id><content type="html" xml:base="http://localhost:4000/blog/cpu/representation-of-negative-numbers"><![CDATA[<p>Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-08-22T01:01:07+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Execution Flow of an Assembly Program</title><link href="http://localhost:4000/blog/assembly/execution-flow-of-an-assembly-program" rel="alternate" type="text/html" title="Execution Flow of an Assembly Program" /><published>2024-08-17T01:30:00+05:30</published><updated>2024-08-17T01:30:00+05:30</updated><id>http://localhost:4000/blog/assembly/execution-flow-of-an-assembly-program</id><content type="html" xml:base="http://localhost:4000/blog/assembly/execution-flow-of-an-assembly-program"><![CDATA[<p>High-level compiled languages like C, Go, and Rust are translated into low-level assembly language by their respective compilers. However, the journey of an assembly program doesn’t end there. Although developers typically write code in high-level languages, assembly language remains the go-to choice in specialized fields such as embedded systems, operating system kernels, firmware development, and other areas where performance is crucial. Unlike high-level languages, where much of the complexity is abstracted away, assembly language offers developers a detailed view of what happens under the hood. In this blog post, we will go through the complete lifecycle of an assembly program from writing and assembling the code to linking, loading, and finally executing it on the hardware.</p>
+
+<div style="text-align: center;">
+    <strong>Execution Flow of an Assembly Program: From Source Code to Execution</strong>
+</div>
+<p><br /></p>
+
+<p><img src="/blog/assets/images/execution-flow-3.png" alt="Execution Cycle of an Assembly Program" height="800" /></p>
+
+<h4 id="hello-world-program-in-mips-assembly">‘Hello World’ Program in MIPS Assembly</h4>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.data
+message: .asciiz "Hello, World!\n"
+
+.text
+.globl main
+
+main:
+    li $v0, 4         # syscall for printing a string
+    la $a0, message   # load address of message into $a0
+    syscall           # make syscall
+
+    li $v0, 10        # syscall for exiting the program
+    syscall           # make syscall
+</code></pre></div></div>
+
+<p>Breaking down the above program</p>
+
+<p><strong>1. Data Segment</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.data
+message: .asciiz "Hello, World!\n"
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">.data:</code> This directive starts the data segment of the program. The data segment is where you define and store data that your program will use, such as strings, integers, etc.</li>
+  <li><code class="language-plaintext highlighter-rouge">message:</code> This is a label that serves as a reference to the memory location where the string “Hello, World!\n” is stored. Labels are used to access data or instructions.</li>
+  <li><code class="language-plaintext highlighter-rouge">.asciiz "Hello, World!\n":</code> This directive stores a null-terminated ASCII string in memory. The <code class="language-plaintext highlighter-rouge">\n</code> at the end of the string adds a newline character, which moves the cursor to the next line after printing the string.</li>
+</ul>
+
+<p><strong>2. Text Segment</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.text
+.globl main
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">.text:</code> This directive starts the text segment of the program. The text segment is where the actual code (instructions) of the program is written.</li>
+  <li><code class="language-plaintext highlighter-rouge">.globl main:</code> This directive declares the label main as a global symbol, meaning it can be accessed from outside the file (useful when linking multiple files). The label main is typically used as the entry point of the program, similar to the <code class="language-plaintext highlighter-rouge">main()</code> function in C.</li>
+</ul>
+
+<p><strong>3. Main Procedure</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>main:
+    li $v0, 4         # syscall for printing a string
+    la $a0, message   # load address of message into $a0
+    syscall           # make syscall
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">main:</code> This is a label marking the start of the main procedure.</li>
+  <li><code class="language-plaintext highlighter-rouge">li $v0, 4:</code> The instruction li stands for “load immediate.” It’s a pseudo instruction that loads the immediate value 4 into register <code class="language-plaintext highlighter-rouge">$v0</code>. In MIPS, the value 4 in <code class="language-plaintext highlighter-rouge">$v0</code> indicates a system call for printing a string.</li>
+  <li><code class="language-plaintext highlighter-rouge">la $a0, message:</code> The instruction la stands for “load address.” It loads the address of the label message into register <code class="language-plaintext highlighter-rouge">$a0</code>. In MIPS, the <code class="language-plaintext highlighter-rouge">$a0</code> register is used to pass the first argument to system calls, which in this case is the address of the string we want to print.</li>
+  <li><code class="language-plaintext highlighter-rouge">syscall:</code> This instruction triggers a system call. The system call number (in <code class="language-plaintext highlighter-rouge">$v0</code>) and arguments (in <code class="language-plaintext highlighter-rouge">$a0</code>, <code class="language-plaintext highlighter-rouge">$a1</code>, etc.) tell the operating system what service to perform. Here, it prints the string pointed to by <code class="language-plaintext highlighter-rouge">$a0</code>.</li>
+</ul>
+
+<p><strong>4. Exit Program</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>li $v0, 10        # syscall for exiting the program
+syscall           # make syscall
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">li $v0, 10:</code> This pseudo-instruction loads the immediate value 10 into register <code class="language-plaintext highlighter-rouge">$v0</code>. The value 10 is the system call code for terminating the program.</li>
+  <li><code class="language-plaintext highlighter-rouge">syscall:</code> This makes a system call to exit the program.</li>
+</ul>
+
+<h2 id="components-involved-in-execution-of-a-program">Components Involved in Execution of a Program</h2>
+
+<h3 id="1-compiler">1. Compiler</h3>
+
+<p>A compiler is responsible for translating high-level source code written in languages like C, Go, or Rust into a lower-level language, typically assembly language. Beyond simple translation, a compiler performs several important tasks:</p>
+
+<ul>
+  <li><strong>Preprocessing:</strong> Handles directives like #include and #define, expanding macros and including header files.</li>
+  <li><strong>Lexical Analysis:</strong> Converts the source code into tokens, which are the basic elements of the programming language (keywords, identifiers, symbols).</li>
+  <li><strong>Parsing:</strong> Analyzes the tokens to ensure they adhere to the language’s grammar rules, constructing a syntax tree.</li>
+  <li><strong>Semantic Analysis:</strong> Ensures that the syntax tree follows the semantic rules of the language, checking for type errors, scope resolution, and other logical aspects.</li>
+  <li><strong>Intermediate Code Generation:</strong> Converts the syntax tree into an intermediate representation, which is easier to optimize and translate into machine code.</li>
+  <li><strong>Code Optimization:</strong> Refines the intermediate code to improve performance and reduce resource usage, such as minimizing instruction count or memory usage.</li>
+  <li><strong>Code Generation:</strong> Translates the optimized intermediate code into assembly code specific to the target CPU architecture (e.g., MIPS).</li>
+</ul>
+
+<h3 id="2-assembler">2. Assembler</h3>
+
+<p>The assembler takes the assembly language code produced by the compiler and translates it into machine code (binary format) that the CPU can execute directly. During this process, the assembler converts symbolic labels into actual memory addresses and translates mnemonic instructions into binary opcodes.</p>]]></content><author><name>Sanketh</name></author><category term="assembly" /><summary type="html"><![CDATA[High-level compiled languages like C, Go, and Rust are translated into low-level assembly language by their respective compilers. However, the journey of an assembly program doesn’t end there. Although developers typically write code in high-level languages, assembly language remains the go-to choice in specialized fields such as embedded systems, operating system kernels, firmware development, and other areas where performance is crucial. Unlike high-level languages, where much of the complexity is abstracted away, assembly language offers developers a detailed view of what happens under the hood. In this blog post, we will go through the complete lifecycle of an assembly program from writing and assembling the code to linking, loading, and finally executing it on the hardware.]]></summary></entry><entry><title type="html">Implementing Basic Programming Consutructs in MIPS Assembly</title><link href="http://localhost:4000/blog/mips/assembly/implementing-basic-programming-constructs-in-mips-assembly" rel="alternate" type="text/html" title="Implementing Basic Programming Consutructs in MIPS Assembly" /><published>2024-08-17T01:30:00+05:30</published><updated>2024-08-17T01:30:00+05:30</updated><id>http://localhost:4000/blog/mips/assembly/implementing-basic-programming-constructs-in-mips-assembly</id><content type="html" xml:base="http://localhost:4000/blog/mips/assembly/implementing-basic-programming-constructs-in-mips-assembly"><![CDATA[]]></content><author><name>Sanketh</name></author><category term="mips" /><category term="assembly" /><summary type="html"><![CDATA[]]></summary></entry><entry><title type="html">Representation of Negative Numbers in Hardware</title><link href="http://localhost:4000/blog/cpu/representation-of-negative-numbers" rel="alternate" type="text/html" title="Representation of Negative Numbers in Hardware" /><published>2024-07-21T20:51:00+05:30</published><updated>2024-07-21T20:51:00+05:30</updated><id>http://localhost:4000/blog/cpu/representation-of-negative-numbers</id><content type="html" xml:base="http://localhost:4000/blog/cpu/representation-of-negative-numbers"><![CDATA[<p>Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.</p>
 
 <h2 id="characteristics-of-an-ideal-representation">Characteristics of an Ideal Representation</h2>
 

@@ -39,3 +39,11 @@
   color: #fff;
 }
 /* Add more categories and colors as needed */
+
+
+img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
