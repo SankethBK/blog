@@ -1,11 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-08-22T01:01:07+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html">Execution Flow of an Assembly Program</title><link href="http://localhost:4000/blog/assembly/execution-flow-of-an-assembly-program" rel="alternate" type="text/html" title="Execution Flow of an Assembly Program" /><published>2024-08-17T01:30:00+05:30</published><updated>2024-08-17T01:30:00+05:30</updated><id>http://localhost:4000/blog/assembly/execution-flow-of-an-assembly-program</id><content type="html" xml:base="http://localhost:4000/blog/assembly/execution-flow-of-an-assembly-program"><![CDATA[<p>High-level compiled languages like C, Go, and Rust are translated into low-level assembly language by their respective compilers. However, the journey of an assembly program doesn’t end there. Although developers typically write code in high-level languages, assembly language remains the go-to choice in specialized fields such as embedded systems, operating system kernels, firmware development, and other areas where performance is crucial. Unlike high-level languages, where much of the complexity is abstracted away, assembly language offers developers a detailed view of what happens under the hood. In this blog post, we will go through the complete lifecycle of an assembly program from writing and assembling the code to linking, loading, and finally executing it on the hardware.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2024-09-16T01:52:29+05:30</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Sanketh’s Blog</title><subtitle>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</subtitle><author><name>Sanketh B K</name></author><entry><title type="html"></title><link href="http://localhost:4000/blog/2024-08-17-execution-flow-of-an-assembly-program" rel="alternate" type="text/html" title="" /><published>2024-09-16T01:52:29+05:30</published><updated>2024-09-16T01:52:29+05:30</updated><id>http://localhost:4000/blog/2024-08-17-execution-flow-of-an-assembly-program</id><content type="html" xml:base="http://localhost:4000/blog/2024-08-17-execution-flow-of-an-assembly-program"><![CDATA[<p>High-level compiled languages like C, Go, and Rust are translated into low-level assembly language by their respective compilers. However, the journey of an assembly program doesn’t end there. Although developers typically write code in high-level languages, assembly language remains the go-to choice in specialized fields such as embedded systems, operating system kernels, firmware development, and other areas where performance is crucial. Unlike high-level languages, where much of the complexity is abstracted away, assembly language offers developers a detailed view of what happens under the hood. In this blog post, we will go through the complete lifecycle of an assembly program from writing and assembling the code to linking, loading, and finally executing it on the hardware.</p>
 
 <div style="text-align: center;">
     <strong>Execution Flow of an Assembly Program: From Source Code to Execution</strong>
 </div>
 <p><br /></p>
 
-<p><img src="/blog/assets/images/execution-flow-3.png" alt="Execution Cycle of an Assembly Program" height="800" /></p>
+<p><img src="/blog/assets/images/execution-flow.png" alt="Execution Cycle of an Assembly Program" height="800" /></p>
 
 <h4 id="hello-world-program-in-mips-assembly">‘Hello World’ Program in MIPS Assembly</h4>
 
@@ -91,9 +91,110 @@ syscall           # make syscall
   <li><strong>Code Generation:</strong> Translates the optimized intermediate code into assembly code specific to the target CPU architecture (e.g., MIPS).</li>
 </ul>
 
+<p>Let’s consider the hello world program in C</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+   <span class="n">printf</span><span class="p">(</span><span class="s">"Hello, world!"</span><span class="p">);</span>
+   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Since I don’t have a CPU with MIPS architecture, I am using a cross compiler to convert C code to MIPS Assembly. The cross compiler I am using is mips-linux-gnu-gcc on Ubuntu. Other options include SPIM, MARS, QEMU, mips-none-elf-gcc, or websites like <a href="https://godbolt.org/">Godbolt</a>.</p>
+
+<p>This is the MIPS Assembly generated from the above C code, using the following command:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mips-linux-gnu-gcc -S hello_world.c -o hello_world.s
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.file	1 "hello.c"
+	.section .mdebug.abi32
+	.previous
+	.nan	legacy
+	.module	fp=xx
+	.module	nooddspreg
+	.module	arch=mips32r2
+	.abicalls
+	.text
+	.rdata
+	.align	2
+$LC0:
+	.ascii	"Hello, World!\000"
+	.text
+	.align	2
+	.globl	main
+	.set	nomips16
+	.set	nomicromips
+	.ent	main
+	.type	main, @function
+main:
+	.frame	$fp,32,$31		# vars= 0, regs= 2/0, args= 16, gp= 8
+	.mask	0xc0000000,-4
+	.fmask	0x00000000,0
+	.set	noreorder
+	.set	nomacro
+	addiu	$sp,$sp,-32
+	sw	$31,28($sp)
+	sw	$fp,24($sp)
+	move	$fp,$sp
+	lui	$28,%hi(__gnu_local_gp)
+	addiu	$28,$28,%lo(__gnu_local_gp)
+	.cprestore	16
+	lui	$2,%hi($LC0)
+	addiu	$4,$2,%lo($LC0)
+	lw	$2,%call16(puts)($28)
+	move	$25,$2
+	.reloc	1f,R_MIPS_JALR,puts
+1:	jalr	$25
+	nop
+
+	lw	$28,16($fp)
+	move	$2,$0
+	move	$sp,$fp
+	lw	$31,28($sp)
+	lw	$fp,24($sp)
+	addiu	$sp,$sp,32
+	jr	$31
+	nop
+
+	.set	macro
+	.set	reorder
+	.end	main
+	.size	main, .-main
+	.ident	"GCC: (Ubuntu 12.3.0-17ubuntu1) 12.3.0"
+	.section	.note.GNU-stack,"",@progbits
+</code></pre></div></div>
+
+<p>Although this is lot of code just for printing the “hello world”, let’s look at the code directly responsible for printing hello world and decode it.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$LC0:
+    .ascii  "Hello, World!\000"
+</code></pre></div></div>
+
+<p>This section defines the string “Hello, World!” as a null-terminated string in the program’s data segment.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lui    $2, %hi($LC0)
+addiu  $4, $2, %lo($LC0)
+</code></pre></div></div>
+
+<ul>
+  <li>These two instructions load the address of the string “Hello, World!” into register <code class="language-plaintext highlighter-rouge">$4</code> (which is $a0), used as the first argument to the <code class="language-plaintext highlighter-rouge">puts</code> function.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">lui</code> (Load Upper Immediate) instruction is used to load a 16-bit immediate value into the upper 16 bits of a register. In this case, <code class="language-plaintext highlighter-rouge">$2</code> (which is $v0) is loaded with the upper 16 bits of the address of the string “Hello, World!”, labeled as <code class="language-plaintext highlighter-rouge">$LC0</code>.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">%lo($LC0)</code> macro extracts the lower 16 bits of the address of <code class="language-plaintext highlighter-rouge">$LC0</code>.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">addiu</code> (Add Immediate Unsigned) instruction adds an immediate value to a register and stores the result in another register. Here, it combines the upper 16 bits (already stored in <code class="language-plaintext highlighter-rouge">$2</code>) with the lower 16 bits of the address of <code class="language-plaintext highlighter-rouge">$LC0</code>.</li>
+</ul>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lw     $2, %call16(puts)($28)
+move   $25, $2
+jalr   $25
+nop
+</code></pre></div></div>
+
+<p>These instructions load the address of the <code class="language-plaintext highlighter-rouge">puts</code> function into register <code class="language-plaintext highlighter-rouge">$25</code>, then jump to this function using <code class="language-plaintext highlighter-rouge">jalr $25</code>, effectively calling <code class="language-plaintext highlighter-rouge">puts</code> to print the string.</p>
+
 <h3 id="2-assembler">2. Assembler</h3>
 
-<p>The assembler takes the assembly language code produced by the compiler and translates it into machine code (binary format) that the CPU can execute directly. During this process, the assembler converts symbolic labels into actual memory addresses and translates mnemonic instructions into binary opcodes.</p>]]></content><author><name>Sanketh</name></author><category term="assembly" /><summary type="html"><![CDATA[High-level compiled languages like C, Go, and Rust are translated into low-level assembly language by their respective compilers. However, the journey of an assembly program doesn’t end there. Although developers typically write code in high-level languages, assembly language remains the go-to choice in specialized fields such as embedded systems, operating system kernels, firmware development, and other areas where performance is crucial. Unlike high-level languages, where much of the complexity is abstracted away, assembly language offers developers a detailed view of what happens under the hood. In this blog post, we will go through the complete lifecycle of an assembly program from writing and assembling the code to linking, loading, and finally executing it on the hardware.]]></summary></entry><entry><title type="html">Implementing Basic Programming Consutructs in MIPS Assembly</title><link href="http://localhost:4000/blog/mips/assembly/implementing-basic-programming-constructs-in-mips-assembly" rel="alternate" type="text/html" title="Implementing Basic Programming Consutructs in MIPS Assembly" /><published>2024-08-17T01:30:00+05:30</published><updated>2024-08-17T01:30:00+05:30</updated><id>http://localhost:4000/blog/mips/assembly/implementing-basic-programming-constructs-in-mips-assembly</id><content type="html" xml:base="http://localhost:4000/blog/mips/assembly/implementing-basic-programming-constructs-in-mips-assembly"><![CDATA[]]></content><author><name>Sanketh</name></author><category term="mips" /><category term="assembly" /><summary type="html"><![CDATA[]]></summary></entry><entry><title type="html">Representation of Negative Numbers in Hardware</title><link href="http://localhost:4000/blog/cpu/representation-of-negative-numbers" rel="alternate" type="text/html" title="Representation of Negative Numbers in Hardware" /><published>2024-07-21T20:51:00+05:30</published><updated>2024-07-21T20:51:00+05:30</updated><id>http://localhost:4000/blog/cpu/representation-of-negative-numbers</id><content type="html" xml:base="http://localhost:4000/blog/cpu/representation-of-negative-numbers"><![CDATA[<p>Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.</p>
+<p>The assembler takes the assembly language code produced by the compiler and translates it into machine code (binary format) that the CPU can execute directly. During this process, the assembler converts symbolic labels into actual memory addresses and translates mnemonic instructions into binary opcodes.</p>]]></content><author><name>Sanketh B K</name></author></entry><entry><title type="html">Implementing Basic Programming Consutructs in MIPS Assembly</title><link href="http://localhost:4000/blog/mips/assembly/implementing-basic-programming-constructs-in-mips-assembly" rel="alternate" type="text/html" title="Implementing Basic Programming Consutructs in MIPS Assembly" /><published>2024-08-17T01:30:00+05:30</published><updated>2024-08-17T01:30:00+05:30</updated><id>http://localhost:4000/blog/mips/assembly/implementing-basic-programming-constructs-in-mips-assembly</id><content type="html" xml:base="http://localhost:4000/blog/mips/assembly/implementing-basic-programming-constructs-in-mips-assembly"><![CDATA[]]></content><author><name>Sanketh</name></author><category term="mips" /><category term="assembly" /><summary type="html"><![CDATA[]]></summary></entry><entry><title type="html">Representation of Negative Numbers in Hardware</title><link href="http://localhost:4000/blog/cpu/representation-of-negative-numbers" rel="alternate" type="text/html" title="Representation of Negative Numbers in Hardware" /><published>2024-07-21T20:51:00+05:30</published><updated>2024-07-21T20:51:00+05:30</updated><id>http://localhost:4000/blog/cpu/representation-of-negative-numbers</id><content type="html" xml:base="http://localhost:4000/blog/cpu/representation-of-negative-numbers"><![CDATA[<p>Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a minus sign to indicate negative values, binary systems must encode this information within a fixed number of bits. This requirement leads to various methods of representation, each with its own set of advantages and limitations. The main challenge lies in developing a system that can accurately represent both positive and negative values while ensuring that arithmetic operations remain efficient and straightforward. In the following sections, we will explore several common approaches to representing negative numbers in binary, including their respective challenges and trade-offs.</p>
 
 <h2 id="characteristics-of-an-ideal-representation">Characteristics of an Ideal Representation</h2>
 
@@ -1885,7 +1986,214 @@ bne $at, $zero, label  # Branch to label if $at is not zero
     <p><strong>Memory Alignment:</strong> The MIPS assembler automatically aligns data in memory according to the data type’s natural alignment requirements.The <code class="language-plaintext highlighter-rouge">.align</code> directive is used to ensure that the data in memory is aligned on a specific boundary, which can be critical for performance or correctness in certain architectures. The directive takes an argument that specifies the power of two for the alignment (e.g., <code class="language-plaintext highlighter-rouge">.align</code> 2 aligns the data on a 4-byte boundary). This is particularly useful when dealing with data types that require specific alignment for efficient access. The <code class="language-plaintext highlighter-rouge">.align 0</code> directive can be used to turn off automatic alignment. 
 For example: <code class="language-plaintext highlighter-rouge">.align 3</code> aligns the data on an 8-byte boundary, suitable for 64-bit data types.</p>
   </li>
-</ol>]]></content><author><name>Sanketh</name></author><category term="cpu" /><category term="assembly" /><summary type="html"><![CDATA[MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA’s. It was developed in the early 1980s at Stanford University by Professor John L. Hennessy. MIPS is widely used in academic research and industry, particularly in computer architecture courses due to its straightforward design and in various embedded systems applications for its efficiency and performance.]]></summary></entry><entry><title type="html">The Fetch Decode Execute Cycle</title><link href="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle" rel="alternate" type="text/html" title="The Fetch Decode Execute Cycle" /><published>2024-06-30T19:32:40+05:30</published><updated>2024-06-30T19:32:40+05:30</updated><id>http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle</id><content type="html" xml:base="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle"><![CDATA[<p>The Fetch-decode-execute cycle or instruction cycle is how CPU executes programs. During this cycle, the CPU retrieves an instruction from memory (fetch), interprets what action is required (decode), and then carries out the necessary operations to complete the instruction (execute). This cycle is crucial for the CPU to perform any computational tasks, and it repeats continuously while the computer is powered on.</p>
+</ol>
+
+<h2 id="relocation">Relocation</h2>
+
+<p>Relocation operators are special constructs used in assembly language to handle addresses and constants that may not be fully resolved until the linking or loading phase of program compilation. They instruct the assembler and linker on how to compute and adjust addresses and offsets. They allow for the program to be loaded into different memory locations without requiring manual modification of addresses within the code.</p>
+
+<p>The main purposes of relocation operators include:</p>
+
+<ul>
+  <li>Allowing code to be position-independent</li>
+  <li>Facilitating dynamic linking of libraries</li>
+  <li>Enabling the operating system to load programs at arbitrary memory locations</li>
+</ul>
+
+<p>We can think of relocation operators as special “instructions” for the linker, much like how assembly instructions are for the CPU. They instruct the linker on how to adjust addresses in the machine code to make the program work correctly when it is loaded into memory.</p>
+
+<p>Before delving into common relocation operators and their usage, it’s essential to understand how the memory layout of a program is decided and the roles played by the linker and the loader in this process.</p>
+
+<h3 id="memory-layout-of-a-program">Memory Layout of a Program</h3>
+
+<p>The memory layout of a program refers to the organization of different sections in the program’s memory during its execution. A program loaded into memory for execution consists of different sections as shown below:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+----------------------------+  &lt;- High Memory Address (Stack starts here)
+|        Stack               |
+|                            |
+|    (grows downward)        |
++----------------------------+
+|        Heap                |
+|                            |
+|    (grows upward)          |
++----------------------------+
+|  BSS (Uninitialized data)  |
++----------------------------+
+|  Data (Initialized data)   |
++----------------------------+
+|      Text (Code)           |
++----------------------------+  
+</code></pre></div></div>
+
+<ul>
+  <li><strong>Text Section:</strong> Contains the program’s executable code (machine instructions).</li>
+  <li><strong>Data Section:</strong> Contains initialized global and static variables.</li>
+  <li><strong>BSS Section:</strong> Holds uninitialized global and static variables. The BSS is zeroed out when the program starts.</li>
+  <li><strong>Heap:</strong> Used for dynamically allocated memory (e.g., from malloc). The heap grows upward, towards higher memory addresses, as memory is dynamically allocated.</li>
+  <li><strong>Stack:</strong> Used for local variables and function call management (e.g., function parameters, return addresses). The stack grows downward, towards lower memory addresses.</li>
+</ul>
+
+<h4 id="role-of-linker-in-building-memory-layout">Role of Linker in building Memory Layout</h4>
+
+<p>The linker is a tool that combines one or more object files (generated by the assembler from source code) into a single executable or library. It helps in determining the memory layout during the linking phase by:</p>
+
+<ul>
+  <li><strong>Merging Sections:</strong> The linker combines similar sections (like <code class="language-plaintext highlighter-rouge">.text</code>, <code class="language-plaintext highlighter-rouge">.data</code>, and <code class="language-plaintext highlighter-rouge">.bss</code>) from different object files into unified sections in the final executable.</li>
+  <li><strong>Resolving Symbols:</strong> The linker resolves symbol references by matching symbol definitions and uses across object files, updating addresses accordingly.</li>
+  <li><strong>Performing Relocation:</strong> It adjusts addresses in the machine code to reflect the assigned memory locations, handling any necessary calculations.</li>
+  <li><strong>Address Assignment:</strong> The linker assigns relative addresses to sections and symbols within the program. The linker can fully determine the relative (virtual) addresses for the <strong>text</strong> and <strong>data</strong> sections during the linking process, because these sections are static and do not change once assigned. However, in the case of dynamically loaded libraries (DLLs), the addresses of code and data sections may be determined at runtime by the dynamic linker, allowing them to vary between executions.</li>
+  <li><strong>Creating Additional Sections:</strong> The linker may create sections like .got (Global Offset Table) and .plt (Procedure Linkage Table) for dynamic linking.</li>
+</ul>
+
+<p>However, the linker typically cannot:</p>
+<ul>
+  <li>Determine the final absolute memory addresses where the program will be loaded.</li>
+  <li>Account for runtime memory allocation or shared library loading addresses.</li>
+  <li>For executables designed to be position-independent, the linker defers some relocation to be handled at load time.</li>
+</ul>
+
+<h3 id="common-relocation-operators-and-their-usage">Common Relocation Operators and Their Usage</h3>
+
+<h4 id="1-high-and-low-relocation-operators">1. High and Low Relocation Operators:</h4>
+
+<p>In MIPS assembly, the <code class="language-plaintext highlighter-rouge">%hi()</code> and <code class="language-plaintext highlighter-rouge">%lo()</code> relocation operators are used to handle 32-bit addresses by splitting them into two 16-bit parts. Since MIPS instructions can only handle immediate values up to 16 bits, these operators allow the assembler and linker to work with larger 32-bit addresses in a sequence of instructions.</p>
+
+<p>Example:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lui $t0, %hi(global_var)
+lw  $t1, %lo(global_var)($t0)
+</code></pre></div></div>
+
+<p>In this example, the address of the <code class="language-plaintext highlighter-rouge">global_var</code> variable is ultimately stored in the <code class="language-plaintext highlighter-rouge">$t1</code> register.</p>
+
+<p>Here the address of <code class="language-plaintext highlighter-rouge">global_var</code> variable is stored in <code class="language-plaintext highlighter-rouge">$t1</code> register. Since the address is 32-bits, it can’t be loaded by a single instruction. So <code class="language-plaintext highlighter-rouge">%hi</code> calculates the higher 16 bits of the address and stores it in <code class="language-plaintext highlighter-rouge">$t0</code> and then <code class="language-plaintext highlighter-rouge">%lo</code> calculates lower 16 bits of the address and adds it with higher 16-bits stored in <code class="language-plaintext highlighter-rouge">$t0</code> which stores complete 32-bit address in <code class="language-plaintext highlighter-rouge">$t1</code>. It is typically used for global and static variables because they have fixed memory addresses known at link time.</p>
+
+<ul>
+  <li><strong>lui $t0, %hi(global_var):</strong> The <code class="language-plaintext highlighter-rouge">lui</code> (Load Upper Immediate) instruction loads the upper 16 bits of the 32-bit address of <code class="language-plaintext highlighter-rouge">global_var</code> into register <code class="language-plaintext highlighter-rouge">$t0</code>. The <code class="language-plaintext highlighter-rouge">%hi(global_var)</code> operator extracts these higher bits.</li>
+  <li><strong>lw $t1, %lo(global_var)($t0):</strong> The <code class="language-plaintext highlighter-rouge">lw</code> (Load Word) instruction loads a word from memory. The <code class="language-plaintext highlighter-rouge">%lo(global_var)</code> operator calculates the lower 16 bits of the address of <code class="language-plaintext highlighter-rouge">global_var</code>. These lower bits are added to the value already in <code class="language-plaintext highlighter-rouge">$t0</code> (which contains the upper 16 bits), resulting in the full 32-bit address.</li>
+</ul>
+
+<p>We previously saw that the <code class="language-plaintext highlighter-rouge">lui</code> and <code class="language-plaintext highlighter-rouge">ori</code> instructions can also be used together to load a 32-bit address in a similar way. For example:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lui $t0, 0x1234
+ori $t0, $t0, 0x5678
+</code></pre></div></div>
+
+<p>However, this approach only works when the full 32-bit address is already known at assembly time. For global and static variables, the addresses are typically not known until link time, because these variables might reside in different sections of memory that are determined when the program is linked. This is where the <code class="language-plaintext highlighter-rouge">%hi</code> and <code class="language-plaintext highlighter-rouge">%lo</code> relocation operators come in. They act as instructions for the linker to provide the upper 16 bits (<code class="language-plaintext highlighter-rouge">%hi</code>) and lower 16 bits (<code class="language-plaintext highlighter-rouge">%lo</code>) of the address when the final memory layout is decided during the linking phase.</p>
+
+<p>Let’s consider this program</p>
+
+<p><strong>main.s</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.data
+global_var: .word 0x12345678  # Define a 32-bit variable with the value 0x12345678
+
+
+.text
+.globl main
+main:
+   lui $t0, %hi(global_var)   # Load upper 16 bits of the address of global_var into $t0
+   lw  $t1, %lo(global_var)($t0)  # Load the 32-bit value from the address of global_var into $t1
+   # $t1 now contains the value 0x12345678
+
+
+   # Exit program (usually a system call or similar; this is just a placeholder)
+   li $v0, 10
+   syscall
+</code></pre></div></div>
+
+<p>Now Assembling the above program</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ mips-linux-gnu-as -o main.o main.s
+</code></pre></div></div>
+
+<p>To see the readable format of above machine code in <code class="language-plaintext highlighter-rouge">main.o</code>, we can disassemble it using</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ mips-linux-gnu-objdump -d main.o
+</code></pre></div></div>
+
+<p>Output</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>main.o:     file format elf32-tradbigmips
+
+
+Disassembly of section .text:
+
+00000000 &lt;main&gt;:
+   0:	3c080000 	lui	t0,0x0
+   4:	8d090000 	lw	t1,0(t0)
+   8:	2402000a 	li	v0,10
+   c:	0000000c 	syscall
+</code></pre></div></div>
+
+<p>The disassembly output shows:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">00000000:</code> This is the address of the first instruction in the main function. It’s the offset within the <code class="language-plaintext highlighter-rouge">.text</code> section (code section).</li>
+  <li>The <code class="language-plaintext highlighter-rouge">lui</code> and <code class="language-plaintext highlighter-rouge">lw</code> instructions have placeholders (0x0) for the address of <code class="language-plaintext highlighter-rouge">global_var</code>. This is expected behavior because at the assembly stage, the exact address of global variables (like global_var) is not yet known.</li>
+  <li>The values 0, 4, 8, and c are the addresses of the instructions within the <code class="language-plaintext highlighter-rouge">.text</code> section (which contains the code). Each instruction in MIPS is 4 bytes, so the addresses increment by 4. These addresses are relative to the start of the <code class="language-plaintext highlighter-rouge">.text</code> section, which in this object file is <code class="language-plaintext highlighter-rouge">0x00000000</code>. After linking, the base address of the <code class="language-plaintext highlighter-rouge">.text</code> section will typically change, and the final addresses will reflect where the code is placed in memory during program execution.</li>
+  <li>Each line also shows the corresponding machine code for that instruction. For eg <code class="language-plaintext highlighter-rouge">3c080000</code> is the machine code in hex for <code class="language-plaintext highlighter-rouge">lui t0,0x0</code>.</li>
+</ul>
+
+<p>We can also see that <code class="language-plaintext highlighter-rouge">%hi</code> and <code class="language-plaintext highlighter-rouge">%lo</code> have been removed from the machine code produced by Assembler, then how does the linker know that these operators were used?</p>
+
+<p>When the assembler encounters the <code class="language-plaintext highlighter-rouge">%hi()</code> and <code class="language-plaintext highlighter-rouge">%lo()</code> operators, it generates relocation entries instead of directly encoding the full address in the machine code. These entries act as instructions for the linker to modify the machine code with the correct addresses once the final layout of the program is determined.</p>
+
+<p>We can inspect the relocation table entries by</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ mips-linux-gnu-readelf -r main.o
+</code></pre></div></div>
+
+<p>Output</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Relocation section '.rel.text' at offset 0x154 contains 2 entries:
+ Offset     Info    Type            Sym.Value  Sym. Name
+00000000  00000205 R_MIPS_HI16       00000000   .data
+00000004  00000206 R_MIPS_LO16       00000000   .data
+</code></pre></div></div>
+
+<ul>
+  <li><strong>.rel.text</strong>: This indicates that the relocation entries are for the <code class="language-plaintext highlighter-rouge">.text</code> section (which contains the program’s executable code).</li>
+  <li><strong>Offset 0x154</strong>: The relocation table starts at offset 0x154 in the object file. This is the file offset, not a memory address.</li>
+  <li>The table lists two relocation entries, which indicate places in the code that need adjustment during linking. These are the locations where the linker will modify the machine code to insert the correct addresses for data.</li>
+  <li><strong>First Entry</strong>
+    <ul>
+      <li><strong>Offset 00000000:</strong> This is the offset within the <code class="language-plaintext highlighter-rouge">.text</code> section where the relocation will be applied. In this case, it refers to the start of the <code class="language-plaintext highlighter-rouge">.text</code> section. This is the location of the lui instruction, which uses <code class="language-plaintext highlighter-rouge">%hi()</code>.</li>
+      <li><strong>Info 00000205:</strong> The first part (000002) refers to the symbol index in the symbol table, which corresponds to <code class="language-plaintext highlighter-rouge">.data</code>. The last 3 digits (205) indicate the type of relocation which corresponds to <code class="language-plaintext highlighter-rouge">R_MIPS_HI16</code>.</li>
+      <li><strong>Sym.Value:</strong> The <code class="language-plaintext highlighter-rouge">Sym.Value</code> in a relocation entry refers to the address or value of the symbol on which the relocation operator is acting. However, it is typically set to 0 in the object file because the actual address or value is not known at assembly time and will only be resolved by the linker during the linking process.</li>
+      <li><strong>Sym.Name .data</strong>: The symbol for which the relocation is being applied is the <code class="language-plaintext highlighter-rouge">.data</code> section. This means that the relocation is related to accessing data stored in the <code class="language-plaintext highlighter-rouge">.data</code> section.</li>
+    </ul>
+  </li>
+  <li><strong>Second Entry</strong>
+    <ul>
+      <li><strong>Offset 00000004:</strong> Indicates the offset within the <code class="language-plaintext highlighter-rouge">.text</code> section where the second relocation will be applied.</li>
+      <li><strong>Info 00000206:</strong> Similar to the previous entry, this indicates the relocation type (206 corresponds to <code class="language-plaintext highlighter-rouge">R_MIPS_LO16</code>), and the symbol index (000002) refers to <code class="language-plaintext highlighter-rouge">.data</code>.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Now we can link the machine code by</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ mips-linux-gnu-ld -o main main.o -e main
+</code></pre></div></div>
+
+<p>We can view the disassmbled output by</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ mips-linux-gnu-objdump -d main
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>main:     file format elf32-tradbigmips
+
+
+Disassembly of section .text:
+
+004000f0 &lt;_ftext&gt;:
+  4000f0:	3c080041 	lui	t0,0x41
+  4000f4:	8d090100 	lw	t1,256(t0)
+  4000f8:	2402000a 	li	v0,10
+  4000fc:	0000000c 	syscall
+</code></pre></div></div>
+<ul>
+  <li><strong>004000f0:</strong> This is the memory address where the <code class="language-plaintext highlighter-rouge">_ftext</code> function (or label) begins. This is the entry point of your program, set to 0x004000f0 by the linker. <code class="language-plaintext highlighter-rouge">_ftext</code> is a label indicating the start of the .text section</li>
+  <li><strong>First Instruction:</strong> From symbol table of linker’s output <code class="language-plaintext highlighter-rouge">0x00410100</code> is the address of <code class="language-plaintext highlighter-rouge">global_var</code>. Linker applied <code class="language-plaintext highlighter-rouge">%hi</code> function on this address and placed <code class="language-plaintext highlighter-rouge">0x00410000</code> in place of immediate value.</li>
+  <li><strong>Second Instruction:</strong> Second instruction takes lower 16 bits of <code class="language-plaintext highlighter-rouge">0x00410100</code> which is <code class="language-plaintext highlighter-rouge">256</code> in decimal.</li>
+</ul>]]></content><author><name>Sanketh</name></author><category term="cpu" /><category term="assembly" /><summary type="html"><![CDATA[MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA’s. It was developed in the early 1980s at Stanford University by Professor John L. Hennessy. MIPS is widely used in academic research and industry, particularly in computer architecture courses due to its straightforward design and in various embedded systems applications for its efficiency and performance.]]></summary></entry><entry><title type="html">The Fetch Decode Execute Cycle</title><link href="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle" rel="alternate" type="text/html" title="The Fetch Decode Execute Cycle" /><published>2024-06-30T19:32:40+05:30</published><updated>2024-06-30T19:32:40+05:30</updated><id>http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle</id><content type="html" xml:base="http://localhost:4000/blog/cpu/the-fetch-decode-execute-cycle"><![CDATA[<p>The Fetch-decode-execute cycle or instruction cycle is how CPU executes programs. During this cycle, the CPU retrieves an instruction from memory (fetch), interprets what action is required (decode), and then carries out the necessary operations to complete the instruction (execute). This cycle is crucial for the CPU to perform any computational tasks, and it repeats continuously while the computer is powered on.</p>
 
 <h2 id="what-is-machine-code">What is Machine Code?</h2>
 
