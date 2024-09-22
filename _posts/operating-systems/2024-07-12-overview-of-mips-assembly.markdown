@@ -869,3 +869,22 @@ Disassembly of section .text:
 - **Second Instruction:** Second instruction takes lower 16 bits of `0x00410100` which is `256` in decimal.
   
 
+#### 2. Function Call Relocation with `%call16` Operator:
+
+The `%call16` operator in MIPS is used to generate a 16-bit offset for function calls, which is commonly seen in the context of position-independent code (PIC) or when working with dynamically linked libraries. This operator is useful for accessing functions when the exact memory address of the function may not be known at assembly time but will be resolved during linking or runtime.
+
+
+**Global Offset Table (GOT):**
+
+The GOT is a table used to store the actual addresses of global variables and functions when a program uses dynamic linking. At runtime, the GOT holds the addresses of functions and global data that may not be known at link time. 
+
+When we write a program that uses shared libraries or is compiled as position-independent code (PIC), the actual addresses of functions and variables are unknown until the program is loaded into memory. The GOT is used to store the real addresses after they are resolved.
+
+- The `%call16` operator is used to compute a 16-bit offset that references a specific entry in the GOT for the function we want to call.
+- The address of the function is not directly embedded in the code but is instead stored in the GOT, which can be updated dynamically at runtime.
+- During linking, the linker generates relocation entries using `%call16` for each function that needs to be resolved via the GOT.
+- At runtime, the dynamic loader fills in the GOT entries with the actual addresses of the functions, ensuring that the function calls point to the correct memory location even if the program or library was loaded at a different memory address than expected.
+- At runtime, the program first loads the address of the function from the GOT into a register, then `jalr` (jump and link register) instruction is used to call the function.
+
+
+
