@@ -1,108 +1,344 @@
-<!DOCTYPE html>
-<html lang="en"><head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
-<title>Sanketh’s Blog | Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</title>
-<meta name="generator" content="Jekyll v4.3.3" />
-<meta property="og:title" content="Sanketh’s Blog" />
-<meta name="author" content="Sanketh B K" />
-<meta property="og:locale" content="en_US" />
-<meta name="description" content="Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science." />
-<meta property="og:description" content="Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science." />
-<link rel="canonical" href="http://localhost:4000/blog/" />
-<meta property="og:url" content="http://localhost:4000/blog/" />
-<meta property="og:site_name" content="Sanketh’s Blog" />
-<meta property="og:type" content="website" />
-<meta name="twitter:card" content="summary" />
-<meta property="twitter:title" content="Sanketh’s Blog" />
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebSite","author":{"@type":"Person","name":"Sanketh B K"},"description":"Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.","headline":"Sanketh’s Blog","name":"Sanketh’s Blog","url":"http://localhost:4000/blog/"}</script>
-<!-- End Jekyll SEO tag -->
-<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/blog/feed.xml" title="Sanketh&apos;s Blog" /></head>
-<body><header class="site-header" role="banner">
+<!doctype html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.26.2 by Michael Rose
+  Copyright 2013-2024 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+-->
 
-  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Sanketh&#39;s Blog</a><nav class="site-nav">
-        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
-        <label for="nav-trigger">
-          <span class="menu-icon">
-            <svg viewBox="0 0 18 15" width="18px" height="15px">
-              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
-            </svg>
-          </span>
-        </label>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
 
-        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
-      </nav></div>
-</header>
-<main class="page-content" aria-label="Content">
-      <div class="wrapper">
-        <div class="home">
-<h2 class="post-list-heading">Posts</h2>
-    <ul class="post-list"><li><span class="post-meta">Jul 21, 2024</span>
-        <h3>
-          <a class="post-link" href="/blog/cpu/representation-of-negative-numbers">
-            Representation of Negative Numbers in Hardware
-          </a>
-        </h3></li><li><span class="post-meta">Jul 12, 2024</span>
-        <h3>
-          <a class="post-link" href="/blog/cpu/assembly/overview-of-mips-assembly">
-            Overview of MIPS Assembly
-          </a>
-        </h3></li><li><span class="post-meta">Jun 30, 2024</span>
-        <h3>
-          <a class="post-link" href="/blog/cpu/the-fetch-decode-execute-cycle">
-            The Fetch Decode Execute Cycle
-          </a>
-        </h3></li><li><span class="post-meta">Jun 21, 2024</span>
-        <h3>
-          <a class="post-link" href="/blog/cpu/measuring-cpu-performance">
-            Measuring CPU Performance
-          </a>
-        </h3></li><li><span class="post-meta">Jun 2, 2024</span>
-        <h3>
-          <a class="post-link" href="/blog/cpu/processor-bit-size">
-            Key Differences between 32-bit and 64-bit CPU architectures
-          </a>
-        </h3></li><li><span class="post-meta">May 31, 2024</span>
-        <h3>
-          <a class="post-link" href="/blog/cpu/components-of-cpu">
-            Components of CPU
-          </a>
-        </h3></li><li><span class="post-meta">Apr 6, 2024</span>
-        <h3>
-          <a class="post-link" href="/blog/operating-systems/learning-resources/my-study-resources">
-            My Resources for Learning Operating Systems and Computer Architecture
-          </a>
-        </h3></li></ul>
+<!-- begin _includes/seo.html --><title>Sanketh’s Blog - Sanketh’s Blog</title>
+<meta name="description" content="Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.">
 
-    <p class="rss-subscribe">subscribe <a href="/blog/feed.xml">via RSS</a></p></div>
 
-      </div>
-    </main><footer class="site-footer h-card">
-  <data class="u-url" href="/blog/"></data>
 
-  <div class="wrapper">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Sanketh's Blog">
+<meta property="og:title" content="Sanketh’s Blog">
+<meta property="og:url" content="http://localhost:4000/blog/">
 
-    <h2 class="footer-heading">Sanketh&#39;s Blog</h2>
 
-    <div class="footer-col-wrapper">
-      <div class="footer-col footer-col-1">
-        <ul class="contact-list">
-          <li class="p-name">Sanketh B K</li><li><a class="u-email" href="mailto:sankethbk.1611@gmail.com">sankethbk.1611@gmail.com</a></li></ul>
-      </div>
+  <meta property="og:description" content="Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.">
 
-      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/Sankethbk"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">Sankethbk</span></a></li><li><a href="https://www.linkedin.com/in/sankethbk"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#linkedin"></use></svg> <span class="username">sankethbk</span></a></li><li><a href="https://www.twitter.com/Sankethbk"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">Sankethbk</span></a></li></ul>
+
+
+
+
+
+
+
+
+
+
+
+<link rel="canonical" href="http://localhost:4000/blog/">
+
+
+
+
+
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+    "name": null,
+    "url": "http://localhost:4000/blog/"
+}
+</script>
+
+
+
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/blog/feed.xml" type="application/atom+xml" rel="alternate" title="Sanketh's Blog Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script type="text/javascript">
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/blog/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--home">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+        <a class="site-title" href="/blog/">
+          Sanketh's Blog
+          
+        </a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a
+                href="https://mmistakes.github.io/minimal-mistakes/docs/quick-start-guide/"
+                
+                
+              >Quick-Start Guide</a>
+            </li></ul>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
 </div>
 
-      <div class="footer-col footer-col-3">
-        <p>Welcome to my blog! I have started this blog to document my journey of learning low-level areas of computer science.</p>
-      </div>
-    </div>
+
+    <div class="initial-content">
+      
+
+
+
+<div id="main" role="main">
+  
+
+
+  <div class="archive">
+    
+      <h1 id="page-title" class="page__title"></h1>
+    
+    
+
+
+<h3 class="archive__subtitle">Recent Posts</h3>
+
+
+
+
+<div class="entries-list">
+  
+    
+
+
+
+<div class="list__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/blog/cpu/representation-of-negative-numbers" rel="permalink">Representation of Negative Numbers in Hardware
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">Representing negative numbers in binary poses unique challenges due to the inherent nature of binary systems. Unlike decimal systems, which can easily use a ...</p>
+  </article>
+</div>
+
+  
+    
+
+
+
+<div class="list__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/blog/cpu/assembly/overview-of-mips-assembly" rel="permalink">Overview of MIPS Assembly
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA’s. It was developed in the early 1980s at Stanford University by Pr...</p>
+  </article>
+</div>
+
+  
+    
+
+
+
+<div class="list__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/blog/cpu/the-fetch-decode-execute-cycle" rel="permalink">The Fetch Decode Execute Cycle
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">The Fetch-decode-execute cycle or instruction cycle is how CPU executes programs. During this cycle, the CPU retrieves an instruction from memory (fetch), in...</p>
+  </article>
+</div>
+
+  
+    
+
+
+
+<div class="list__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/blog/cpu/measuring-cpu-performance" rel="permalink">Measuring CPU Performance
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">CPU Manufacturers publish several metrics related to CPU like clock speed, number of cores, cache sizes, ISA, performance per Watt, number of transistors and...</p>
+  </article>
+</div>
+
+  
+    
+
+
+
+<div class="list__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/blog/cpu/processor-bit-size" rel="permalink">Key Differences between 32-bit and 64-bit CPU architectures
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">The terms 32 bit and 64 bit specifically relate to the size of the data and address registers within the CPU, which determines the maximum amount of memory t...</p>
+  </article>
+</div>
+
+  
+    
+
+
+
+<div class="list__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/blog/cpu/components-of-cpu" rel="permalink">Components of CPU
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">Before learning Assembly, I think it would be useful to learn a bit about different components of CPU in general. If we think of CPU as a black box its main ...</p>
+  </article>
+</div>
+
+  
+    
+
+
+
+<div class="list__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/blog/operating-systems/learning-resources/my-study-resources" rel="permalink">My Resources for Learning Operating Systems and Computer Architecture
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">I have previously studied operating systems as a part of my university curriculum, i’ve realized it’s time to revisit the fundamentals and go beyond. I have ...</p>
+  </article>
+</div>
+
+  
+</div>
+
+
+
 
   </div>
+</div>
 
-</footer>
-</body>
+      
+    </div>
 
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+
+    
+      <li><a href="/blog/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2024 <a href="http://localhost:4000">Sanketh's Blog</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/blog/assets/js/main.min.js"></script>
+
+
+
+
+
+
+
+
+
+  </body>
 </html>

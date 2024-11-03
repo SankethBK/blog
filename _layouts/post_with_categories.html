@@ -1,5 +1,6 @@
 ---
-layout: default
+layout: single
+share: true
 ---
 
 <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
@@ -12,10 +13,6 @@ layout: default
 <link rel="stylesheet" href="{{ '/assets/custom.css' | relative_url }}" />
 
 <article class="post">
-  <header class="post-header">
-    <h1 class="post-title">{{ page.title | escape }}</h1>
-  </header>
-
   <div class="categories">
     {% for category in page.categories %}
     <a

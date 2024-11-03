@@ -30,16 +30,20 @@ linkedin_username: sankethbk
 author: Sanketh B K
 
 # Build settings
-theme: minima
+theme: minimal-mistakes-jekyll
+minimal_mistakes_skin: "aqua" # "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
+
 plugins:
   - jekyll-feed
 
 defaults:
   - scope:
       path: ''
-      type: post
+      type: posts
     values:
       permalink: /:categories/:title
+      layout: single
+      share: true
 
 collections:
   categories:
