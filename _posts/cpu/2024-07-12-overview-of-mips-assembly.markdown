@@ -236,7 +236,7 @@ However, within a 4GB address space, it’s possible that the target instruction
 
 4. **Usage of Fewer Bits for Target Addresses:** In uniform instruction sets, the alignment of instructions allows the use of fewer bits to specify target addresses. For example, in a 32-bit wide instruction set, the last 2 bits of any instruction address are always 0 due to word alignment. This means that only 30 bits are needed to represent the address instead of 32. This reduction in required bits can be exploited in certain ISAs, such as MIPS/MIPS16, to provide additional storage space for other purposes, like indicating a mode with smaller or variable-length instructions. This efficient use of addressing allows for more compact encoding of instructions and can enhance the flexibility of the instruction set by supporting different modes.
 
-## Cons
+### Cons
 
 1. **Low Code Density:** Uniform instruction width can lead to inefficient use of memory when instructions are shorter than the fixed width. For example, if you have a 32-bit instruction width but some instructions only require a few bits, the extra bits in each instruction are wasted. This can lead to larger code sizes and increased memory consumption.
 
