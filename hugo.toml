@@ -1,0 +1,7 @@
+baseURL = 'https://example.org/'
+languageCode = 'en-us'
+title = 'The Binary Yard'
+theme = "PaperMod"
+
+[params]
+    ShowToc = true
