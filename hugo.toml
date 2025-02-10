@@ -1,4 +1,4 @@
-baseURL = 'https://example.org/'
+baseURL = 'https://thebinaryyard.github.io/blog/'
 languageCode = 'en-us'
 title = 'The Binary Yard'
 theme = "PaperMod"
