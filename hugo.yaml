@@ -1,0 +1,13 @@
+baseURL: "https://thebinaryyard.github.io/blog/"
+languageCode: "en-us"
+title: "The Binary Yard"
+theme: "PaperMod"
+
+params:
+  ShowToc: true  
+  ShowReadingTime: true  
+
+  editPost:
+    URL: "https://github.com/TheBinaryYard/blog/edit/master/content"
+    Text: "Suggest Changes"
+    appendFilePath: true  
