@@ -1,0 +1,51 @@
+/* 🌞 Light Mode */
+#references {
+  margin-top: 2rem;
+  padding: 1rem;
+  background-color: #f9f9f9; /* Light grey background */
+  border: 1px solid #ddd; /* Light grey border */
+  border-radius: 5px;
+}
+
+#references h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #333; /* Dark text */
+}
+
+#references ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+}
+
+#references ul li {
+  margin-bottom: 0.5rem;
+}
+
+#references ul li a {
+  text-decoration: none;
+  color: #007bff; /* Blue links */
+}
+
+#references ul li a:hover {
+  text-decoration: underline;
+}
+
+/* 🌙 Dark Mode (PaperMod uses `body.dark`) */
+body.dark #references {
+  background-color: #1e1e1e; /* Dark grey background */
+  border: 1px solid #444; /* Dark grey border */
+}
+
+body.dark #references h2 {
+  color: #ddd; /* Light text */
+}
+
+body.dark #references ul li a {
+  color: #4ea8de; /* Softer blue links for dark mode */
+}
+
+body.dark #references ul li a:hover {
+  color: #72c8ff; /* Brighter blue on hover */
+  text-decoration: underline;
+}

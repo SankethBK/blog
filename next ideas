@@ -1,0 +1,6 @@
+next ideas
+
+1. how overflow is handled, real world examples of failures
+2. add/sub/mul and div circuits for ints and floats 
+3. Endianness
+4.  Boot Process & How CPUs Start Execution

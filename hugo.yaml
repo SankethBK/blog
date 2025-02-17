@@ -1,0 +1,28 @@
+baseURL: "https://sankethbk.github.io/blog/"
+languageCode: "en-us"
+title: "Sanketh's Blog"
+theme: "PaperMod"
+
+params:
+  ShowToc: true  
+  ShowReadingTime: true  
+
+  editPost:
+    URL: "https://github.com/SankethBK/blog/edit/main/content"
+    Text: "Suggest Changes"
+    appendFilePath: true  
+
+
+  # homeInfoParams:
+  #   Title: "Sanketh's Notes"
+  #   Content: I’m here to write about low-level computing—exploring how computers process data at the fundamental level.  
+
+
+
+  socialIcons:
+    - name: github
+      url: "https://github.com/sankethbk"
+    - name: X
+      url: "https://x.com/sankethbk7777"
+    - name: substack
+      url: "https://thebinaryyard.substack.com"
