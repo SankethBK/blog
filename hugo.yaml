@@ -3,6 +3,11 @@ languageCode: "en-us"
 title: "Sanketh's Blog"
 theme: "PaperMod"
 
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+
 params:
   ShowToc: true  
   ShowReadingTime: true  

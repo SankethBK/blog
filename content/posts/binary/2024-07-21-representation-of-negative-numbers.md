@@ -1,6 +1,6 @@
 ---
 title: "Representation of Negative Numbers in Hardware"
-date: 2024-02-09
+date: 2024-07-21
 draft: false
 tags: ["binary"]
 categories: ["cpu"]
