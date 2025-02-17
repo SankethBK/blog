@@ -1,8 +1,9 @@
 ---
 layout: post_with_categories
 title:  "Overview of MIPS Assembly"
-date:   2024-07-12 20:38:05 +0530
-categories: cpu assembly
+date:   2024-07-12 
+categories: ["cpu"]
+tags: ["assembly", "mips"]
 author: Sanketh
 references: 
 #    - https://en.wikipedia.org/wiki/MIPS_architecture
