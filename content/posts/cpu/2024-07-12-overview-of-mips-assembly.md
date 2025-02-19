@@ -6,19 +6,45 @@ categories: ["cpu"]
 tags: ["assembly", "mips"]
 author: Sanketh
 references: 
-#    - https://en.wikipedia.org/wiki/MIPS_architecture
-#    - https://mathcs.holycross.edu/~csci226/MIPS/summaryHO.pdf
-#    - https://profile.iiita.ac.in/bibhas.ghoshal/COA_2021/lecture_slides/MIPS_Programming.pdf
-#    - https://ablconnect.harvard.edu/files/ablconnect/files/mips_instruction_set.pdf
-#    - https://www.comp.nus.edu.sg/~adi-yoga/CS2100/ch08/
-#    - https://en.wikibooks.org/wiki/MIPS_Assembly/Instruction_Formats
-#    - https://stackoverflow.com/questions/48509093/using-different-registers-in-mips
-#    - https://stackoverflow.com/questions/18024672/what-registers-are-preserved-through-a-linux-x86-64-function-call
-#    - https://stackoverflow.com/questions/9609721/how-far-can-the-jjump-instruction-jump-in-memory-mips
-#    - https://electronics.stackexchange.com/questions/162976/range-of-mips-j-instruction
-#    - https://stackoverflow.com/questions/6950230/how-to-calculate-jump-target-address-and-branch-target-address
-#    - https://stackoverflow.com/questions/44694957/the-difference-between-logical-shift-right-arithmetic-shift-right-and-rotate-r
-#    - https://www.d.umn.edu/~gshute/mips/directives-registers.pdf
+- title: "MIPS Architecture - Wikipedia"
+  url: "https://en.wikipedia.org/wiki/MIPS_architecture"
+
+- title: "MIPS Summary - College of the Holy Cross"
+  url: "https://mathcs.holycross.edu/~csci226/MIPS/summaryHO.pdf"
+
+- title: "MIPS Programming - IIIT Allahabad"
+  url: "https://profile.iiita.ac.in/bibhas.ghoshal/COA_2021/lecture_slides/MIPS_Programming.pdf"
+
+- title: "MIPS Instruction Set - Harvard ABLConnect"
+  url: "https://ablconnect.harvard.edu/files/ablconnect/files/mips_instruction_set.pdf"
+
+- title: "CS2100 Chapter 8 - National University of Singapore"
+  url: "https://www.comp.nus.edu.sg/~adi-yoga/CS2100/ch08/"
+
+- title: "MIPS Instruction Formats - Wikibooks"
+  url: "https://en.wikibooks.org/wiki/MIPS_Assembly/Instruction_Formats"
+
+- title: "Using Different Registers in MIPS - Stack Overflow"
+  url: "https://stackoverflow.com/questions/48509093/using-different-registers-in-mips"
+
+- title: "Registers Preserved Through a Linux x86-64 Function Call - Stack Overflow"
+  url: "https://stackoverflow.com/questions/18024672/what-registers-are-preserved-through-a-linux-x86-64-function-call"
+
+- title: "Jump Instruction Range in MIPS - Stack Overflow"
+  url: "https://stackoverflow.com/questions/9609721/how-far-can-the-jjump-instruction-jump-in-memory-mips"
+
+- title: "MIPS J Instruction Range - Electrical Engineering Stack Exchange"
+  url: "https://electronics.stackexchange.com/questions/162976/range-of-mips-j-instruction"
+
+- title: "Calculating Jump and Branch Target Addresses in MIPS - Stack Overflow"
+  url: "https://stackoverflow.com/questions/6950230/how-to-calculate-jump-target-address-and-branch-target-address"
+
+- title: "Logical Shift Right, Arithmetic Shift Right, and Rotate Right - Stack Overflow"
+  url: "https://stackoverflow.com/questions/44694957/the-difference-between-logical-shift-right-arithmetic-shift-right-and-rotate-r"
+
+- title: "MIPS Directives and Registers - University of Minnesota Duluth"
+  url: "https://www.d.umn.edu/~gshute/mips/directives-registers.pdf"
+
 ---
 
 MIPS (Microprocessor without Interlocked Pipeline Stages) assembly is one of the RISC ISA's. It was developed in the early 1980s at Stanford University by Professor John L. Hennessy. MIPS is widely used in academic research and industry, particularly in computer architecture courses due to its straightforward design and in various embedded systems applications for its efficiency and performance.
