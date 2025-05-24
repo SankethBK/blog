@@ -1,0 +1,43 @@
+---
+title:  "History of x86 Architecture"
+date:   2024-04-11
+draft: true
+categories: ["cpu"]
+tags: ["cpu", "x86"]
+author: Sanketh
+---
+
+Since its debut in 1978, the x86 instruction-set architecture has quietly become the backbone of modern computing. What began as a modest 16-bit processor with 29,000 transistors operating at 5 MHz has evolved into the foundation of modern computing, powering billions of devices worldwide. Through more than four decades of innovation, x86 has demonstrated remarkable resilience and adaptability, transitioning from simple personal computers to enterprise servers, gaming systems, and beyond. Along the way it has absorbed innovations like pipelining, superscalar execution, SIMD extensions, and 64-bit addressing, all while maintaining the same fundamental instruction encoding that made it ubiquitous. In this blog, we’ll trace the fascinating journey of x86—from its origins at Intel to its battles with AMD, the rise of x64, and its enduring legacy in an era of ARM and RISC-V challenges. 
+
+The Intel 8086 processor, launched in 1978, stands as one of the most pivotal moments in computing history, marking the birth of the x86 architecture that would eventually dominate personal computing for decades to come. This groundbreaking 16-bit microprocessor represented a quantum leap from its predecessors, introducing revolutionary concepts like segmented memory addressing that could handle up to 1 megabyte of memory—a massive expansion from the 64KB limitations of earlier 8-bit processors. However, to truly appreciate the significance of the 8086's innovations and understand why certain architectural decisions were made, we must first explore the fascinating landscape of microprocessors that preceded it.
+
+# From Vacuum Tubes to Silicon: The Computing Revolution Before x86
+
+## 1903s Mechanical to Electromechanical Transition
+
+The late 1930s and early 1940s marked a pivotal moment in computing history, representing the crucial bridge between purely mechanical calculation and the electronic digital computers that would follow. Before electrons ever pulsed through vacuum tubes, computation was a dance of gears, cams, and punched-card levers—Charles Babbage's 19th-century Difference Engine and the Hollerith tabulators that powered the 1890 U.S. census proved that purely mechanical machinery could automate arithmetic, yet they remained slow, bulky, and inflexible. The growing demands of scientific research, military applications, and business data processing required faster, more reliable, and more sophisticated computational tools than purely mechanical systems could provide.
+
+This era witnessed the emergence of electromechanical computers that cleverly combined the reliability of mechanical components with the speed and flexibility of electrical control systems. Relays—electromagnetic switches that could open and close circuits in response to electrical signals—became the key technology that enabled this transition. These devices allowed computers to perform logical operations and store information electronically while still relying on mechanical switching for the actual computation. The electromechanical approach offered significant advantages over purely mechanical systems: faster operation, greater reliability, the ability to handle more complex calculations, and most importantly, the foundation for programmable logic that could be modified without rebuilding the entire machine.
+
+### Atanasoff–Berry Computer (ABC)
+
+The Atanasoff–Berry Computer (ABC), built between 1937 and 1942 at Iowa State College by physicist John Atanasoff and graduate student Clifford Berry, is widely regarded as the first electronic digital computing device. Designed specifically to solve large systems of linear equations for physics research, it pioneered several concepts that became standard in later machines: binary (base-2) arithmetic instead of decimal, parallel processing of bits, and a regenerative capacitor-based memory that foreshadowed modern DRAM. Although the ABC was special-purpose (it wasn’t a general stored-program computer and required manual setup for each problem), its use of about 300 vacuum tubes to perform purely electronic logic proved that electrons could outpace the electromechanical relays of its contemporaries—laying crucial groundwork for the electronic computers that followed in the 1940s. A vacuum tube (or thermionic valve) is a sealed glass/metal envelope in which a heated cathode sprays electrons toward a positive anode; one or more control grids between them throttle that flow. By switching or amplifying current this way, tubes served as the first high-speed electronic “on–off” devices long before transistors existed.
+
+
+The ABC wasn’t fully electronic—it blended fast tube-based logic with slower mechanical aids:
+
+- **Electronic parts:**
+~300 vacuum-tube stages (dual-triodes plus thyratrons) formed the arithmetic-logic circuitry, doing all adds/subtracts entirely in electrons.
+Wikipedia
+
+- **Electromechanical parts:**
+Control signals that fired only once per memory-drum revolution were generated by ordinary telephone-style relays, because speed there didn’t matter.
+Wikipedia
+
+- **Mechanical motion:**
+  - Main memory lived on two motor-driven drums; each carried 1 600 capacitors that had to spin once per second so the electronics could refresh their charges.
+  Wikipedia
+  - Input and output relied on an IBM 80-column punched-card reader/punch and a paper-sheet writer—both purely mechanical transports.
+  Wikipedia
+
+The ABC would be considered the first electronic ALU (arithmetic logic unit) – which is integrated into every modern processor's design because all of those arithmetic and logic operations were executed purely with vacuum-tube electronics, not with gears or relay contacts. The ABC earns the “first electronic ALU” title because it moved the core arithmetic function from slow-moving mechanical parts to fast, purely electronic elements, establishing a design pattern that every subsequent computer—right up to the latest multicore CPUs—still follows.
