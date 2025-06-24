@@ -1,0 +1,68 @@
+---
+title:  "Intel 4004"
+date:   2025-06-18
+draft: true
+categories: ["cpu"]
+tags: ["cpu", "4004"]
+author: Sanketh
+references: 
+ - title: Intel's Founding
+   url: https://www.intel.com/content/www/us/en/history/virtual-vault/articles/intels-founding.html
+
+ - title: Birth of Microprocessor
+   url: https://www.shmj.or.jp/makimoto/en/pdf/makimoto_E_02_03.pdf
+
+ - title: Intel Wikipedia
+   url: https://en.wikipedia.org/wiki/Intel
+
+ - title: The First Intel Microprocessor The Chip that Changed Everything
+   url: https://www.microchipusa.com/articles/the-first-intel-microprocessor-the-chip-that-changed-everything
+
+---
+
+## How Intel Started?
+
+Robert Noyce and Gordon Moore started **Integrated Electronics** (Intel) in 1968 with the goal to not only involve in manufacturing of semiconductor devices but also invest heavily in R&D. Robert and Gordon had previosuly founded Fairchild semiconductors in 1957. They quit Fairchild semiconductors as they felt the parent company wasn’t reinvesting enough into the R&D of new semiconductor technologies. As a young company, intel's initial product focus was on memory. They aimed to replace the slower and larger magnetic core memory with semiconductor alternatives. Their first product was 1 Kbit DRAM, 1103, released in October 1970 [^dram]. The 1103 was the bestselling semiconductor memory chip in the world by 1972, as it replaced core memory in many applications. Intel continued with products like 3101 SRAM [^sram] and 1702 EPROM [^eprom] which was a major part of their revenue till 1980s.  
+
+## 4004: A Microprocessor Born Out of a Calculator
+
+In 1969 the Japanese calculator manufacturer Busicom asked Intel to build 12 custom LSI chips [^lsi]. The original block diagram had separate ICs for the ALU, control logic, timing, I/O, plus multiple ROMs, so Intel would have needed a dozen different mask sets in parallel [^mask]. That scale threatened both schedule and cost, prompting engineers in Intel to rethink the assignment: what if a single, programmable control chip could replace most of that fixed-function logic, leaving only the ROM contents to change from product to product? 
+
+### Key Contributors
+
+#### Ted Hoff - The Visionary Architect
+
+Marcian "Ted" Hoff, head of Intel's Application Research Department, was the visionary architect who formulated the revolutionary concept that became the Intel 4004. When faced with Busicom's request for 12 custom LSI chips, Hoff recognized that Intel's small design team would be overwhelmed by such complexity. His breakthrough insight was to abandon the traditional approach of hard-wiring specific functions into separate chips and instead propose a single, general-purpose processor that could be programmed through software stored in ROM. Working with Stan Mazor and in conjunction with Busicom's Masatoshi Shima, Hoff developed the architectural proposal and instruction set. that would define the world's first commercial microprocessor. His conceptual framework laid the foundation for the entire microprocessor industry. Hoff’s four-chip proposal—CPU, ROM, RAM, shift-register I/O—became the skeletal MCS-4 family. In 1980, Hoff was named the first Intel Fellow, which is the highest technical position in the company.
+
+#### Federico Faggin - The Master Designer
+
+Federico Faggin was the brilliant  physicist-designer who translated Hoff's architectural vision into silicon reality, having previously invented the silicon gate technology (SGT) at Fairchild Semiconductor in 1968 that made the 4004's complexity possible on a single chip. His silicon gate technology replaced aluminum control gates in MOS transistors, creating faster, more energy-efficient circuits that required less space. His key contributions are: 
+- Drafted new layout rules that let the poly-silicon gate act as its own mask, doubling density.
+- Added buried contacts to jam interconnects into tighter corners [^buried-contacts]. 
+- Invented on-chip bootstrap loads that gave full voltage swing without a second supply.
+
+#### Masatoshi Shima - The Bridge Between Vision and Application
+
+Masatoshi Shima, a Busicom engineer, served as the crucial link between Intel's design team and the real-world application requirements, working closely with Ted Hoff in developing the logic design and collaborating with Federico Faggin to translate concepts into working silicon. As the customer representative who understood both the calculator industry's needs and the technical possibilities, Shima provided essential feedback during the development process that ensured the 4004 would meet practical commercial requirements. His contributions were so valuable that he later joined Intel, and he concluded that the combined abilities of Hoff, Faggin, and himself were what made the 4004's success possible.
+
+### Commercialization
+
+The product which was commercialized based on this concept was 4004. The initial contract gave Busicom exclusive rights to the chips, but the calculator market slumped during development and Busicom asked to renegotiate the part price. Intel’s Bob Noyce saw an opening: he refunded Busicom’s $60 k NRE in exchange for the right to sell the 4004 to anyone except calculator makers. When the chipset launched publicly in November 1971, that clause let Intel market the world’s first commercial microprocessor to rail-signal companies, cash registers, pinball games, and eventually to every industry on earth.
+
+
+
+[^dram]: DRAM stores data in tiny capacitors that need to be constantly refreshed (recharged) because the capacitors naturally leak their charge over time - hence "dynamic." Each memory cell consists of one transistor and one capacitor, making it very dense and cost-effective. The Intel 1103 was a 1 Kbit (1,024 bits) DRAM chip that became hugely successful because it was much faster and smaller than the magnetic core memory it replaced.
+
+[^sram]: SRAM stores data using flip-flop circuits that maintain information as long as power is supplied, without needing constant refreshing like DRAM. The Intel 3101 was a high-speed memory chip that provided fast access times crucial for computer caches and buffer storage. Though more expensive per bit than DRAM due to its complex transistor structure, SRAM's speed made it essential for performance-critical applications in early computers and industrial systems.
+
+[^eprom]: EPROM (Erasable Programmable Read-Only Memory) is non-volatile memory that retains data permanently without power, but can be erased by ultraviolet light and reprogrammed electrically. The Intel 1702 allowed engineers to store firmware and programs that needed to persist through power cycles, while still being updatable during development or field servicing. This reusability made EPROMs invaluable for prototyping, system debugging, and applications requiring permanent but occasionally updatable code storage.
+
+
+
+[^lsi]: LSI chips were integrated circuits that could pack hundreds to thousands of transistors onto a single silicon chip. This was a major advancement from earlier integration levels like SSI (Small-Scale Integration) with fewer than 12 transistors, and MSI (Medium-Scale Integration) with 12-100 transistors.
+
+[^mask]: Each mask is essentially a precise template made of glass or quartz with patterns of opaque and transparent areas. These patterns define where different materials should be deposited, etched, or implanted on the silicon wafer during various manufacturing steps.
+
+[^buried-contacts]: buried contacts are electrical connections between different layers of the chip that are "buried" beneath the surface during manufacturing. Traditional contacts took up significant surface area and limited how tightly components could be packed together. Faggin's buried contact technique allowed interconnections between the polysilicon gate layer and the underlying silicon substrate or diffusion regions to be made in much smaller spaces. This innovation let designers "jam interconnects into tighter corners" because the electrical connections didn't require as much precious surface real estate, enabling much denser circuit layouts.
+
+[^bootstrap-loads]: Bootstrap loads are circuit elements that use a feedback mechanism to "pull themselves up by their bootstraps" - essentially using the circuit's own output signal to enhance its performance. In MOS circuits of the early 1970s, achieving full voltage swing (the complete range from low to high voltage) typically required a second power supply voltage, which added complexity and cost. Faggin's on-chip bootstrap loads were clever circuit configurations that used capacitive coupling and timing to boost internal voltages dynamically during operation. This allowed the circuits to achieve full voltage swing using only a single power supply, eliminating the need for external dual supplies while maintaining strong, clean digital signals.
