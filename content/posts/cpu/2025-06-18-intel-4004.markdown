@@ -20,6 +20,12 @@ references:
 
  - title: Oral History Panel on the Development and Promotion of the Intel 4004 Microprocessor
    url: https://archive.computerhistory.org/resources/access/text/2012/04/102658187-05-01-acc.pdf
+
+ - title: 4004 Technical Specification
+   url: https://datasheets.chipdb.org/Intel/MCS-4/datashts/intel-4004.pdf
+
+ - title: The Strangeness Of The Intel 4004
+   url: https://thechipletter.substack.com/p/the-strangeness-of-the-intel-4004
 ---
 
 ## How Intel Started?
@@ -71,6 +77,30 @@ The product which was commercialized based on this concept was 4004. The initial
 
 4004 is called as the first "true single-chip CPU" as it was the first commercial single-chip microprocessor and complete general-purpose CPU on a single chip. By integrating the timing functions that would have required a separate chip, Intel created what was essentially a complete central processing unit on one piece of silicon—all the core CPU functions (arithmetic logic unit, control unit, registers, and now timing) were contained within that single 16-pin package. The MCS-4 family consisted of four individual chips: the 4004 CPU, 4001 ROM with I/O port, 4002 RAM with output port, and 4003 shift register for I/O expansion. 
 
+## 4004 Technical Specifications
+
+| Attribute | Details |
+|-|-|
+| Transistor count / die size | 2,300 transistors in ≈ 12 mm² (≈ 3 × 4 mm) die |
+| Process technology | 10 µm, p-channel, self-aligned silicon-gate MOS with buried contacts & bootstrap loads [^process-node] |
+| Package / pins | 16-pin ceramic dual in-line package (DIP) | 
+| Clock | 500 kHz typical, 740 kHz max; two-phase external clock |
+| Companion-chip set (MCS-4) | (MCS-4)	4001 ROM + I/O, 4002 RAM + port, 4003 10-bit shift register, 4008/4009 bus adapters, later 4040 CPU enhancement |
+
+### Architectural highlights
+
+- **4-bit core, 8-bit op-codes** – two instruction formats: 1-byte (execute in 1 cycle) and 2-byte (execute in 2 cycles). The upper nibble of every opcode selects one of 16 register pairs, letting a very small core hit any operand without separate load/store instructions.
+
+- **Multiplexed 4-line bus** – during the first half of a machine cycle the CPU drives the low 8 bits of a 12-bit address; during the second half it puts the high 4 bits plus a function code on the same four pins. This keeps pin-count at 16 yet reaches 4 KB of ROM and 2.5 Kb of RAM.
+
+- **Stack in silicon, not RAM** – a tiny three-level (4004) or four-level (4040) push-down stack is built from static latches on-chip, so CALL/RET take no external memory cycles.
+
+### Memory Specifications
+
+- **Program Memory**: 4 KB maximum program memory size.
+- **Data Memory**: 640 bytes of RAM, stored as 1280 4-bit "characters"
+- **Memory Access**: RAM access done same way as I/O ports - first use SRC instruction to specify memory address, then use WRM or RDM to write/read data 
+
 [^dram]: DRAM stores data in tiny capacitors that need to be constantly refreshed (recharged) because the capacitors naturally leak their charge over time - hence "dynamic." Each memory cell consists of one transistor and one capacitor, making it very dense and cost-effective. The Intel 1103 was a 1 Kbit (1,024 bits) DRAM chip that became hugely successful because it was much faster and smaller than the magnetic core memory it replaced.
 
 [^sram]: SRAM stores data using flip-flop circuits that maintain information as long as power is supplied, without needing constant refreshing like DRAM. The Intel 3101 was a high-speed memory chip that provided fast access times crucial for computer caches and buffer storage. Though more expensive per bit than DRAM due to its complex transistor structure, SRAM's speed made it essential for performance-critical applications in early computers and industrial systems.
@@ -90,3 +120,4 @@ The product which was commercialized based on this concept was 4004. The initial
 
 [^bootstrap-loads]: Bootstrap loads are circuit elements that use a feedback mechanism to "pull themselves up by their bootstraps" - essentially using the circuit's own output signal to enhance its performance. In MOS circuits of the early 1970s, achieving full voltage swing (the complete range from low to high voltage) typically required a second power supply voltage, which added complexity and cost. Faggin's on-chip bootstrap loads were clever circuit configurations that used capacitive coupling and timing to boost internal voltages dynamically during operation. This allowed the circuits to achieve full voltage swing using only a single power supply, eliminating the need for external dual supplies while maintaining strong, clean digital signals.
 
+[^process-node]: The "10 µm" refers to the process node or feature size - it's the minimum dimension that can be reliably manufactured on the chip, typically measured as the smallest transistor gate length or the minimum width of conducting lines.
