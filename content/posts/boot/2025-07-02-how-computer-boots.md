@@ -21,7 +21,7 @@ The power supply stabilizes voltages and asserts a “Power‑Good” (PWR_OK) l
 
 ### 2. CPU Reset Vector
 
-The reset vector is a predetermined memory address where the CPU begins execution after being powered on or reset. On x86 processors, this address is typically 0xFFFFFFF0 (near the top of the 4GB address space). When the CPU comes out of reset, its program counter (instruction pointer) is automatically set to this address. The motherboard's memory mapping ensures that this address points to the BIOS/UEFI firmware ROM chip, so the very first instruction the CPU executes comes from the firmware.
+The reset vector is a predetermined memory address where the CPU begins execution after being powered on or reset. On x86 processors, this address is typically `0xFFFFFFF0` (near the top of the 4GB address space). When the CPU comes out of reset, its program counter (instruction pointer) is automatically set to this address. The motherboard's memory mapping ensures that this address points to the BIOS/UEFI firmware ROM chip, so the very first instruction the CPU executes comes from the firmware.
 
 ### 3. Microcode / Internal Init
 
@@ -70,7 +70,7 @@ The MBR is a 512-byte sector located at the very beginning of a storage device (
 
 - Boot flag (1 byte) - indicates if this partition is active/bootable
 - Starting CHS address (3 bytes) - Cylinder, Head, Sector in old addressing
-- Partition type (1 byte) - identifies the file system (0x83 for Linux, 0x07 for NTFS, etc.)
+- Partition type (1 byte) - identifies the file system (`0x83` for Linux, `0x07` for NTFS, etc.)
 - Ending CHS address (3 bytes)
 - Starting LBA address (4 bytes) - modern sector addressing
 - Partition size in sectors (4 bytes)
@@ -85,6 +85,96 @@ When the BIOS finds a valid MBR, it loads all 512 bytes into memory at address `
 - Cannot handle disks larger than 2TB due to 32-bit LBA addressing
 - Single point of failure - if MBR is corrupted, entire disk becomes unbootable
 - No built-in redundancy or error correction
+
+#### How MBR Supports booting multiple OSes
+
+The MBR's job is simple and dumb. It scans the four entries in its partition table, finds the one and only one partition that has the "active" flag set, and then it loads the bootloader from that partition. It ignores the other three. That's it. The MBR boot code has no menu system, no user interface, no choice mechanism - it's too small and primitive for that.
+
+The MBR itself doesn't load the operating system. Its sole job is to pass control to the next stage. This process is called **chain loading**.
+
+1. BIOS/UEFI (in legacy mode) loads the MBR code (from the first sector of the boot device) into memory and executes it.
+2.  MBR code finds the active partition and loads the boot code from that partition's first sector. This is known as the Partition Boot Record (PBR) or Volume Boot Record (VBR).
+3.  PBR/VBR code contains the instructions needed to load the actual operating system files (like the Windows bootmgr or the Linux GRUB loader) from its own partition.
+4. This creates a chain of trust, where each small program is responsible for loading and executing the next, slightly larger and more complex program, until the full OS kernel is running.
+
+Example Multi-Boot Setup
+
+```
+Partition 1: /boot (active, contains GRUB) ← MBR points here
+Partition 2: Ubuntu root filesystem
+Partition 3: Windows NTFS
+Partition 4: Shared data
+```
+
+Boot sequence:
+
+1. MBR → finds active Partition 1 → loads GRUB
+2. GRUB → shows menu: "Ubuntu or Windows?"
+3. User selects → GRUB loads appropriate kernel or chain-loads Windows boot loader
+
+#### Overcoming the 4-Partition Limit: Extended and Logical Partitions
+
+The MBR's limit of four primary partitions was a significant constraint. To work around this, the concept of an extended partition was introduced.
+
+
+- You can designate one of your four primary partitions as an "extended partition."
+- This extended partition doesn't hold a filesystem directly. Instead, it acts as a container for multiple logical partitions.
+- You can create many logical partitions inside this single extended partition, each with its own drive letter and filesystem.
+
+A common disk layout might look like this:
+- Primary Partition 1: Windows OS (C:)
+- Primary Partition 2: Linux OS
+- Primary Partition 3 (Extended Partition Container):
+  - Logical Partition 1: Data Drive (D:)
+  - Logical Partition 2: Backup Drive (E:)
+  - Logical Partition 3: Shared Files (F:)
+- Primary Partition 4: Empty/Unused
+
+This system was a functional, if complex, workaround. However, it's a perfect example of the legacy baggage that led to the development of the much simpler and more powerful GUID Partition Table (GPT).
+
+### GUID Partition Table (GPT) - Modern UEFI Systems
+
+GPT is a much more sophisticated partitioning scheme that addresses all of MBR's limitations. It's part of the UEFI specification and provides better data integrity and flexibility.
+
+- **LBA 0: Protective MBR:** For backward compatibility, the very first sector of a GPT disk still contains a 512 byte MBR styled memory called "protective" MBR. This MBR has a single partition entry of size same as disk's size and type `0xEE` (invalid partition type, to prevent legacy tools from misidentifying). This tricks the legacy MBR-only tools into thinking that the disk is already full so it can't create any new partitions from misidentifying the disk as unformatted and accidentally overwriting it.
+- **LBA 1: Primary GPT Header:** This header defines the layout of the partition table itself. It contains:
+   - A signature ("EFI PART") to identify it as a GPT disk.
+   - The location of the partition entries.
+   - The number of partition entries.
+   - A unique GUID (Globally Unique Identifier) for the entire disk.
+   - A CRC32 checksum for the header and the partition table, which allows the system to verify their integrity.
+-  **LBA 2 to LBA 33 (typically):** Partition Entry Array: This is where the actual partition information is stored. By default, GPT allocates space for 128 partition entries (128 bytes each), though this can be changed.
+- **Partition Data:** The rest of the disk is used for the actual partitions.
+- **Last 33 LBAs:** Backup GPT header and partition entries (mirror of the beginning).
+
+#### Each Partition Table Entry (128 bytes) contains:
+
+- **Partition Type GUID (16 bytes):** A unique ID that specifies the partition's purpose (e.g., an EFI System Partition, a Microsoft basic data partition). This is far more
+ specific than MBR's single-byte type code.
+- **Unique Partition GUID (16 bytes):** Every single partition on the disk gets its own unique identifier.
+- **Starting and Ending LBA address (8 bytes each):** Uses 64-bit addressing, allowing for astronomically large disk sizes.
+- **Partition Attributes (8 bytes):** Flags that define properties like "read-only" or "bootable."
+- **Partition Name (72 bytes):** A human-readable name (e.g., "Linux home") stored in Unicode.
+
+#### GPT/UEFI Boot Process:
+
+The boot process on a UEFI system with a GPT disk is fundamentally different and more robust than the legacy BIOS/MBR method.
+
+1. The UEFI firmware initializes and scans the storage devices.
+2. Instead of executing code from a boot sector, the UEFI firmware actively looks for a specific partition known as the EFI System Partition (ESP). The ESP is identified by its Partition Type GUID.
+1. The UEFI firmware understands file systems (typically FAT32), so it can mount the ESP and browse its contents.
+2. It looks for a bootloader application at a standardized file path, such as` \EFI\BOOT\BOOTX64.EFI` (for removable media) or a vendor-specific path like `\EFI\Microsoft\Boot\bootmgfw.efi` for Windows.
+1. Once found, the firmware executes this `.efi` bootloader file directly, which then takes over to load the operating system kernel.
+
+
+#### GPT Advantages over MBR:
+
+- **Massive Disk Sizes:** Supports disks larger than 2TB (up to 9.4 ZB - zettabytes - in theory) thanks to 64-bit LBA addressing.
+- **More Partitions:** Allows for 128 primary partitions by default, eliminating the need for the complex extended/logical partition scheme.
+- **Redundancy and Reliability**: The backup GPT header and CRC32 checksums provide protection against data corruption in the partition table. If the primary header is damaged, the disk can be recovered from the backup.
+- **No "Active" Partition:** The bootable partition is defined in the UEFI firmware's boot manager settings, not by a fragile flag on the partition itself, making multi-booting cleaner.
+- **Unique IDs:** Using GUIDs for both the disk and partitions prevents potential conflicts and collisions that could occur with MBR systems.
+
 
 [^pci-pcie]: **PCI (Peripheral Component Interconnect) and PCIe (Peripheral Component Interconnect Express)** are both interface standards for connecting hardware components to a computer's motherboard, but PCIe is a newer, faster, and more flexible version of PCI. 
 
