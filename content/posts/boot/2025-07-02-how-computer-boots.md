@@ -175,9 +175,105 @@ The boot process on a UEFI system with a GPT disk is fundamentally different and
 - **No "Active" Partition:** The bootable partition is defined in the UEFI firmware's boot manager settings, not by a fragile flag on the partition itself, making multi-booting cleaner.
 - **Unique IDs:** Using GUIDs for both the disk and partitions prevents potential conflicts and collisions that could occur with MBR systems.
 
+## 5. Kernel Loading
+
+Once the bootloader has been identified and loaded by either the BIOS/MBR or UEFI/GPT process, its one and only job is to find the operating system's kernel, load it into memory, and hand over control of the system. This is the moment the actual operating system begins to take charge.
+
+### 1. Boot Loader to Kernel Handoff
+
+The bootloader (like GRUB for Linux or the Windows Boot Manager) knows where to find the kernel file on the storage device (e.g., `vmlinuz` in Linux [^vmlinuz], `ntoskrnl.exe` in Windows [^ntoskrnl]). But the kernel alone isn't enough.
+
+Modern kernels are modular and don't contain every possible hardware driver. To solve this chicken-and-egg problem—where the kernel needs drivers to access the disk, but the drivers are on the disk—the bootloader also loads an **initial RAM disk (initrd**) or **initial RAM filesystem (initramfs)** into memory alongside the kernel.
+
+This `initrd` is a temporary, compressed filesystem that contains the essential drivers and tools needed for the kernel to access the main storage device and other critical hardware.
+
+#### 1. Memory Layout Setup:
+
+- The kernel is loaded at a specific memory address (typically around 1MB on x86 systems).
+- Boot loader creates a memory map showing which areas are safe to use.
+- Sets up initial page tables for virtual memory management.
+- Preserves important boot information in memory that the kernel will need.
+
+#### 2. CPU State Preparation:
+
+- Switches CPU from 16-bit real mode to 32-bit protected mode (or 64-bit long mode).
+- Disables interrupts temporarily.
+- Sets up initial stack pointer.
+- Prepares CPU registers with boot parameters.
+
+**Boot Parameters:** The boot loader passes crucial information to the kernel through standardized protocols:
+
+- Linux: Boot protocol with command line arguments, initrd location, memory map
+- Windows: Boot Configuration Data (BCD) and hardware abstraction layer info
+- Hardware details: Available RAM, CPU features, device tree (on ARM systems)
+
+## 3. Kernel Initialization: Building the System
+
+The moment the kernel begins executing, it runs in a highly constrained environment. It must bootstrap itself, initializing all its core subsystems to transform the raw hardware into a fully functional operating system.
+
+### 1. Entry Point and Early Setup
+
+The kernel's very first instructions are architecture-specific and focus on creating a stable environment for the rest of the initialization:
+
+- **Initializes Core CPU Structures:** Sets up the Interrupt Descriptor Table (IDT) to handle hardware interrupts and exceptions, though interrupts remain disabled for now.
+- **Processes Boot Information:** Parses the command-line arguments and memory map passed by the bootloader to understand its environment and available resources.
+- **Validates Integrity:** If Secure Boot is enabled, the kernel validates its own digital signature to ensure it hasn't been tampered with.
+
+
+### 2. Memory Management Initialization
+
+The kernel immediately takes control of all system memory:
+
+- **Virtual Memory Setup:** It creates a comprehensive set of page tables to map virtual addresses to physical RAM addresses, establishing the kernel's own protected address space.
+- **Physical Memory Management:** Using the map from the bootloader, it builds a complete picture of physical memory, initializing allocators (like the buddy and slab allocators) to manage free and used memory frames.
+
+### 3. Core Subsystem Initialization
+
+With memory management active, the kernel brings its fundamental components online:
+
+- **Process Management:** Creates the first process, the idle process (PID 0), and initializes the process scheduler, which is responsible for task switching.
+- **Interrupt and Exception Handling:** Configures the system's interrupt controllers (PIC/APIC) and enables interrupts, allowing hardware to communicate with the CPU.
+- **Synchronization Primitives:** Initializes the low-level mechanisms like mutexes, semaphores, and spinlocks that are essential for preventing data corruption on multiprocessor systems.
+
+### 4. Device and Driver Infrastructure
+
+The kernel sets up the framework for communicating with hardware:
+
+- **Device Model Framework:** Initializes the device driver subsystem and parses hardware information from ACPI tables (on x86) or a device tree (on ARM) to discover what hardware is present.
+- **Essential Driver Loading:** Loads the built-in drivers compiled directly into the kernel, focusing on those needed to access the root filesystem (e.g., SATA/NVMe drivers).
+- **Hardware Abstraction:** Initializes platform-specific code and Hardware Abstraction Layers (HAL) to provide a consistent interface for the rest of the kernel to interact with the underlying hardware.
+
+### 5. Filesystem and I/O Preparation
+
+Before it can mount the root filesystem, the kernel prepares its I/O subsystems:
+
+- **Virtual File System (VFS):** Initializes the VFS, an abstraction layer that allows the kernel to treat all filesystems (like ext4, NTFS, etc.) in a uniform way.
+- **Block Device Layer:** Initializes the subsystem that manages block devices (like hard drives and SSDs) and sets up I/O schedulers to optimize disk requests.
+
+### 6. Initial Process Creation
+
+The kernel creates its own essential background threads (like kthreadd for managing other kernel threads) and then prepares to make the critical leap from kernel space to user space.
+
+### 7. Transition to User Space
+
+- **Mounting the Root Filesystem:** The kernel first mounts the initrd/initramfs as a temporary root filesystem. The drivers and tools in the initrd are used to mount the real root filesystem from the main storage device.
+- **Launching the Init Process:** The kernel creates the very first user-space process, which is given Process ID 1 (PID 1). This process is the ancestor of all other user processes. On modern Linux systems, this is systemd; on Windows, it's smss.exe.
+
+
+### 8. Handoff to the Init System
+
+
+At this point, the kernel's primary initialization is complete. It has transformed into a fully preemptive, multitasking operating system kernel. While the kernel continues to run for the lifetime of the system—managing hardware, handling interrupts, and processing system calls—it now hands the responsibility of finishing the boot process to the **init system**. The init system is responsible for starting all the higher-level services, such as networking, background daemons, and ultimately, the user login screen.
 
 [^pci-pcie]: **PCI (Peripheral Component Interconnect) and PCIe (Peripheral Component Interconnect Express)** are both interface standards for connecting hardware components to a computer's motherboard, but PCIe is a newer, faster, and more flexible version of PCI. 
 
 [^network-boot]: **Network booting (PXE - Preboot Execution Environment)** allows a computer to boot an operating system directly from a network server rather than local storage. When enabled, the network card's Option ROM takes control during the boot process and broadcasts a DHCP request that includes PXE-specific information. A PXE-enabled DHCP server responds with an IP address for the client plus the location of a TFTP (Trivial File Transfer Protocol) server and the filename of a network boot loader. The client then downloads this small boot loader over the network and executes it, which in turn can download a kernel, initial ramdisk, or even a complete operating system image. This technology is commonly used in corporate environments for automated OS deployment, diskless workstations, and system recovery scenarios, as it allows administrators to boot and manage hundreds of computers from a central server without needing individual storage devices or manual intervention on each machine.
 
 [^logical-access-block]: **Logical Block Address 0** refers to the first addressable unit of storage on a device. Think of LBA as a simple numbering system that starts from 0 and counts up sequentially. Modern storage devices use LBA as an abstraction layer that hides the physical complexity of how data is actually stored. Whether it's a traditional hard drive with physical cylinders, heads, and sectors, or a solid-state drive with flash memory cells arranged in pages and blocks, the operating system and firmware see everything as a linear sequence of logical blocks.
+
+[^vmlinuz]: vmlinuz is the name of the Linux kernel executable file. The name is historical and descriptive:
+      - vm: Stands for Virtual Memory, indicating the kernel supports this feature.
+      - linuz: Refers to the Linux kernel, and the z at the end signifies that it is a zlib-compressed executable.
+    When the bootloader loads this file, the first thing the kernel does is decompress itself into memory before it begins initializing the system.
+
+[^ntoskrnl]: ntoskrnl.exe stands for Windows NT Operating System Kernel. It is the fundamental kernel space module for the Windows NT family of operating systems (including all modern versions like Windows 10/11 and Windows Server). This single executable file contains the Windows kernel, the executive, the memory manager, and other core components responsible for managing the system's hardware and software resources.
