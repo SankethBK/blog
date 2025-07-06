@@ -11,6 +11,9 @@ references:
 
     - title: Network Boot
       url: https://en.wikipedia.org/wiki/Network_booting
+
+    - title: Bootloader Wiki
+      url: https://wiki.osdev.org/Bootloader
 ---
 
 ## 1. Power‑On & Hardware Reset
