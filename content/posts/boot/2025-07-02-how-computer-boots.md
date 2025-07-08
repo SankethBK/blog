@@ -1,7 +1,7 @@
 ---
 title:  "What happens when you turn on computer?"
 date:   2025-07-02
-draft: true
+draft: false
 categories: ["boot"]
 tags: ["boot"]
 author: Sanketh
