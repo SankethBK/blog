@@ -31,7 +31,7 @@ The hardware initialization performed by MBR code is quite limited but crucial f
 - Sets up segment registers (CS, DS, ES, SS) to known values
 - Initializes the stack pointer (SP) to create a small working stack
 - Clears or sets specific CPU flags to ensure predictable behavior
-- The BIOS typically loads MBR at physical address 0x7C00, so CS:IP points there
+- The BIOS typically loads MBR at physical address 0x7C00 [^0x7C00], so CS:IP points there [^cs-ip]
 
 #### Interrupt Handling:
 
@@ -149,3 +149,5 @@ Cannot access network interfaces, USB devices, or modern peripherals without wri
 
 
 [^0x7C00]: The BIOS loads the 510‑byte sector to segment:offset 0000:7C00, which equals physical address 0x7C00. The lower 2 KB of RAM (0x0000–07FF) already hosts the interrupt‑vector table and the BIOS Data Area, so 0x7C00 was the first convenient free gap on the original IBM PC—and the convention stuck. Immediately on entry the stub usually copies itself downward to something like 0x0600 (or 0x0500). That frees 0x7C00 so it can be overwritten by the Volume Boot Record (VBR) from the active partition that the stub is about to load. The destination (0x0600–07BF) lies safely below 0x7C00 and above the BIOS Data Area, so nothing important is overwritten. It tansfers control (jmp 0x0000:0x7C00) so the OS-specific stage-1½/2 bootloader can continue.
+
+[^cs-ip]: Together CS:IP forms the complete address where the processor will fetch the next instruction. Physical Address = (CS × 16) + IP.
