@@ -14,6 +14,15 @@ references:
 
     - title: From 0 to 1 MB in DOS
       url: https://blogsystem5.substack.com/p/from-0-to-1-mb-in-dos
+
+    - title: Intel 80286 Manual
+      url: https://ragestorm.net/downloads/286intel.txt
+
+    - title: Task State Segment
+      url: https://pdos.csail.mit.edu/6.828/2017/readings/i386/s07_01.htm
+
+    - title: Intel 80386 Manual
+      url: https://pdos.csail.mit.edu/6.828/2017/readings/i386/toc.htm
 ---
 
 # The 8086 Processor
@@ -45,21 +54,7 @@ The physical address was divided into 2 parts: selector/segment and offset.
 
 The idea is to express a 20-bit address using 2 16-bit registers. A selector register (CS, DS, ES, SS) indicates the starting address of the segment and the offset register (SI, DI, BP, SP) indicates the boundary of the segment. Since the offset is 16-bits, the boundary can be at a maximum of 64KB thus maintaining backward compatibility.
 
-```
-     20-bit physical address space   (1 MB total)
-     ─────────────────────────────────────────────────────────
-     00000h                                                      FFFFFh
-        ↑                                                         ↑
-        │                                                         │
-        │<────────── 64 KB window (Segment N) ───────────>│
-        │                                                 │
-        │          │<────────── 64 KB window (Segment N+1) ───────────>│
-        │          │                                      │
-        │          └───────────  overlap  ────────----────┘
-        │
-   base = N × 16 bytes                base = (N+1) × 16 bytes
-   address = (segment × 16) + offset  address = (segment × 16) + offset
-```
+![Segmentation Model](/images/segmentation-memory-model.png)
 
 **What the diagram shows**
 
@@ -254,6 +249,144 @@ A0000h ├───────────────────────�
 - ROM needs upper memory: BIOS must be at top (reset vector at FFFFFh)
 - Video needs fast access: Memory-mapped for performance
 - Programs need contiguous space: Large conventional memory block
+
+# The 80286 and protected mode
+
+## Introduction to the 80286
+
+The Intel 80286, released in 1982, represented a revolutionary leap in x86 architecture. While maintaining backward compatibility with the 8086, it introduced protected mode - a sophisticated operating environment that broke free from real mode's limitations and laid the foundation for modern computing.
+
+The 80286 was Intel's answer to the growing demands for multitasking operating systems, memory protection, and the ability to address more than 1MB of memory. It powered the IBM PC/AT and became the processor that truly enabled the transition from simple DOS machines to powerful workstations.
+
+## Key Innovations of the 80286
+
+### 16MB Address Space
+
+- **24-bit address bus** (compared to 8086's 20-bit)
+- **16MB maximum memory** (2^24 = 16,777,216 bytes)
+- **Maintained real mode compatibility** for existing 
+
+### Hardware Memory Protection
+
+- **Privilege levels** preventing user programs from corrupting system memory
+- **Segment-level protection** with access rights and bounds checking
+- **Hardware-enforced security** that software cannot bypass
+
+### Virtual Memory Foundation
+
+- **Segment descriptors** containing detailed memory management information
+- **Global and Local Descriptor Tables** for memory organization
+- **Task switching support** enabling true multitasking
+
+## The Protected Mode
+
+### Addressing 24-Bit Memory
+
+The 80286 processor had 24 address bus compared to 20-Bit address bus of 8086. It had to implement the addressing in such a way that its backward compatible with 8086 processor's addressing. Instead of extending the logic used in 8086's real mode addressing, 80286 took an entirely different approach. The memory was still addressed with `selector (16-Bit): offset (16-Bit)` pairs. In real mode, a selector value was a paragraph number of physical memory. In protected mode, a selector value is an index into a descriptor table. In both modes, programs are divided into segments. In real mode, these segments are at fixed positions in physical memory and the selector value denotes the paragraph number of the beginning of the segment. 
+
+While we are storing the actual physical address of the segment in descriptor table, the descriptor table entry can store other information related to the segment as well. For eg: length of the segment which can be used to check if the memory accessed by the program is within the segment, read/write flags which can be used to enforce protection, etc.
+
+![Descriptor Table](/images/descriptor-table.png)
+
+### The Virtual Memory
+
+The idea of virtual memory is provide an illusion to a program that it is the only program running and it has access to all the memory. The 80286 introduced the foundational concepts of virtual memory to the x86 architecture, though it implemented a more limited form compared to modern processors. Understanding the 80286's approach helps clarify why virtual memory became essential and how it evolved.
+
+Virtual memory creates an abstraction layer between what programs think they're accessing (virtual addresses) and what actually exists in physical memory. The 80286 achieved this through segmentation-based virtual memory.
+
+![Virtual Memory](/images/virtual-memory-80286.png)
+
+#### Simplified Programming Model with Virtual Memory
+
+Before virtual memory, programmer had to directly manage physical addresses which is error prone and there's a possibility of overwriting other program's data. This also means the programmer has to know where the segments will be loaded in memory beforehand. Virtual Memory solves this issue as each segment will be under the illusion that it starts at memory address 0 and can access upto 64KB of memory. 
+
+### The Memory Management Unit (MMU)
+
+The MMU in the 80286 is a hardware component integrated into the CPU chip itself. THe main purpose of MMU is to translate virtual addresses into physical addresses, along with checking bounds, enforcing privileges, etc. 
+
+### Global and Local Descriptor Tables (GDT and LDT)
+
+#### What Are Descriptor Tables?
+
+Think of descriptor tables as address books for the computer's memory system. Just like you use a phone book to look up someone's address when you only know their name, the 80286 processor uses descriptor tables to look up memory information when it only knows a selector (a kind of memory "name").
+
+#### The Basic Problem They Solve
+
+In real mode, programs had to deal with physical memory addresses directly:
+
+```
+Real Mode Problem:
+Program says: "I want to access memory at 0x12345"
+CPU responds: "OK, accessing physical memory at 0x12345"
+
+Issues:
+- Programs must know exact physical addresses
+- No protection between programs  
+- Programs can corrupt each other's memory
+- Hard to relocate programs in memory
+```
+
+Protected mode solves this with an indirection layer:
+
+```
+Protected Mode Solution:
+Program says: "I want to access selector 0x0008, offset 0x1234"
+CPU responds: "Let me look up selector 0x0008 in the descriptor table..."
+CPU finds: "Selector 0x0008 points to base address 0x100000"
+CPU calculates: "Physical address = 0x100000 + 0x1234 = 0x101234"
+CPU verifies: "Access allowed? Yes. Accessing physical memory at 0x101234"
+```
+
+#### Understanding Selectors
+
+A selector is a 16-bit value that acts like a "memory ID card." Instead of using physical addresses, programs use selectors to identify memory segments.
+
+![Selector Format](/images/selector-format.png)
+
+- **Index (bits 15-3):** Which entry in the descriptor table (0-8191)
+- **TI (bit 2):** Table Indicator - 0 = GDT, 1 = LDT
+- **RPL (bits 1-0):** Requested Privilege Level (0-3)
+
+#### What Is a Descriptor?
+
+A descriptor is an 8-byte data structure that contains all the information the CPU needs to access a memory segment safely.
+
+![Descriptor Format](/images/descriptor-format.png)
+
+**Base Address (24 bits total in 80286):** (Base[23..16] + Base[15..0])
+- Bits 15..0 from the lower section
+- Bits 23..16 from the upper section
+
+**Limit (20 bits total, but 80286 only uses 16 bits):** 
+- Limit 15..0 (16 bits) - from Lower 32 bits
+- Limit 19..16 (4 bits) - from Upper 32 bits (but not used in 80286)
+
+The descriptor format was designed to be forward-compatible. The 80386 later extended it to use:
+- Full 32-bit base address (adding Base 31..24)
+- Full 20-bit limit (adding Limit 19..16 with granularity bit)
+
+
+**Final physical address calculation:**
+
+```
+Physical Address = 24-bit Base (from descriptor) + 16-bit Offset (from instruction)
+```
+
+**Access Byte Format**
+
+![Access Byte](/images/access-byte-format.png)
+
+- **P (Present) - Bit 7:** Indicates whether the segment is currently loaded in memory. When P=1, the segment is valid and can be accessed. When P=0, any attempt to access this segment generates a segment-not-present exception, allowing the OS to load the segment from disk (virtual memory support).
+- **DPL (Descriptor Privilege Level) - Bits 6-5:** Defines the privilege level required to access this segment (0-3, where 0 is most privileged). Code running at privilege level 3 (user mode) cannot access segments with DPL=0 (kernel mode). This enforces memory protection between kernel and user space.
+- **S (System) - Bit 4:** Distinguishes between application segments and system segments. When S=1, this is an application segment (code/data used by programs). When S=0, this is a system segment (like Task State Segment or LDT descriptor) used by the processor for special operations.
+- **E (Executable) - Bit 3:** Determines if this segment contains executable code or data. When E=1, this is a code segment that can be executed (instructions fetched from here). When E=0, this is a data segment used for storing variables and cannot be executed.
+- **D (Direction/Conforming) - Bit 2:** For data segments: D=0 means segment grows upward (normal), D=1 means grows downward (stack). For code segments: D=0 means non-conforming (strict privilege checking), D=1 means conforming (can be called from lower privilege levels without changing CPL).
+- **R (Read/Write) - Bit 1:** For data segments: R=1 allows write access, R=0 makes it read-only. For code segments: R=1 allows reading the code (useful for debuggers), R=0 makes it execute-only. Code segments are never writable regardless of this bit.
+- **A (Accessed) - Bit 0:** Automatically set by the CPU whenever the segment is accessed (loaded into a segment register or used). Never cleared by hardware - only software can clear it. Used by operating systems to implement virtual memory algorithms by tracking which segments are actively being used.
+
+#### Global Descriptor Table (GDT)
+
+The Global Descriptor Table is a system-wide table containing descriptors that all tasks can potentially access. Think of it as the "public directory" of memory segments.
 
 
 
