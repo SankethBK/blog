@@ -23,6 +23,12 @@ references:
 
     - title: Intel 80386 Manual
       url: https://pdos.csail.mit.edu/6.828/2017/readings/i386/toc.htm
+
+    - title: Global Descriptor Table
+      url: https://wiki.osdev.org/Global_Descriptor_Table
+
+    - title: Task State Segment
+      url: https://wiki.osdev.org/Task_State_Segment
 ---
 
 # The 8086 Processor
@@ -388,6 +394,459 @@ Physical Address = 24-bit Base (from descriptor) + 16-bit Offset (from instructi
 
 The Global Descriptor Table is a system-wide table containing descriptors that all tasks can potentially access. Think of it as the "public directory" of memory segments.
 
+##### GDT Structure and Location
+
+```
+Physical Memory Layout:
+┌─────────────────────────────────────────────────────────────┐
+│                    System RAM                               │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                 GDT                                 │    │
+│  ├─────────────────────────────────────────────────────┤    │
+│  │ Entry 0: NULL Descriptor (required)                 │    │
+│  ├─────────────────────────────────────────────────────┤    │
+│  │ Entry 1: Kernel Code Segment                        │    │
+│  ├─────────────────────────────────────────────────────┤    │
+│  │ Entry 2: Kernel Data Segment                        │    │
+│  ├─────────────────────────────────────────────────────┤    │
+│  │ Entry 3: User Code Segment                          │    │
+│  ├─────────────────────────────────────────────────────┤    │
+│  │ Entry 4: User Data Segment                          │    │
+│  ├─────────────────────────────────────────────────────┤    │
+│  │ Entry 5: Task A's LDT Descriptor                    │    │
+│  ├─────────────────────────────────────────────────────┤    │
+│  │ Entry 6: Task A's TSS Descriptor                    │    │
+│  ├─────────────────────────────────────────────────────┤    │
+│  │ Entry 7: Task B's LDT Descriptor                    │    │
+│  ├─────────────────────────────────────────────────────┤    │
+│  │ Entry 8: Task B's TSS Descriptor                    │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+GDTR Register (inside CPU):
+┌─────────────────────────────────────────────────────────────┐
+│ Base Address: Points to start of GDT in memory              │
+│ Limit: Size of GDT - 1                                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### What Goes in the GDT?
+
+**System-wide resources that multiple tasks might need:**
+
+**1. Operating System Segments**
+- Kernel code segment (Ring 0)
+- Kernel data segment (Ring 0)
+- System service segments
+
+**2. Common User Segments**
+- Standard user code segment (Ring 3)
+- Standard user data segment (Ring 3)
+
+**3. Task Management Descriptors**
+- Task State Segments (TSS) for each task
+- Local Descriptor Table (LDT) descriptors for each task
+
+**4. Device Driver Segments**
+- Driver code segments
+- Shared system libraries
+
+
+##### Example GDT Layout
+
+```
+┌─────┬───────────────────┬──────────┬─────────┬─────────────────┐
+│Index│ Description       │ Base     │ Limit   │ Access Rights   │
+├─────┼───────────────────┼──────────┼─────────┼─────────────────┤
+│  0  │ NULL (required)   │ 00000000 │ 00000   │ 00000000        │
+├─────┼───────────────────┼──────────┼─────────┼─────────────────┤
+│  1  │ Kernel Code       │ 00000000 │ FFFFF   │ 9A (Ring 0, X/R)│
+├─────┼───────────────────┼──────────┼─────────┼─────────────────┤
+│  2  │ Kernel Data       │ 00000000 │ FFFFF   │ 92 (Ring 0, R/W)│
+├─────┼───────────────────┼──────────┼─────────┼─────────────────┤
+│  3  │ User Code         │ 00000000 │ FFFFF   │ FA (Ring 3, X/R)│
+├─────┼───────────────────┼──────────┼─────────┼─────────────────┤
+│  4  │ User Data         │ 00000000 │ FFFFF   │ F2 (Ring 3, R/W)│
+├─────┼───────────────────┼──────────┼─────────┼─────────────────┤
+│  5  │ Text Editor LDT   │ 00200000 │ 01000   │ 82 (LDT, Ring 0)│
+├─────┼───────────────────┼──────────┼─────────┼─────────────────┤
+│  6  │ Text Editor TSS   │ 00201000 │ 00068   │ 89 (TSS, Ring 0)│
+├─────┼───────────────────┼──────────┼─────────┼─────────────────┤
+│  7  │ Web Browser LDT   │ 00300000 │ 01000   │ 82 (LDT, Ring 0)│
+├─────┼───────────────────┼──────────┼─────────┼─────────────────┤
+│  8  │ Web Browser TSS   │ 00301000 │ 00068   │ 89 (TSS, Ring 0)│
+└─────┴───────────────────┴──────────┴─────────┴─────────────────┘
+```
+
+#### Local Descriptor Table (LDT)
+
+A Local Descriptor Table is a task-specific table containing descriptors that are private to one particular task. Think of it as each task's "private address book."
+
+##### Key Differences: GDT vs LDT
+
+```
+GDT (Global - Shared):           LDT (Local - Private):
+┌─────────────────────┐         ┌─────────────────────┐
+│ • One per system    │         │ • One per task      │
+│ • Shared by all     │         │ • Private to task   │
+│ • System resources  │         │ • Task resources    │
+│ • Always available  │         │ • Only when task    │
+│                     │         │   is running        │
+└─────────────────────┘         └─────────────────────┘
+```
+##### How LDTs Work
+
+**Step 1: LDT Descriptor in GDT**
+The GDT contains a descriptor that points to each task's LDT:
+
+```
+GDT Entry 5 (Text Editor's LDT):
+┌─────────────────────────────────────────────────────────────┐
+│ Base: 0x200000  ← Physical address where LDT is stored      │
+│ Limit: 0x1000   ← LDT can hold up to 512 descriptors        │
+│ Type: LDT       ← This is an LDT descriptor                 │
+│ DPL: 0          ← Ring 0 (system manages LDTs)              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Step 2: LDT Contains Task's Private Descriptors**
+
+```
+At physical address 0x200000 (Text Editor's LDT):
+┌─────────────────────────────────────────────────────────────┐
+│ Entry 0: NULL                                               │
+│ Entry 1: Text Editor Code Segment                           │
+│ Entry 2: Text Editor Data Segment                           │
+│ Entry 3: Text Editor Stack Segment                          │
+│ Entry 4: Document Buffer Segment                            │
+│ Entry 5: Font Library Segment                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### LDT Entries
+
+LDT entries follow the exact same 8-byte descriptor format as GDT entries. An LDT is a block of (linear) memory up to 64K in size, just like the GDT. The difference from the GDT is in the Descriptors that it can store, and the method used to access it.
+
+Both use the same:
+- 64-bit (8-byte) descriptor structure
+- Same Base/Limit/Access byte/Flags layout
+- Same bit positions for all fields
+
+
+However, there are content restrictions for LDT:
+- LDT cannot hold system segments (Task State Segments and Local Descriptor Tables) 
+- LDT can only contain application segments (code/data) and some gates
+- GDT can contain everything (application segments, system segments, LDT descriptors, TSS descriptors)
+
+#### What Are Gates?
+
+Gates are special descriptors that act as "doorways" for controlled transfers of execution. Unlike regular segment descriptors that point to memory regions, gates contain entry points (addresses) where execution should transfer to.
+
+##### Types of Gates in x86:
+
+**1. Call Gates**
+- **Purpose:** Allow controlled calls from lower privilege code to higher privilege code
+- **Function:** Like a "secure function pointer" - lets user code (Ring 3) safely call kernel functions (Ring 0)
+- **Contains:** Target code segment selector + offset where to jump
+- **Security:** CPU automatically checks privilege levels and switches stacks if needed
+
+**2. Task Gates**
+- **Purpose:** Trigger hardware task switches
+- **Function:** Points to a TSS descriptor to switch to a different task
+- **Contains:** TSS selector that identifies which task to switch to
+- **Usage:** Can be placed in IDT for task-switching interrupts
+
+**3. Interrupt Gates**
+- **Purpose:** Handle interrupts and exceptions
+- **Function:** Similar to call gates but for interrupt handling
+- **Contains:** Target code segment + interrupt handler address
+- **Behavior:** Automatically disables interrupts when called
+
+**4. Trap Gates**
+- **Purpose:** Handle exceptions and software interrupts
+- **Function:** Like interrupt gates but doesn't disable interrupts
+- **Contains:** Target code segment + exception handler address
+- **Usage:** For system calls and debugging exceptions
+
+**Why Gates Can Be in LDT:**
+
+While LDT cannot contain system segments (TSS, LDT descriptors), it can contain gates because:
+- **Call gates:** Allow process-specific entry points to system services
+- **Task gates:** Could theoretically allow process-specific task switching (though rarely used)
+
+**Example Use Case:**
+
+```
+Process A's LDT might contain:
+├── Code Segment (Ring 3)
+├── Data Segment (Ring 3) 
+├── Call Gate → Kernel function for file I/O
+└── Call Gate → Kernel function for memory allocation
+```
+
+This way, each process can have its own set of "approved" kernel entry points through call gates in their private LDT, while the kernel maintains control over exactly which functions can be called and how.
+
+In practice: Modern operating systems rarely use LDTs or gates, preferring software-based system call mechanisms and paging-based memory protection. But the hardware still supports these features for compatibility and specialized use cases.
+
+#### GDTR and LDTR
+
+The processor locates the GDT and the current LDT in memory by means of the GDTR and LDTR registers. These registers store the base addresses of the tables in the linear address space and store the segment limits. 
+
+##### GDTR (Global Descriptor Table Register):
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ GDTR - Simple pointer structure                             │
+├─────────────────────────────────┬───────────────────────────┤
+│ Base Address (32-bit)           │ Limit (16-bit)            │
+│ Linear address of GDT in memory │ Size of GDT - 1           │
+└─────────────────────────────────┴───────────────────────────┘
+```
+
+- Direct pointer to GDT location in memory
+- Loaded with `LGDT` instruction
+- Contains actual memory address and size
+
+##### LDTR (Local Descriptor Table Register):
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ LDTR - Segment register with selector + cached descriptor   │
+├─────────────────────────────────────────────────────────────┤
+│ Visible: LDT Selector (16-bit)                              │
+├─────────────────────────────────────────────────────────────┤
+│ Hidden: Cached LDT Descriptor (64-bit)                      │
+│ Base + Limit + Access Rights from GDT entry                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- Indirect reference through GDT selector
+- The LDT is defined as a 'normal' memory Segment inside the GDT - simply with a Base memory address and Limit 
+- Loaded with LLDT instruction using a selector
+- CPU automatically fetches LDT descriptor from GDT and caches it
+
+**The Relationship:**
+
+- GDTR points directly to GDT in memory
+- LDTR contains a selector that points to an entry within the GDT
+- That GDT entry describes where the LDT is located
+- CPU caches that LDT descriptor information from GDT in LDTR's hidden part
+
+##### WHo can Read/Write into GDTR and LDTR registers?
+
+**GDTR (Global Descriptor Table Register):**
+
+- **Set by:** Operating system kernel (Ring 0 code only)
+- **Instructions:** LGDT (Load GDT) and SGDT (Store GDT)
+- **Privilege:** These instructions can only be executed in Ring 0 (kernel mode)
+- **When:** During OS boot/initialization
+
+**LDTR (Local Descriptor Table Register):**
+
+- **Set by:** Operating system kernel (Ring 0 code only)
+- **Instructions:** LLDT (Load LDT) and SLDT (Store LDT)
+- **Privilege:** Ring 0 only
+- **When:** During task/process creation or context switches
+
+
+##### Initial Setup Process:
+
+**1. System Boot Sequence:**
+
+```
+1. CPU starts in Real Mode (no GDTR/LDTR)
+2. Bootloader loads OS kernel
+3. Kernel creates initial GDT in memory
+4. Kernel executes LGDT to set GDTR
+5. Kernel switches to Protected Mode
+6. Kernel can now create LDTs and set LDTR as needed
+```
+
+**2. GDT Creation (by OS Kernel):**
+
+```C
+// Kernel code (Ring 0) during boot
+struct gdt_entry gdt[8];  // Array in kernel memory
+
+// Set up null descriptor (entry 0)
+gdt[0] = {0};
+
+// Set up kernel code segment (entry 1) 
+gdt[1] = {base: 0, limit: 0xFFFFF, access: 0x9A, flags: 0xC};
+
+// Set up kernel data segment (entry 2)
+gdt[2] = {base: 0, limit: 0xFFFFF, access: 0x92, flags: 0xC};
+
+// Set up user code segment (entry 3)
+gdt[3] = {base: 0, limit: 0xFFFFF, access: 0xFA, flags: 0xC};
+
+// More entries...
+
+// Load the GDT
+struct gdt_ptr {
+    uint16_t limit;
+    uint32_t base;
+} gdt_descriptor = {sizeof(gdt)-1, (uint32_t)gdt};
+
+asm("lgdt %0" : : "m"(gdt_descriptor));
+```
+
+##### Who Can Read/Write GDT and LDT?
+
+**Reading:**
+
+GDT/LDT contents: Any code can read (they're just memory)
+GDTR/LDTR values: SGDT/SLDT instructions (Ring 0 only)
+
+**Writing:**
+
+GDT/LDT contents: Only Ring 0 code should modify (by convention)
+GDTR/LDTR registers: Only Ring 0 via LGDT/LLDT
+
+**Memory Protection:**
+
+GDT location: Kernel typically places GDT in kernel-only memory pages
+LDT location: Can be in user-accessible memory (but user can't change LDTR)
+
+##### Post 80386 Era
+
+- SGDT/SLDT: Ring 3 accessible (any privilege level)
+- LGDT/LLDT: Still Ring 0 only
+
+**Why Intel Made This Change:**
+
+**Practical Reasons:**
+
+- Debugging tools: Debuggers and system utilities needed to examine system state
+- Virtual machines: VM software needed to read GDT/IDT information
+- System monitoring: Performance tools and diagnostics required access
+- Compatibility: Some software had legitimate needs to read (not write) this info
+
+**Security Analysis:**
+
+- Reading GDTR/IDTR: Reveals memory layout but doesn't grant control
+- Still protected: Only reading allowed - writing still requires Ring 0
+- Limited exposure: Knowing GDT location doesn't directly compromise security
+
+**Modern Usage:**
+
+This change enabled:
+- Hypervisors: VMware, VirtualBox can inspect guest OS descriptor tables
+- Security tools: Rootkit detectors can examine system structures
+- Debuggers: WinDbg, GDB can show detailed system state
+- OS utilities: System information tools can display memory management details
+
+### Task State Segment (TSS)
+
+The Task State Segment (TSS) is a special data structure that contains the complete execution state of a task (program). Think of it as a "snapshot" that captures everything the CPU needs to know about a task - all its registers, memory settings, and execution context.
+
+Before the 80286, task switching was a manual, error-prone process:
+
+```
+Manual Task Switching (8086 era):
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Programmer saves all registers manually                  │
+│    MOV [task_a_ax], AX                                      │
+│    MOV [task_a_bx], BX                                      │
+│    MOV [task_a_cx], CX                                      │
+│    ... (save 20+ registers and flags)                       │
+│                                                             │
+│ 2. Programmer loads new task's registers manually           │
+│    MOV AX, [task_b_ax]                                      │
+│    MOV BX, [task_b_bx]                                      │
+│    ... (load 20+ registers and flags)                       │
+│                                                             │
+│ 3. Programmer manages memory segments manually              │
+│    MOV DS, [task_b_ds]                                      │
+│    MOV ES, [task_b_es]                                      │
+│                                                             │
+│ Problems:                                                   │
+│ ❌ 50+ instructions per task switch                         │
+│ ❌ Easy to forget registers                                 │
+│ ❌ No atomic operation                                      │
+│ ❌ No protection                                            │
+│ ❌ Very slow                                                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### TSS Solution:
+
+```
+Hardware Task Switching (80286):
+┌─────────────────────────────────────────────────────────────┐
+│ Single instruction: JMP task_selector                       │
+│                                                             │
+│ Hardware automatically:                                     │
+│ ✅ Saves ALL current state to current TSS                   │
+│ ✅ Loads ALL new state from target TSS                      │
+│ ✅ Updates memory management (LDT switch)                   │
+│ ✅ Atomic operation (cannot be interrupted)                 │
+│ ✅ Hardware protection checks                               │
+│ ✅ Extremely fast (few clock cycles)                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### TSS Structure and Layout
+
+The 80286 TSS is a 44-byte (104 bytes with I/O bitmap [^i/o-bitmap]) data structure containing every piece of information needed to resume a task:
+
+```
+TSS Layout (80286):
+┌─────────────────────────────────────────────────────────────┐
+│ Offset │ Size │ Field Name        │ Description             │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   00h  │  2   │ Previous TSS Link │ Selector of previous    │
+│        │      │                   │ task (for nested calls)│
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   02h  │  2   │ SP0 (Stack Ring 0)│ Stack pointer for Ring 0│
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   04h  │  2   │ SS0 (Stack Ring 0)│ Stack segment for Ring 0│
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   06h  │  2   │ SP1 (Stack Ring 1)│ Stack pointer for Ring 1│
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   08h  │  2   │ SS1 (Stack Ring 1)│ Stack segment for Ring 1│
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   0Ah  │  2   │ SP2 (Stack Ring 2)│ Stack pointer for Ring 2│
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   0Ch  │  2   │ SS2 (Stack Ring 2)│ Stack segment for Ring 2│
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   0Eh  │  2   │ IP                │ Instruction Pointer     │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   10h  │  2   │ FLAGS             │ Processor flags         │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   12h  │  2   │ AX                │ General register AX     │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   14h  │  2   │ CX                │ General register CX     │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   16h  │  2   │ DX                │ General register DX     │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   18h  │  2   │ BX                │ General register BX     │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   1Ah  │  2   │ SP                │ Stack Pointer           │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   1Ch  │  2   │ BP                │ Base Pointer            │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   1Eh  │  2   │ SI                │ Source Index            │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   20h  │  2   │ DI                │ Destination Index       │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   22h  │  2   │ ES                │ Extra Segment           │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   24h  │  2   │ CS                │ Code Segment            │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   26h  │  2   │ SS                │ Stack Segment           │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   28h  │  2   │ DS                │ Data Segment            │
+├────────┼──────┼───────────────────┼─────────────────────────┤
+│   2Ah  │  2   │ LDT Selector      │ Local Descriptor Table  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Memory Layout Visualization
+
+
 
 
 [^address-bus]: An address bus is a collection of wires (or electrical pathways) that carries memory addresses from the processor to memory and other components. Think of it as the "postal system" of the computer - when the CPU wants to read from or write to a specific location in memory, it sends that location's address through the address bus. Each wire in the address bus represents one bit of the address. The CPU sets each wire to either high voltage (representing binary 1) or low voltage (representing binary 0) to form the complete binary address.
@@ -399,3 +858,5 @@ The Global Descriptor Table is a system-wide table containing descriptors that a
 [^Modifier-key-states]: Whether Shift, Ctrl, Alt, Caps Lock, Num Lock, or Scroll Lock are currently pressed or toggled. This is stored as bit flags in memory location 0040:0017h.
 
 [^Keyboard-buffer]: A circular buffer (usually 15-16 characters) that stores keystrokes when they're typed faster than the program can process them. This prevents losing keystrokes during busy periods.
+
+[^i/o-bitmap]: This bitmap, usually set up by the operating system when a task is started, specifies individual ports to which the program should have access. The I/O bitmap is a bit array of port access permissions; if the program has permission to access a port, a "0" is stored at the corresponding bit index, and if the program does not have permission, a "1" is stored there. When a program issues an x86 I/O port instruction such as IN or OUT, the hardware will do an I/O privilege level (IOPL) check to see if the program has access to all I/O ports. If the Current Privilege Level (CPL) of the program is numerically greater than the I/O Privilege level (IOPL), the program does not have I/O port access to all ports. If the IOPL check fails, the CPU then consults the I/O bitmap to see if this specific port is allowed. It prevents malicious programs from accessing hardware directly by stopping user programs from interfering with system devices.
