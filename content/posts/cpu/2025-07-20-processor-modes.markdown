@@ -390,6 +390,40 @@ Physical Address = 24-bit Base (from descriptor) + 16-bit Offset (from instructi
 - **R (Read/Write) - Bit 1:** For data segments: R=1 allows write access, R=0 makes it read-only. For code segments: R=1 allows reading the code (useful for debuggers), R=0 makes it execute-only. Code segments are never writable regardless of this bit.
 - **A (Accessed) - Bit 0:** Automatically set by the CPU whenever the segment is accessed (loaded into a segment register or used). Never cleared by hardware - only software can clear it. Used by operating systems to implement virtual memory algorithms by tracking which segments are actively being used.
 
+#### Flags Field (4 bits)
+
+**Bit 3: G (Granularity)**
+- G = 0: Limit is in bytes (fine granularity)
+  - Segment can be 1 byte to 1 MB in size
+  - Limit value is used directly
+
+- G = 1: Limit is in 4KB pages (page granularity)
+  - Segment can be 4KB to 4GB in size
+  - CPU automatically shifts limit left by 12 bits (multiplies by 4096)
+
+**Bit 2: D/B (Default/Big)**
+
+- For Code Segments: Controls default operand/address size
+  - D = 0: 16-bit mode (8086/80286 compatible)
+  - D = 1: 32-bit mode (80386+ native)
+
+- For Data Segments: Controls stack pointer size
+  - B = 0: Stack uses SP (16-bit stack pointer)
+  - B = 1: Stack uses ESP (32-bit stack pointer)
+
+
+**Bit 1: L (Long Mode)**
+- For 64-bit mode only (not relevant for 80286)
+- L = 0: Not a 64-bit code segment
+- L = 1: 64-bit code segment (x86-64 mode)
+- Rule: If L = 1, then D must = 0
+
+**Bit 0: AVL (Available)**
+- Available for system software use
+- Not used by CPU hardware
+- OS can use for its own purposes
+- Examples: Process tracking, debugging flags, memory management hints
+
 #### Global Descriptor Table (GDT)
 
 The Global Descriptor Table is a system-wide table containing descriptors that all tasks can potentially access. Think of it as the "public directory" of memory segments.
@@ -798,7 +832,7 @@ TSS Layout (80286):
 │ Offset │ Size │ Field Name        │ Description             │
 ├────────┼──────┼───────────────────┼─────────────────────────┤
 │   00h  │  2   │ Previous TSS Link │ Selector of previous    │
-│        │      │                   │ task (for nested calls)│
+│        │      │                   │ task (for nested calls) │
 ├────────┼──────┼───────────────────┼─────────────────────────┤
 │   02h  │  2   │ SP0 (Stack Ring 0)│ Stack pointer for Ring 0│
 ├────────┼──────┼───────────────────┼─────────────────────────┤
@@ -846,8 +880,855 @@ TSS Layout (80286):
 
 #### Memory Layout Visualization
 
+```
+TSS in Physical Memory:
+┌─────────────────────────────────────────────────────────────┐
+│                     Task A's TSS                            │
+│                  (44 bytes minimum)                         │
+├─────────────────────────────────────────────────────────────┤
+│ Offset 00h: Previous Task = 0x0000                          │
+│ Offset 02h: Ring 0 SP = 0x7C00                              │
+│ Offset 04h: Ring 0 SS = 0x0008                              │
+│ Offset 06h: Ring 1 SP = 0x0000                              │
+│ Offset 08h: Ring 1 SS = 0x0000                              │
+│ Offset 0Ah: Ring 2 SP = 0x0000                              │
+│ Offset 0Ch: Ring 2 SS = 0x0000                              │
+│ Offset 0Eh: IP = 0x1234        ← Where task will resume     │
+│ Offset 10h: FLAGS = 0x0202                                  │
+│ Offset 12h: AX = 0x1234                                     │
+│ Offset 14h: CX = 0x5678                                     │
+│ Offset 16h: DX = 0x9ABC                                     │
+│ Offset 18h: BX = 0xDEF0                                     │
+│ Offset 1Ah: SP = 0x7FF0                                     │
+│ Offset 1Ch: BP = 0x7FE0                                     │
+│ Offset 1Eh: SI = 0x1000                                     │
+│ Offset 20h: DI = 0x2000                                     │
+│ Offset 22h: ES = 0x0010                                     │
+│ Offset 24h: CS = 0x0008                                     │
+│ Offset 26h: SS = 0x0010                                     │
+│ Offset 28h: DS = 0x0010                                     │
+│ Offset 2Ah: LDT = 0x0028       ← Task's private memory      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### TSS Descriptor in the GDT
+
+The TSS itself is just a data structure in memory. To use it, there must be a TSS descriptor in the GDT that points to it:
+(SInce TSS Descriptor is just another entry in GDT, it follows the same pattern as GDT entries)
+
+```
+GDT Entry for TSS:
+┌─────────────────────────────────────────────────────────────┐
+│                 TSS Descriptor (8 bytes)                   │
+├─────────────────────────────────────────────────────────────┤
+│ Base Address: 0x00010000  ← Physical address of TSS        │
+│ Limit: 0x0067             ← TSS size (103 bytes)           │
+│ Access Byte: 0x89         ← TSS type, Ring 0               │
+│ Flags: 0x00               ← Standard flags                 │
+└─────────────────────────────────────────────────────────────┘
+
+Access Byte Breakdown (0x89):
+┌─┬─────┬─┬─┬─────┬─┬─┬─┐
+│1│ 00  │0│1│ 001 │0│0│1│
+└─┴─────┴─┴─┴─────┴─┴─┴─┘
+ │  │    │ │  │    │ │ │
+ │  │    │ │  │    │ │ └─ Accessed bit
+ │  │    │ │  │    │ └─── Reserved
+ │  │    │ │  │    └───── Busy bit (0=available, 1=busy)
+ │  │    │ │  └────────── TSS type (1001 = available TSS)
+ │  │    │ └─────────────── System descriptor (0)
+ │  │    └───────────────── Reserved
+ │  └────────────────────── Privilege level (00 = Ring 0)
+ └───────────────────────── Present (1 = valid)
+ ```
+
+**Key Differences by Descriptor Type**
+
+**Bits 3-0 Interpretation**
+- Application Descriptors (S=1):
+  - Bit 3: Executable (1=code, 0=data)
+  - Bit 2: Direction/Conforming
+  - Bit 1: Read/Write permission
+  - Bit 0: Accessed by CPU
+
+- System Descriptors (S=0):
+  - Bits 3-0: System type (TSS, LDT, gates, etc.)
+
+```
+System Types:
+0001 = Available 286 TSS
+0010 = LDT
+0011 = Busy 286 TSS  
+0100 = 286 Call Gate
+0101 = Task Gate
+0110 = 286 Interrupt Gate
+0111 = 286 Trap Gate
+1001 = Available 386 TSS
+1011 = Busy 386 TSS
+(others reserved)
+```
+
+#### Task Switching Process
+
+When the CPU executes a task switch instruction, here's exactly what happens:
+
+```
+Task Switch: JMP 0x0030  ; Jump to task with TSS at GDT entry 6
+
+Hardware Sequence:
+┌─────────────────────────────────────────────────────────────┐
+│ Step 1: Identify Target Task                                │
+│ • Extract index from selector 0x0030 → Index 6              │
+│ • Look up GDT entry 6 → TSS descriptor                      │
+│ • Get TSS base address and verify it's a valid TSS          │
+├─────────────────────────────────────────────────────────────┤
+│ Step 2: Save Current Task State                             │
+│ • Get current TSS address (from TR register)                │
+│ • Save all CPU registers to current TSS:                    │
+│   - Store AX at TSS+0x12h                                   │
+│   - Store CX at TSS+0x14h                                   │
+│   - Store DX at TSS+0x16h                                   │
+│   - ... (save all registers and flags)                      │
+│   - Store IP at TSS+0x0Eh                                   │
+│   - Store segment registers                                 │
+├─────────────────────────────────────────────────────────────┤
+│ Step 3: Mark Tasks                                          │
+│ • Set current TSS descriptor busy bit = 0 (available)       │
+│ • Set target TSS descriptor busy bit = 1 (busy)             │
+├─────────────────────────────────────────────────────────────┤
+│ Step 4: Load New Task State                                 │
+│ • Load all registers from target TSS:                       │
+│   - Load AX from TSS+0x12h                                  │
+│   - Load CX from TSS+0x14h                                  │
+│   - ... (load all registers and flags)                      │
+│   - Load IP from TSS+0x0Eh                                  │
+│   - Load segment registers                                  │
+├─────────────────────────────────────────────────────────────┤
+│ Step 5: Update Memory Management                            │
+│ • Load LDT selector from TSS+0x2Ah                          │
+│ • Update LDTR register → new task's private memory view     │
+│ • Flush segment register caches                             │
+├─────────────────────────────────────────────────────────────┤
+│ Step 6: Update Task Register                                │
+│ • Store new TSS selector in TR register                     │
+│ • Cache new TSS descriptor in hidden portion                │
+├─────────────────────────────────────────────────────────────┤
+│ Step 7: Continue Execution                                  │
+│ • Begin executing at CS:IP from new TSS                     │
+│ • Task switch complete!                                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Total time: ~17-34 clock cycles (extremely fast!)
+
+#### Privilege Level Stack Management
+
+Each privilege level (Ring 0-3) needs its own separate stack for each program for security and proper operation:
+
+##### Why Multiple Stacks are Needed?
+
+```
+Security Problem Without Separate Stacks:
+┌─────────────────────────────────────────────────────────────┐
+│ User Program (Ring 3) stack contains:                      │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ User data, local variables, function calls             │ │
+│ │ Potentially malicious or corrupted data                │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ System Call (Ring 3 → Ring 0):                            │
+│ If kernel uses same stack:                                  │
+│ ❌ Kernel data mixed with user data                        │
+│ ❌ User could corrupt kernel stack                         │
+│ ❌ Security vulnerability                                  │
+│ ❌ Kernel crash could corrupt user stack                   │
+└─────────────────────────────────────────────────────────────┘
+
+Solution - Separate Stacks:
+┌─────────────────────────────────────────────────────────────┐
+│ Ring 0 Stack (Kernel):                                     │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Kernel local variables, system call parameters         │ │
+│ │ Protected from user access                              │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ Ring 3 Stack (User):                                       │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ User program data, function calls                       │ │
+│ │ Cannot affect kernel operations                         │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### Stack Pointer (SP) and Stack Segment (SS) Explained
+
+- **Stack Pointer (SP):** The offset within the stack segment where the stack currently "points"
+- **Stack Segment (SS):** The selector that identifies which memory segment contains the stack
+
+##### How Stack Switching Works?
+
+```
+Privilege Level Change Example:
+
+User Program (Ring 3) makes system call:
+┌─────────────────────────────────────────────────────────────┐
+│ Current State:                                              │
+│ SS = 0x0010 (user data segment)                             │
+│ SP = 0x7FF0 (user stack pointer)                            │
+│ CPL = 3 (Ring 3)                                            │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼ INT 21h (system call)
+┌─────────────────────────────────────────────────────────────┐
+│ Hardware automatically:                                     │
+│ 1. Detects privilege change: Ring 3 → Ring 0                │
+│ 2. Gets Ring 0 stack from current TSS:                      │
+│    SS0 = 0x0008, SP0 = 0x7C00                               │
+│ 3. Switches to Ring 0 stack:                                │
+│    SS = 0x0008, SP = 0x7C00                                 │
+│ 4. Pushes Ring 3 context onto Ring 0 stack:                 │
+│    - Push old SS (0x0010)                                   │
+│    - Push old SP (0x7FF0)                                   │
+│    - Push FLAGS                                             │
+│    - Push CS                                                │
+│    - Push IP                                                │
+│ 5. Loads interrupt handler address                          │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────────┐
+│ Now Running in Ring 0:                                     │
+│ SS = 0x0008 (kernel data segment)                          │
+│ SP = 0x7BF6 (adjusted after pushes)                        │
+│ CPL = 0 (Ring 0)                                           │
+│                                                            │
+│ Ring 0 stack now contains:                                 │
+│ [SP+12]: Old SS (0x0010)                                   │
+│ [SP+10]: Old SP (0x7FF0)                                   │
+│ [SP+8]:  Old FLAGS                                         │
+│ [SP+6]:  Old CS                                            │
+│ [SP+4]:  Old IP                                            │
+│ [SP+2]:  (space for kernel use)                            │
+│ [SP+0]:  (current stack top)                               │
+└────────────────────────────────────────────────────────────┘
+```
+##### Ring 1 and Ring 2 Stacks
+
+```
+Ring Usage in Practice:
+┌─────────────────────────────────────────────────────────────┐
+│ Ring 0: Operating System Kernel                            │
+│ • SS0/SP0: Most critical system operations                 │
+│ • Memory management, process switching                     │
+│ • Hardware interrupt handlers                              │
+├─────────────────────────────────────────────────────────────┤
+│ Ring 1: Device Drivers (Rarely Used)                       │
+│ • SS1/SP1: Device driver code                             │
+│ • Some operating systems use this for drivers              │
+│ • Most modern systems use Ring 0 for drivers               │
+├─────────────────────────────────────────────────────────────┤
+│ Ring 2: System Services (Rarely Used)                      │
+│ • SS2/SP2: System service layer                           │
+│ • Most systems jump directly from Ring 3 to Ring 0        │
+│ • Some experimental OS designs used this                   │
+├─────────────────────────────────────────────────────────────┤
+│ Ring 3: User Applications                                  │
+│ • SS/SP: Normal application stack                          │
+│ • Regular program execution                                │
+│ • Cannot directly access lower rings                       │
+└─────────────────────────────────────────────────────────────┘
+
+Typical Stack Usage:
+Most 80286 systems only used Ring 0 and Ring 3:
+- SS0/SP0: Kernel stack  
+- SS1/SP1: Usually 0 (unused)
+- SS2/SP2: Usually 0 (unused)  
+- SS/SP: User application stack
+```
+
+When user program makes system call:
+1. Hardware saves user context on kernel stack (SS0:SP0)
+2. Kernel operations use kernel stack space
+3. When returning, hardware restores user context
+4. User program continues with user stack (SS:SP)
+
+##### Why Each Program Gets its own Kernel Stack Even though Kernel Code is Common for all?
+
+If there was only one kernel stack for the entire OS, here's what would happen:
+
+```
+Single Global Kernel Stack Problem:
+┌─────────────────────────────────────────────────────────────┐
+│ Task A makes system call:                                   │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Global Kernel Stack:                                    │ │
+│ │ [Task A's saved context]                                │ │
+│ │ [Kernel local variables for Task A]                     │ │
+│ │ [System call parameters]                                │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ Timer interrupt occurs → Task Switch to Task B:             │
+│ ❌ Task A's kernel context still on global stack!           │
+│                                                             │
+│ Task B makes system call:                                   │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Global Kernel Stack (CORRUPTED):                        │ │
+│ │ [Task A's saved context] ← Still there!                 │ |
+│ │ [Task A's kernel variables] ← Still there!              │ |
+│ │ [Task B's saved context] ← New data overwrites!         │ │
+│ │ [Task B's kernel variables]                             │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ When Task A resumes:                                        │
+│ ❌ Its kernel context is corrupted                          │
+│ ❌ System crash or data corruption                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### Why Each Task Needs Its Own Kernel Stack
+
+Each task gets its own kernel stack because:
+- Task can be preempted while in kernel mode
+- Kernel context must be preserved per task
+- Multiple tasks can have pending system calls
+- Recursion and nested operations
+
+##### Shared Kernel Segment, Separate Stack Areas
+
+The kernel memory segment is shared, but each task gets its own stack area within that segment:
+
+```
+Kernel Memory Layout:
+┌────────────────────────────────────────────────────────────┐
+│              Kernel Data Segment (Selector 0x0008)         │
+│                    Base Address: 0x100000                  │
+├────────────────────────────────────────────────────────────┤
+│ 0x100000: Kernel Code                                      │
+│ 0x110000: Kernel Global Data                               │
+│ 0x120000: Kernel Heap                                      │
+│ 0x130000: ┌─────────────────────────────────────────────┐  │
+│           │ Task A Kernel Stack                         │  │
+│ 0x131000: │ ← Task A's SS0:SP0 = 0x0008:0x31000         │  │
+│           └─────────────────────────────────────────────┘  │
+│ 0x131000: ┌─────────────────────────────────────────────┐  │
+│           │ Task B Kernel Stack                         │  │
+│ 0x132000: │ ← Task B's SS0:SP0 = 0x0008:0x32000         │  │
+│           └────────────────────────────────────────-────┘  │
+│ 0x132000: ┌─────────────────────────────────────────────┐  │
+│           │ Task C Kernel Stack                         │  │
+│ 0x133000: │ ← Task C's SS0:SP0 = 0x0008:0x33000         │  │
+│           └-────────────────────────────────────────────┘  │
+│ 0x140000: Other Kernel Data                                │
+└────────────────────────────────────────────────────────────┘
+
+Key Point: Same SS0 (0x0008), Different SP0 values
+```
+
+#### TSS Stack Pointer Management
+
+```
+Task Creation Process:
+┌─────────────────────────────────────────────────────────────┐
+│ When OS creates new task:                                   │
+│                                                             │
+│ 1. Allocate kernel stack space:                             │
+│    kernel_stack_base = allocate_kernel_stack()              │
+│    // Returns something like 0x31000                        │
+│                                                             │
+│ 2. Set up TSS:                                              │
+│    task_tss.SS0 = KERNEL_DATA_SELECTOR  // 0x0008           │
+│    task_tss.SP0 = kernel_stack_base     // 0x31000          │
+│                                                             │
+│ 3. When task makes system call:                             │
+│    Hardware automatically switches to SS0:SP0               │
+│    Now using this task's private kernel stack area          │
+│                                                             │
+│ 4. When task switch occurs:                                 │
+│    Each task's kernel stack remains intact                  │
+│    Next task uses its own SS0:SP0 values                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### Real-World Example: System Call with Task Switch
+
+```
+Scenario: Task A calls file read, gets blocked, Task B runs
+
+Step 1: Task A makes system call
+┌─────────────────────────────────────────────────────────────┐
+│ Task A (Ring 3): INT 21h  ; Read file                       │
+│                                                             │
+│ Hardware switches to Task A's kernel stack:                 │
+│ SS = 0x0008, SP = 0x31000 (Task A's kernel stack)           │
+│                                                             │
+│ Task A's Kernel Stack (0x31000):                            │
+│ [Task A's user SS:SP]                                       │
+│ [Task A's user FLAGS]                                       │
+│ [Task A's user CS:IP]                                       │
+│ [Kernel local variables for file operation]                 │
+│ [File system state]                                         │
+└─────────────────────────────────────────────────────────────┘
+
+Step 2: File not ready, Task A blocks
+┌─────────────────────────────────────────────────────────────┐
+│ Kernel: File not available, block Task A                    │
+│                                                             │
+│ Kernel performs task switch to Task B:                      │
+│ JMP task_b_selector                                         │
+│                                                             │
+│ Hardware saves current state to Task A's TSS:               │
+│ - Current SS (0x0008) → Task A TSS                          │
+│ - Current SP (0x30F80) → Task A TSS  ← Note: changed!       │
+│ - All registers → Task A TSS                                │
+│                                                             │
+│ Hardware loads Task B's state:                              │
+│ - SS = Task B's user SS                                     │
+│ - SP = Task B's user SP                                     │
+│ - SS0 = 0x0008, SP0 = 0x32000  ← Task B's kernel stack      │
+└─────────────────────────────────────────────────────────────┘
+
+Step 3: Task B runs and makes system call
+┌─────────────────────────────────────────────────────────────┐
+│ Task B (Ring 3): INT 10h  ; Video operation                 │
+│                                                             │
+│ Hardware switches to Task B's kernel stack:                 │
+│ SS = 0x0008, SP = 0x32000 (Task B's kernel stack)           │
+│                                                             │
+│ Memory State:                                               │
+│ Task A's Kernel Stack (0x31000): [Preserved file operation] │
+│ Task B's Kernel Stack (0x32000): [New video operation]      │
+│                                                             │
+│ Both stacks coexist safely!                                 │
+└─────────────────────────────────────────────────────────────┘
+
+Step 4: Task A resumes later
+┌─────────────────────────────────────────────────────────────┐
+│ File becomes available, switch back to Task A:              │
+│ JMP task_a_selector                                         │
+│                                                             │
+│ Hardware loads Task A's state from TSS:                     │
+│ - SS = 0x0008, SP = 0x30F80  ← Back to Task A kernel stack  │
+│                                                             │
+│ Task A's kernel stack is exactly as it was left:            │
+│ [Task A's user context]                                     │
+│ [File operation state] ← Still there!                       │
+│ [Kernel variables] ← All preserved!                         │
+│                                                             │
+│ Kernel completes file operation and returns to user         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### Why This Design Is Necessary
+
+**Fundamental Requirements**
+
+- **Reentrancy:** Multiple tasks can be "inside" the kernel simultaneously
+- **Preemption:** Tasks can be switched even while in kernel mode
+- **State Preservation:** Each task's kernel context must survive task switches
+- **Isolation:** One task's kernel operations can't interfere with another's
+
+##### Alternative Approaches (Used in Some Systems)
+
+```
+Alternative 1: Non-preemptive Kernel
+┌─────────────────────────────────────────────────────────────┐
+│ • Only one task in kernel at a time                         │
+│ • Disable task switching during system calls                │
+│ • Simpler: can use single kernel stack                      │
+│ • Problem: Poor responsiveness, no true multitasking        │
+└─────────────────────────────────────────────────────────────┘
+
+Alternative 2: Kernel Threads (Modern Approach)
+┌─────────────────────────────────────────────────────────────┐
+│ • Separate kernel thread handles each system call           │
+│ • User task blocks, kernel thread continues                 │
+│ • More complex but better scalability                       │
+│ • Used in modern operating systems                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### The Stack Collision Problem
+
+How Stack Collision Occurs
+
+```
+Stack Growth Problem:
+┌─────────────────────────────────────────────────────────────┐
+│ Normal State:                                               │
+│ 0x130000: ┌────────────────────────────────────────── ───┐  │
+│            │ Task A Kernel Stack                         │  │
+│            │ [Some data]                                 │  │
+│            │ [Some data]                                 │  │
+│ 0x130800:  │ ← Current SP0 (stack grows down)            │  │
+│            │ [Free space]                                │  │
+│ 0x131000:  └─────────────────────────────────────────────┘  │
+│ 0x131000: ┌──────────────────────────────────────────── ─┐  │
+│            │ Task B Kernel Stack                         │  │
+│ 0x131800:  │ ← Current SP0                               │  │
+│            │ [Free space]                                │  │
+│ 0x132000:  └─────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+
+Stack Overflow Scenario:
+┌─────────────────────────────────────────────────────────────┐
+│ Task A makes deep system call with many nested functions:   │
+│ 0x130000: ┌───────────────────────────────────────────── ┐  │
+│            │ Task A Kernel Stack                         │  │
+│            │ [Deep call stack]                           │  │
+│            │ [Local variables]                           │  │
+│            │ [More function calls]                       │  │
+│            │ [Even more data]                            │  │
+│ 0x130F00:  │ ← SP0 approaching limit                     │  │
+│            │ [Critical: Almost full!]                    │  │
+│ 0x131000:  └─────────────────────────────────────────────┘  │
+│ 0x131000: ┌─────────────────────────────────────────── ──┐  │
+│            │ Task B Kernel Stack ← CORRUPTED!            │  │
+│            │ [Task A overflow data] ← Wrong task data!   │  │
+│ 0x131800:  │ ← Task B's SP0                              │  │
+│ 0x132000:  └─────────────────────────────────────────────┘  │
+│                                                             │
+│ Result: Task A corrupts Task B's kernel stack               │
+│         System crash, data corruption, security breach      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### Real-World Solutions
+
+**1. Stack Size Planning and Limits**
+
+```
+Conservative Stack Allocation:
+┌─────────────────────────────────────────────────────────────┐
+│ Better Layout with Larger Gaps:                             │
+├─────────────────────────────────────────────────────────────┤
+│ 0x130000:  ┌─────────────────────────────────────────────┐  │
+│            │ Task A Kernel Stack (8KB)                   │  │
+│ 0x132000:  └─────────────────────────────────────────────┘  │
+│ 0x132000:  ┌─────────────────────────────────────────────┐  │
+│            │ Task B Kernel Stack (8KB)                   │  │
+│ 0x134000:  └─────────────────────────────────────────────┘  │
+│ 0x134000:  ┌──────────────────────────────────────────-──┐  │
+│            │ Task C Kernel Stack (8KB)                   │  │
+│ 0x136000:  └─────────────────────────────────────────────┘  │
+│                                                             │
+│ Advantages:                                                 │
+│ ✅ Larger stacks reduce overflow risk                       │
+│ ✅ Clear boundaries                                         │
+│ ❌ Wastes memory if stacks are small                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**2. Guard Pages (Modern Approach)**
+
+```
+Stack with Guard Pages:
+┌─────────────────────────────────────────────────────────────┐
+│ 0x130000:  ┌───────────────────────────────────────--────┐  │
+│            │ Task A Kernel Stack (4KB)                   │  │
+│ 0x131000:  └─────────────────────────────────────────────┘  │
+│ 0x131000:  ┌────────────────────────────────────────--───┐  │
+│            │ GUARD PAGE (unmapped/protected)             │  │
+│ 0x132000:  └─────────────────────────────────────────────┘  │
+│ 0x132000:  ┌───────────────────────────────────────-─────┐  │
+│            │ Task B Kernel Stack (4KB)                   │  │
+│ 0x133000:  └─────────────────────────────────────────────┘  │
+│                                                             │
+│ How it works:                                               │
+│ • Guard page has no memory mapped                           │
+│ • Stack overflow triggers page fault                        │
+│ • Kernel can detect and handle gracefully                   │
+│ • Kill offending task instead of corrupting memory          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**3. Stack Bounds Checking**
+
+```
+; Kernel stack overflow detection
+check_stack_overflow:
+    mov ax, sp                  ; Get current stack pointer
+    cmp ax, stack_limit         ; Compare with minimum allowed
+    jb stack_overflow_handler   ; Jump if below limit
+    ret
+
+stack_overflow_handler:
+    ; Emergency handling:
+    ; 1. Log the error
+    ; 2. Kill the current task
+    ; 3. Switch to a safe task
+    ; 4. Prevent system crash
+```
+
+**4. Dynamic Stack Expansion (Advanced)**
+
+```
+Expandable Stacks:
+┌─────────────────────────────────────────────────────────────┐
+│ Initial Allocation (Small):                                 │
+│ 0x130000:  ┌─────────────────────────────────────────────┐  │
+│            │ Task A Initial Stack (1KB)                  │  │
+│ 0x130400:  └─────────────────────────────────────────────┘  │
+│            │ Expansion Area (monitored)                  │  │
+│ 0x131000:  ┌─────────────────────────────────────────────┐  │
+│            │ Task B Initial Stack (1KB)                  │  │
+│ 0x131400:  └─────────────────────────────────────────────┘  │
+│                                                             │
+│ On Near-Overflow:                                           │
+│ • Kernel detects stack approaching limit                    │
+│ • Allocates more space if available                         │
+│ • Updates stack boundaries                                  │
+│ • Continues operation                                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### What 80286 Systems Actually Did
+
+```
+Typical 80286 Approach:
+┌────────────────────────────────────────────────────────────┐
+│ Conservative Fixed Allocation:                             │
+│                                                            │
+│ 1. Large Fixed Stack Sizes:                                │
+│    • Each task: 4KB-8KB kernel stack                       │
+│    • Over-provision to avoid overflow                      │
+│    • Waste memory but ensure safety                        │
+│                                                            │
+│ 2. Task Limits:                                            │
+│    • Limit number of concurrent tasks                      │
+│    • Reduce memory pressure                                │
+│    • Simpler management                                    │
+│                                                            │
+│ 3. Programming Discipline:                                 │
+│    • Avoid deep recursion in kernel                        │
+│    • Minimize local variables                              │
+│    • Use heap for large data structures                    │
+│                                                            │
+│ 4. System Monitoring:                                      │
+│    • Debug builds check stack usage                        │
+│    • Runtime stack depth monitoring                        │
+│    • Early warning systems                                 │
+└────────────────────────────────────────────────────────────┘
+```
+
+##### Example: OS/2 Approach
+
+```
+OS/2 Stack Management:
+┌─────────────────────────────────────────────────────────────┐
+│ Thread Creation:                                            │
+│ • Default kernel stack: 8KB per thread                      │
+│ • Configurable stack sizes                                  │
+│ • Stack committed on demand                                 │
+│                                                             │
+│ Stack Layout:                                               │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Thread 1: 8KB kernel stack                              │ │
+│ │ Thread 2: 8KB kernel stack                              │ │
+│ │ Thread 3: 8KB kernel stack                              │ │
+│ │ (Large gaps to prevent collision)                       │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ Protection:                                                 │
+│ • Memory manager tracks allocations                         │
+│ • Stack overflow detected by memory manager                 │
+│ • Graceful task termination instead of corruption           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### How Modern Systems Handle This
+
+```
+Modern Approach (Linux/Windows):
+┌─────────────────────────────────────────────────────────────┐
+│ Virtual Memory + Guard Pages:                               │
+│                                                             │
+│ Each process/thread gets:                                   │
+│ • Virtual address space                                     │
+│ • Guard pages at stack boundaries                           │
+│ • Page fault handling for overflow                          │
+│ • Dynamic expansion up to limits                            │
+│                                                             │
+│ Benefits:                                                   │
+│ ✅ No memory waste                                          │
+│ ✅ Automatic protection                                     │
+│ ✅ Scales to thousands of threads                           │
+│ ✅ Hardware-assisted detection                              │
+│                                                             │
+│ 80286 Limitations:                                          │
+│ ❌ No virtual memory/paging                                 │
+│ ❌ Limited memory management                                │
+│ ❌ Must use simpler approaches                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Previous TSS Link
+
+The Previous TSS Link supports task calling chains - when one task calls another task (not just jumps to it).
+
+```
+Task Calling vs Task Jumping:
+
+Task Jump (JMP):
+Task A ──JMP──→ Task B
+         │
+         └─ Task A stops, Task B runs
+            No way to return to Task A
+
+Task Call (CALL):  
+Task A ──CALL──→ Task B ──IRET──→ Task A
+         │                        │
+         └─ Task A suspended ──────┘
+            Task B can return to Task A
+```
+
+##### How Previous Task Link Works
+
+```
+Example Task Calling Chain:
+
+Step 1: Main Program calls Print Service
+┌─────────────────────────────────────────────────────────────┐
+│ Main Program TSS (Selector 0x0030)                         │
+│ Previous Link: 0x0000 (no caller)                          │
+│ CALL 0x0038  ; Call Print Service Task                     │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Print Service TSS (Selector 0x0038)                        │
+│ Previous Link: 0x0030 ← Points back to Main Program        │
+│ CALL 0x0040  ; Call File I/O Task                         │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│ File I/O TSS (Selector 0x0040)                             │
+│ Previous Link: 0x0038 ← Points back to Print Service       │
+│ IRET  ; Return to previous task                            │
+└─────────────────────────────────────────────────────────────┘
+
+When File I/O executes IRET:
+1. CPU reads Previous Link (0x0038)
+2. Switches back to Print Service TSS
+3. Print Service continues where it left off
+
+When Print Service executes IRET:
+1. CPU reads Previous Link (0x0030)  
+2. Switches back to Main Program TSS
+3. Main Program continues after the CALL
+```
+
+##### Hardware Behavior
+
+```
+CALL task_selector behavior:
+1. Save current state to current TSS
+2. Set target TSS Previous Link = current TSS selector
+3. Switch to target task
+4. Target task can later use IRET to return
+
+JMP task_selector behavior:
+1. Save current state to current TSS  
+2. Target TSS Previous Link unchanged (usually 0)
+3. Switch to target task
+4. No automatic return mechanism
+```
 
 
+#### TSS Benefits and Limitations
+
+##### Advantages of Hardware Task Switching
+
+**1. Atomic Operation**
+- Complete task switch in single instruction
+- Cannot be interrupted midway
+- Guaranteed consistent state
+
+**2. Performance**
+
+- Extremely fast: ~17-34 clock cycles
+- No manual register save/restore needed
+- Hardware optimized
+
+**3. Reliability**
+
+- Cannot forget to save registers
+- Hardware enforced privilege management
+- Automatic stack switching
+
+**4. Security**
+
+- Memory isolation through LDT switching
+- Privilege level enforcement
+- Protected task linkage
+
+##### Limitations and Problems
+
+**1. Memory Overhead**
+```
+Each task requires:
+- 44+ bytes for TSS
+- 8 bytes for TSS descriptor in GDT
+- Separate stacks for each privilege level
+- Private LDT (optional but recommended)
+```
+For 100 tasks: ~5KB just for task management
+
+**2. GDT Size Limitations**
+
+```
+GDT maximum size: 65536 bytes
+Each TSS descriptor: 8 bytes
+Maximum tasks: ~8000 (practical limit much lower)
+```
+
+**3. Inflexibility**
+
+```
+- Fixed TSS structure
+- Cannot customize task switch behavior
+- All-or-nothing: must save ALL registers
+- Cannot optimize for specific use cases
+```
+
+**4. Scalability Issues**
+
+```
+Modern systems with thousands of threads:
+- Would need thousands of TSS structures
+- GDT would become enormous
+- Memory fragmentation problems
+```
+
+##### Evolution Beyond 80286
+
+**Why Modern Systems Don't Use Hardware Task Switching**
+
+```
+Modern Software Task Switching:
+┌─────────────────────────────────────────────────────────────┐
+│ Advantages:                                                 │
+│ ✅ Flexible task structure                                  │
+│ ✅ Can save only necessary registers                        │
+│ ✅ Custom scheduling algorithms                             │
+│ ✅ Supports unlimited tasks                                 │
+│ ✅ More efficient memory usage                              │
+│ ✅ Better cache performance                                 │
+│                                                             │
+│ Trade-offs:                                                 │
+│ ❌ More complex kernel code                                 │
+│ ❌ Slightly slower (but caches help)                        │
+│ ❌ Must be carefully implemented                            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### Legacy of TSS
+
+Even though modern x86 systems don't use hardware task switching for multitasking, the TSS remains important:
+
+- **One TSS per CPU** for privilege level stack management
+- **System call stack switching** still uses TSS stack pointers
+- **Interrupt handling** relies on TS
 
 [^address-bus]: An address bus is a collection of wires (or electrical pathways) that carries memory addresses from the processor to memory and other components. Think of it as the "postal system" of the computer - when the CPU wants to read from or write to a specific location in memory, it sends that location's address through the address bus. Each wire in the address bus represents one bit of the address. The CPU sets each wire to either high voltage (representing binary 1) or low voltage (representing binary 0) to form the complete binary address.
 
