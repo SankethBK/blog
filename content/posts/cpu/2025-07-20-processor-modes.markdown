@@ -284,9 +284,7 @@ The 80286 was Intel's answer to the growing demands for multitasking operating s
 - **Global and Local Descriptor Tables** for memory organization
 - **Task switching support** enabling true multitasking
 
-## The Protected Mode
-
-### Addressing 24-Bit Memory
+## Addressing 24-Bit Memory
 
 The 80286 processor had 24 address bus compared to 20-Bit address bus of 8086. It had to implement the addressing in such a way that its backward compatible with 8086 processor's addressing. Instead of extending the logic used in 8086's real mode addressing, 80286 took an entirely different approach. The memory was still addressed with `selector (16-Bit): offset (16-Bit)` pairs. In real mode, a selector value was a paragraph number of physical memory. In protected mode, a selector value is an index into a descriptor table. In both modes, programs are divided into segments. In real mode, these segments are at fixed positions in physical memory and the selector value denotes the paragraph number of the beginning of the segment. 
 
@@ -294,7 +292,7 @@ While we are storing the actual physical address of the segment in descriptor ta
 
 ![Descriptor Table](/images/descriptor-table.png)
 
-### The Virtual Memory
+## The Virtual Memory
 
 The idea of virtual memory is provide an illusion to a program that it is the only program running and it has access to all the memory. The 80286 introduced the foundational concepts of virtual memory to the x86 architecture, though it implemented a more limited form compared to modern processors. Understanding the 80286's approach helps clarify why virtual memory became essential and how it evolved.
 
@@ -302,21 +300,18 @@ Virtual memory creates an abstraction layer between what programs think they're 
 
 ![Virtual Memory](/images/virtual-memory-80286.png)
 
-#### Simplified Programming Model with Virtual Memory
+### Simplified Programming Model with Virtual Memory
 
 Before virtual memory, programmer had to directly manage physical addresses which is error prone and there's a possibility of overwriting other program's data. This also means the programmer has to know where the segments will be loaded in memory beforehand. Virtual Memory solves this issue as each segment will be under the illusion that it starts at memory address 0 and can access upto 64KB of memory. 
 
-### The Memory Management Unit (MMU)
 
-The MMU in the 80286 is a hardware component integrated into the CPU chip itself. THe main purpose of MMU is to translate virtual addresses into physical addresses, along with checking bounds, enforcing privileges, etc. 
+## Global and Local Descriptor Tables (GDT and LDT)
 
-### Global and Local Descriptor Tables (GDT and LDT)
-
-#### What Are Descriptor Tables?
+### What Are Descriptor Tables?
 
 Think of descriptor tables as address books for the computer's memory system. Just like you use a phone book to look up someone's address when you only know their name, the 80286 processor uses descriptor tables to look up memory information when it only knows a selector (a kind of memory "name").
 
-#### The Basic Problem They Solve
+### The Basic Problem They Solve
 
 In real mode, programs had to deal with physical memory addresses directly:
 
@@ -343,7 +338,7 @@ CPU calculates: "Physical address = 0x100000 + 0x1234 = 0x101234"
 CPU verifies: "Access allowed? Yes. Accessing physical memory at 0x101234"
 ```
 
-#### Understanding Selectors
+### Understanding Selectors
 
 A selector is a 16-bit value that acts like a "memory ID card." Instead of using physical addresses, programs use selectors to identify memory segments.
 
@@ -353,7 +348,7 @@ A selector is a 16-bit value that acts like a "memory ID card." Instead of using
 - **TI (bit 2):** Table Indicator - 0 = GDT, 1 = LDT
 - **RPL (bits 1-0):** Requested Privilege Level (0-3)
 
-#### What Is a Descriptor?
+### What Is a Descriptor?
 
 A descriptor is an 8-byte data structure that contains all the information the CPU needs to access a memory segment safely.
 
@@ -390,7 +385,7 @@ Physical Address = 24-bit Base (from descriptor) + 16-bit Offset (from instructi
 - **R (Read/Write) - Bit 1:** For data segments: R=1 allows write access, R=0 makes it read-only. For code segments: R=1 allows reading the code (useful for debuggers), R=0 makes it execute-only. Code segments are never writable regardless of this bit.
 - **A (Accessed) - Bit 0:** Automatically set by the CPU whenever the segment is accessed (loaded into a segment register or used). Never cleared by hardware - only software can clear it. Used by operating systems to implement virtual memory algorithms by tracking which segments are actively being used.
 
-#### Flags Field (4 bits)
+### Flags Field (4 bits)
 
 **Bit 3: G (Granularity)**
 - G = 0: Limit is in bytes (fine granularity)
@@ -424,11 +419,11 @@ Physical Address = 24-bit Base (from descriptor) + 16-bit Offset (from instructi
 - OS can use for its own purposes
 - Examples: Process tracking, debugging flags, memory management hints
 
-#### Global Descriptor Table (GDT)
+### Global Descriptor Table (GDT)
 
 The Global Descriptor Table is a system-wide table containing descriptors that all tasks can potentially access. Think of it as the "public directory" of memory segments.
 
-##### GDT Structure and Location
+#### GDT Structure and Location
 
 ```
 Physical Memory Layout:
@@ -466,7 +461,7 @@ GDTR Register (inside CPU):
 └─────────────────────────────────────────────────────────────┘
 ```
 
-##### What Goes in the GDT?
+#### What Goes in the GDT?
 
 **System-wide resources that multiple tasks might need:**
 
@@ -488,7 +483,7 @@ GDTR Register (inside CPU):
 - Shared system libraries
 
 
-##### Example GDT Layout
+#### Example GDT Layout
 
 ```
 ┌─────┬───────────────────┬──────────┬─────────┬─────────────────┐
@@ -514,11 +509,11 @@ GDTR Register (inside CPU):
 └─────┴───────────────────┴──────────┴─────────┴─────────────────┘
 ```
 
-#### Local Descriptor Table (LDT)
+### Local Descriptor Table (LDT)
 
 A Local Descriptor Table is a task-specific table containing descriptors that are private to one particular task. Think of it as each task's "private address book."
 
-##### Key Differences: GDT vs LDT
+#### Key Differences: GDT vs LDT
 
 ```
 GDT (Global - Shared):           LDT (Local - Private):
@@ -530,7 +525,7 @@ GDT (Global - Shared):           LDT (Local - Private):
 │                     │         │   is running        │
 └─────────────────────┘         └─────────────────────┘
 ```
-##### How LDTs Work
+#### How LDTs Work
 
 **Step 1: LDT Descriptor in GDT**
 The GDT contains a descriptor that points to each task's LDT:
@@ -559,7 +554,7 @@ At physical address 0x200000 (Text Editor's LDT):
 └─────────────────────────────────────────────────────────────┘
 ```
 
-##### LDT Entries
+#### LDT Entries
 
 LDT entries follow the exact same 8-byte descriptor format as GDT entries. An LDT is a block of (linear) memory up to 64K in size, just like the GDT. The difference from the GDT is in the Descriptors that it can store, and the method used to access it.
 
@@ -574,11 +569,11 @@ However, there are content restrictions for LDT:
 - LDT can only contain application segments (code/data) and some gates
 - GDT can contain everything (application segments, system segments, LDT descriptors, TSS descriptors)
 
-#### What Are Gates?
+### What Are Gates?
 
 Gates are special descriptors that act as "doorways" for controlled transfers of execution. Unlike regular segment descriptors that point to memory regions, gates contain entry points (addresses) where execution should transfer to.
 
-##### Types of Gates in x86:
+#### Types of Gates in x86:
 
 **1. Call Gates**
 - **Purpose:** Allow controlled calls from lower privilege code to higher privilege code
@@ -624,11 +619,11 @@ This way, each process can have its own set of "approved" kernel entry points th
 
 In practice: Modern operating systems rarely use LDTs or gates, preferring software-based system call mechanisms and paging-based memory protection. But the hardware still supports these features for compatibility and specialized use cases.
 
-#### GDTR and LDTR
+### GDTR and LDTR
 
 The processor locates the GDT and the current LDT in memory by means of the GDTR and LDTR registers. These registers store the base addresses of the tables in the linear address space and store the segment limits. 
 
-##### GDTR (Global Descriptor Table Register):
+#### GDTR (Global Descriptor Table Register):
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -643,7 +638,7 @@ The processor locates the GDT and the current LDT in memory by means of the GDTR
 - Loaded with `LGDT` instruction
 - Contains actual memory address and size
 
-##### LDTR (Local Descriptor Table Register):
+#### LDTR (Local Descriptor Table Register):
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -668,7 +663,7 @@ The processor locates the GDT and the current LDT in memory by means of the GDTR
 - That GDT entry describes where the LDT is located
 - CPU caches that LDT descriptor information from GDT in LDTR's hidden part
 
-##### WHo can Read/Write into GDTR and LDTR registers?
+#### WHo can Read/Write into GDTR and LDTR registers?
 
 **GDTR (Global Descriptor Table Register):**
 
@@ -685,7 +680,7 @@ The processor locates the GDT and the current LDT in memory by means of the GDTR
 - **When:** During task/process creation or context switches
 
 
-##### Initial Setup Process:
+#### Initial Setup Process:
 
 **1. System Boot Sequence:**
 
@@ -727,7 +722,7 @@ struct gdt_ptr {
 asm("lgdt %0" : : "m"(gdt_descriptor));
 ```
 
-##### Who Can Read/Write GDT and LDT?
+#### Who Can Read/Write GDT and LDT?
 
 **Reading:**
 
@@ -744,7 +739,7 @@ GDTR/LDTR registers: Only Ring 0 via LGDT/LLDT
 GDT location: Kernel typically places GDT in kernel-only memory pages
 LDT location: Can be in user-accessible memory (but user can't change LDTR)
 
-##### Post 80386 Era
+#### Post 80386 Era
 
 - SGDT/SLDT: Ring 3 accessible (any privilege level)
 - LGDT/LLDT: Still Ring 0 only
@@ -772,7 +767,7 @@ This change enabled:
 - Debuggers: WinDbg, GDB can show detailed system state
 - OS utilities: System information tools can display memory management details
 
-### Task State Segment (TSS)
+## Task State Segment (TSS)
 
 The Task State Segment (TSS) is a special data structure that contains the complete execution state of a task (program). Think of it as a "snapshot" that captures everything the CPU needs to know about a task - all its registers, memory settings, and execution context.
 
@@ -805,7 +800,7 @@ Manual Task Switching (8086 era):
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### TSS Solution:
+### TSS Solution:
 
 ```
 Hardware Task Switching (80286):
@@ -822,7 +817,7 @@ Hardware Task Switching (80286):
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### TSS Structure and Layout
+### TSS Structure and Layout
 
 The 80286 TSS is a 44-byte (104 bytes with I/O bitmap [^i/o-bitmap]) data structure containing every piece of information needed to resume a task:
 
@@ -878,7 +873,7 @@ TSS Layout (80286):
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### Memory Layout Visualization
+### Memory Layout Visualization
 
 ```
 TSS in Physical Memory:
@@ -911,7 +906,7 @@ TSS in Physical Memory:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### TSS Descriptor in the GDT
+### TSS Descriptor in the GDT
 
 The TSS itself is just a data structure in memory. To use it, there must be a TSS descriptor in the GDT that points to it:
 (SInce TSS Descriptor is just another entry in GDT, it follows the same pattern as GDT entries)
@@ -968,7 +963,7 @@ System Types:
 (others reserved)
 ```
 
-#### Task Switching Process
+### Task Switching Process
 
 When the CPU executes a task switch instruction, here's exactly what happens:
 
@@ -1021,11 +1016,11 @@ Hardware Sequence:
 
 Total time: ~17-34 clock cycles (extremely fast!)
 
-#### Privilege Level Stack Management
+### Privilege Level Stack Management
 
 Each privilege level (Ring 0-3) needs its own separate stack for each program for security and proper operation:
 
-##### Why Multiple Stacks are Needed?
+#### Why Multiple Stacks are Needed?
 
 ```
 Security Problem Without Separate Stacks:
@@ -1060,12 +1055,12 @@ Solution - Separate Stacks:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-##### Stack Pointer (SP) and Stack Segment (SS) Explained
+#### Stack Pointer (SP) and Stack Segment (SS) Explained
 
 - **Stack Pointer (SP):** The offset within the stack segment where the stack currently "points"
 - **Stack Segment (SS):** The selector that identifies which memory segment contains the stack
 
-##### How Stack Switching Works?
+#### How Stack Switching Works?
 
 ```
 Privilege Level Change Example:
@@ -1112,7 +1107,7 @@ User Program (Ring 3) makes system call:
 │ [SP+0]:  (current stack top)                               │
 └────────────────────────────────────────────────────────────┘
 ```
-##### Ring 1 and Ring 2 Stacks
+#### Ring 1 and Ring 2 Stacks
 
 ```
 Ring Usage in Practice:
@@ -1152,7 +1147,7 @@ When user program makes system call:
 3. When returning, hardware restores user context
 4. User program continues with user stack (SS:SP)
 
-##### Why Each Program Gets its own Kernel Stack Even though Kernel Code is Common for all?
+#### Why Each Program Gets its own Kernel Stack Even though Kernel Code is Common for all?
 
 If there was only one kernel stack for the entire OS, here's what would happen:
 
@@ -1185,7 +1180,7 @@ Single Global Kernel Stack Problem:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-##### Why Each Task Needs Its Own Kernel Stack
+#### Why Each Task Needs Its Own Kernel Stack
 
 Each task gets its own kernel stack because:
 - Task can be preempted while in kernel mode
@@ -1193,7 +1188,7 @@ Each task gets its own kernel stack because:
 - Multiple tasks can have pending system calls
 - Recursion and nested operations
 
-##### Shared Kernel Segment, Separate Stack Areas
+#### Shared Kernel Segment, Separate Stack Areas
 
 The kernel memory segment is shared, but each task gets its own stack area within that segment:
 
@@ -1224,7 +1219,7 @@ Kernel Memory Layout:
 Key Point: Same SS0 (0x0008), Different SP0 values
 ```
 
-#### TSS Stack Pointer Management
+### TSS Stack Pointer Management
 
 ```
 Task Creation Process:
@@ -1249,7 +1244,7 @@ Task Creation Process:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-##### Real-World Example: System Call with Task Switch
+#### Real-World Example: System Call with Task Switch
 
 ```
 Scenario: Task A calls file read, gets blocked, Task B runs
@@ -1318,7 +1313,7 @@ Step 4: Task A resumes later
 └─────────────────────────────────────────────────────────────┘
 ```
 
-##### Why This Design Is Necessary
+#### Why This Design Is Necessary
 
 **Fundamental Requirements**
 
@@ -1327,7 +1322,7 @@ Step 4: Task A resumes later
 - **State Preservation:** Each task's kernel context must survive task switches
 - **Isolation:** One task's kernel operations can't interfere with another's
 
-##### Alternative Approaches (Used in Some Systems)
+#### Alternative Approaches (Used in Some Systems)
 
 ```
 Alternative 1: Non-preemptive Kernel
@@ -1347,7 +1342,7 @@ Alternative 2: Kernel Threads (Modern Approach)
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### The Stack Collision Problem
+### The Stack Collision Problem
 
 How Stack Collision Occurs
 
@@ -1392,7 +1387,7 @@ Stack Overflow Scenario:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-##### Real-World Solutions
+#### Real-World Solutions
 
 **1. Stack Size Planning and Limits**
 
@@ -1481,7 +1476,7 @@ Expandable Stacks:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-##### What 80286 Systems Actually Did
+#### What 80286 Systems Actually Did
 
 ```
 Typical 80286 Approach:
@@ -1510,7 +1505,7 @@ Typical 80286 Approach:
 └────────────────────────────────────────────────────────────┘
 ```
 
-##### Example: OS/2 Approach
+#### Example: OS/2 Approach
 
 ```
 OS/2 Stack Management:
@@ -1535,7 +1530,7 @@ OS/2 Stack Management:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-##### How Modern Systems Handle This
+#### How Modern Systems Handle This
 
 ```
 Modern Approach (Linux/Windows):
@@ -1561,7 +1556,7 @@ Modern Approach (Linux/Windows):
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### Previous TSS Link
+### Previous TSS Link
 
 The Previous TSS Link supports task calling chains - when one task calls another task (not just jumps to it).
 
@@ -1581,7 +1576,7 @@ Task A ──CALL──→ Task B ──IRET──→ Task A
             Task B can return to Task A
 ```
 
-##### How Previous Task Link Works
+#### How Previous Task Link Works
 
 ```
 Example Task Calling Chain:
@@ -1618,7 +1613,7 @@ When Print Service executes IRET:
 3. Main Program continues after the CALL
 ```
 
-##### Hardware Behavior
+#### Hardware Behavior
 
 ```
 CALL task_selector behavior:
@@ -1635,9 +1630,9 @@ JMP task_selector behavior:
 ```
 
 
-#### TSS Benefits and Limitations
+### TSS Benefits and Limitations
 
-##### Advantages of Hardware Task Switching
+#### Advantages of Hardware Task Switching
 
 **1. Atomic Operation**
 - Complete task switch in single instruction
@@ -1662,7 +1657,7 @@ JMP task_selector behavior:
 - Privilege level enforcement
 - Protected task linkage
 
-##### Limitations and Problems
+#### Limitations and Problems
 
 **1. Memory Overhead**
 ```
@@ -1700,7 +1695,7 @@ Modern systems with thousands of threads:
 - Memory fragmentation problems
 ```
 
-##### Evolution Beyond 80286
+#### Evolution Beyond 80286
 
 **Why Modern Systems Don't Use Hardware Task Switching**
 
@@ -1722,13 +1717,614 @@ Modern Software Task Switching:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-##### Legacy of TSS
+#### Legacy of TSS
 
 Even though modern x86 systems don't use hardware task switching for multitasking, the TSS remains important:
 
 - **One TSS per CPU** for privilege level stack management
 - **System call stack switching** still uses TSS stack pointers
 - **Interrupt handling** relies on TS
+
+
+## The Memory Management Unit (MMU)
+
+The 80286 was the first x86 processor to introduce an MMU (Memory Management Unit), but it was a simpler form than what we consider a "full" MMU today. The MMU in the 80286 is a hardware component integrated into the CPU chip itself. THe main purpose of MMU is to translate virtual addresses into physical addresses, along with checking bounds, enforcing privileges, etc. 
+
+### Key MMU Functions Introduced by 80286
+
+#### 1. Hardware Address Translation
+
+```
+; 8086 - Software calculation:
+; Physical = (DS × 16) + SI
+
+; 80286 - Hardware MMU translation:
+MOV DS, 0x0008    ; Load selector (points to descriptor)
+MOV AL, [SI]      ; MMU automatically:
+                  ; 1. Looks up descriptor for selector 0x0008
+                  ; 2. Checks permissions and bounds
+                  ; 3. Translates to physical address
+```
+
+#### 2. Memory Protection
+
+```
+Descriptor Access Rights (enforced by MMU):
+┌─┬─-─┬─┬─┬-─┬─-┬─┐
+│P│DPL│S│E│DC│RW│A│ ← MMU checks these bits
+└─┴─-─┴─┴─┴─-┴-─┴─┘
+ │ │  │ │ │  │  │
+ │ │  │ │ │  │  └─ Accessed (set by MMU)
+ │ │  │ │ │  └──── Read/Write permission
+ │ │  │ │ └─────── Direction/Conforming  
+ │ │  │ └───────── Executable bit
+ │ │  └─────────── Descriptor type
+ │ └────────────── Privilege level (0-3)
+ └──────────────── Present bit
+
+MMU generates protection fault if access violates these rules
+```
+
+#### 3. Bounds Checking
+
+```
+Every memory access checked by MMU:
+┌─────────────────────────────────────────┐
+│ Descriptor Limit = 0x7FFF (32KB)        │
+│ Offset = 0x1234                         │
+│ MMU Check: 0x1234 ≤ 0x7FFF? ✓ Allow     │
+│                                         │
+│ Offset = 0x9000                         │  
+│ MMU Check: 0x9000 ≤ 0x7FFF? ✗ Fault     │
+└─────────────────────────────────────────┘
+```
+
+### 80286 MMU Components
+
+#### 1. Segment Register Cache (Hidden Descriptor Cache)
+
+##### What Would Happen Without Segment Register Cache
+
+```
+Every Memory Access Without Cache:
+┌─────────────────────────────────────────────────────────────┐
+│ Program executes: MOV AL, [DS:0x1234]                       │
+│                                                             │
+│ Without caching, MMU would need to:                         │
+│ 1. Read DS selector: 0x0010                                 │
+│ 2. Extract index: 2 (from bits 15-3)                        │
+│ 3. Calculate GDT address: GDT_base + (2 × 8)                │
+│ 4. Read 8 bytes from memory (descriptor)                    │ ← Memory access #1
+│ 5. Extract base address from descriptor                     │
+│ 6. Add offset: base + 0x1234                                │
+│ 7. Finally access target memory                             │ ← Memory access #2
+│                                                             │
+│ Result: Every memory access requires TWO memory reads!      │
+│ Performance: 50% of memory bandwidth wasted on translation  │
+└─────────────────────────────────────────────────────────────┘
+```
+##### How Each Segment Register Actually Works
+
+```
+Complete Segment Register Structure:
+┌─────────────────────────────────────────────────────────────┐
+│                    DS Register                              │
+├─────────────────────────────────────────────────────────────┤
+│ Visible Part (16 bits) - What programmer sees:              │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Selector: 0x0010                                        │ │
+│ └─────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│ Hidden Cache (64 bits) - Hardware only:                     │
+│ ┌─────────────────┬─────────────┬─────────────────────────┐ │
+│ │ Base Address    │ Limit       │ Access Rights           │ │
+│ │ 0x00200000      │ 0xFFFF      │ Ring 3, Read/Write      │ │
+│ │ (Physical addr) │ (Segment sz)│ (Permissions)           │ │
+│ └─────────────────┴─────────────┴─────────────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│ Valid Bit: 1 (cache contains valid data)                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Instead of caching all GDT/LDT entries at MMU level, each segment register caches only one GDT/LDT entry - the one it currently points to:
+
+```
+Individual Segment Register Caches:
+┌─────────────────────────────────────────────────────────────┐
+│ CS Register:                                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Visible: 0x0008 (selector)                              │ │
+│ │ Hidden:  [Base: 0x100000, Limit: 0xFFFF, Access: R/X]   │ │
+│ └─────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│ DS Register:                                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Visible: 0x0010 (selector)                              │ │
+│ │ Hidden:  [Base: 0x200000, Limit: 0xFFFF, Access: R/W]   │ │
+│ └─────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│ ES Register:                                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Visible: 0x0018 (selector)                              │ │
+│ │ Hidden:  [Base: 0x300000, Limit: 0x7FFF, Access: R/W]   │ │
+│ └─────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│ SS Register:                                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Visible: 0x0020 (selector)                              │ │
+│ │ Hidden:  [Base: 0x400000, Limit: 0x1FFF, Access: R/W]   │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+
+Each register caches ONE descriptor from GDT/LDT
+```
+
+##### Cache Loading Process
+
+```
+When Segment Register Is Loaded:
+┌─────────────────────────────────────────────────────────────┐
+│ Program executes: MOV DS, AX  (AX = 0x0010)                 │
+│                                                             │
+│ Hardware automatically:                                     │
+│ 1. Store 0x0010 in DS visible part                          │
+│ 2. Extract index: 2                                         │
+│ 3. Calculate descriptor address: GDT_base + 16              │
+│ 4. Read descriptor from memory (8 bytes)                    │
+│ 5. Parse descriptor into components:                        │
+│    - Base = 0x00200000                                      │
+│    - Limit = 0xFFFF                                         │
+│    - Access = Ring 3, Read/Write                            │
+│ 6. Store in DS hidden cache                                 │
+│ 7. Set valid bit = 1                                        │
+│                                                             │
+│ This happens ONCE when segment register is loaded           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### Fast Address Translation with Cache
+
+```
+Fast Memory Access Using Cache:
+┌─────────────────────────────────────────────────────────────┐
+│ Program executes: MOV AL, [DS:0x1234]                       │
+│                                                             │
+│ MMU hardware:                                               │
+│ 1. Check DS cache valid bit: 1 ✓                            │
+│ 2. Get base from DS cache: 0x00200000                       │
+│ 3. Get limit from DS cache: 0xFFFF                          │
+│ 4. Check bounds: 0x1234 ≤ 0xFFFF ✓                          │
+│ 5. Calculate address: 0x00200000 + 0x1234 = 0x00201234      │
+│ 6. Access memory at 0x00201234                              │
+│                                                             │
+│ Total: ONE memory access (the actual data)                  │
+│ No GDT lookup needed!                                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### Cache Invalidation and Management
+
+```
+Cache Invalidation Scenarios:
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Segment Register Reload:                                 │
+│    MOV DS, AX  ; New selector → invalidate DS cache         │
+│                                                             │
+│ 2. Task Switch:                                             │
+│    JMP task_selector  ; All caches invalidated              │
+│                                                             │
+│ 3. GDT/LDT Reload:                                          │
+│    LGDT [gdt_desc]    ; All caches invalidated              │
+│    LLDT selector      ; All LDT-based caches invalidated    │
+│                                                             │
+│ 4. Descriptor Modification:                                 │
+│    If OS modifies GDT/LDT in memory                         │
+│    Must manually invalidate affected caches                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### What the 80286 MMU Provided
+
+**Segmentation-Based Memory Management**
+The 80286's MMU implemented:
+
+- **Address translation** via descriptor tables (GDT/LDT)
+- **Memory protection** with privilege levels (rings 0-3)
+- **Bounds checking** to prevent segment overruns
+- **Access control** (read/write/execute permissions)
+
+### What 80286 MMU Lacked
+
+#### No Virtual Memory
+
+- All segments had to exist in physical memory
+- No demand paging or swapping to disk
+- No virtual address spaces larger than physical memory
+
+#### No Page-Level Protection
+
+- Segment-level only - coarse-grained protection
+- Cannot protect individual pages within segments
+- Limited memory layout flexibility
+
+#### No Address Space Isolation
+
+- Shared physical address space among all tasks
+- Tasks could potentially access each other's memory if descriptors allowed it
+- No true virtual memory isolation
+
+### Historical Significance
+
+The 80286 MMU was revolutionary for its time because it:
+
+#### Introduced Hardware Memory Protection:
+- First x86 processor with privilege levels
+- Hardware-enforced protection (couldn't be bypassed by software)
+- Foundation for modern operating systems
+
+#### Enabled Multitasking:
+- Task isolation through separate descriptor tables
+- Controlled access to system resources
+- Protection from application crashes
+
+#### Set Architecture Foundation:
+- Descriptor table concept carried forward to 80386
+- Privilege level system still used today
+- Segmentation principles (though largely superseded by paging)
+
+While the 80286's MMU was simpler than modern MMUs, it represented the crucial first step from the 8086's "wild west" of direct memory access to the protected, managed memory systems we use today. The 80386 would later add paging to create the "full" MMU architecture that became the standard for modern computing.
+
+## Ring Level Privileges in 80286
+
+One of the most revolutionary features introduced by the Intel 80286 was its ring-based privilege system - a hardware-enforced security mechanism that fundamentally changed how computer systems protect themselves from malicious or buggy software. Before the 80286, programs had unrestricted access to all system resources, meaning a single misbehaving application could crash the entire computer or corrupt critical system data.
+
+The 80286's ring system solved this by creating four distinct privilege levels (Rings 0-3), arranged in a hierarchical structure where each ring has specific permissions and access rights. Think of it like security clearance levels in a government building - higher clearance (lower ring numbers) grants access to more sensitive areas, while lower clearance (higher ring numbers) restricts what you can access.
+
+The 80286's ring system introduced hardware-enforced separation between different types of code, ensuring that:
+
+- **User applications (Ring 3)** could only access their own resources
+- **Operating system code (Ring 0**) maintained exclusive control over critical hardware
+- **Device drivers (Ring 1)** had controlled access to specific hardware components
+- **System services (Ring 2)** provided a middle layer for specialized operations
+
+<a title="Hertzsprung at English Wikipedia, CC BY-SA 3.0 &lt;http://creativecommons.org/licenses/by-sa/3.0/&gt;, via Wikimedia Commons" href="https://commons.wikimedia.org/wiki/File:Priv_rings.svg"><img width="512" alt="Privilege rings for the x86 architecture, along with their common uses." src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Priv_rings.svg/512px-Priv_rings.svg.png?20250128024610"></a>
+
+Modern CPU's removed ring 1 and ring 2 as they are not used by any applications because of complex privilege transitions.
+
+### Ring 0: The Kernel Domain
+
+Ring 0 represents the most trusted code in the system - the operating system kernel itself.
+Capabilities:
+
+- **Direct hardware access:** Can manipulate any I/O port, memory location, or CPU register
+- **Memory management:** Controls virtual memory, page tables, and segment descriptors
+- **Interrupt handling:** Manages hardware interrupts and system exceptions
+- **Task switching:** Can switch between different processes and threads
+- **Protection control:** Can modify GDT, LDT, and other protection structures
+
+What runs in Ring 0:
+
+```
+Typical Ring 0 Components:
+┌─────────────────────────────────────────────────────────────┐
+│ • Kernel core (scheduler, memory manager)                   │
+│ • Device drivers (disk, network, graphics)                  │
+│ • Interrupt service routines                                │
+│ • System call handlers                                      │
+│ • Hardware abstraction layer                                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Example Ring 0 Operations:**
+
+```
+; Ring 0 can directly manipulate hardware
+OUT 0x3F8, AL      ; Write to serial port
+CLI                ; Disable interrupts
+STI                ; Enable interrupts
+LGDT [gdt_desc]    ; Load new GDT
+```
+
+### Ring 1: Device Driver Territory
+
+Ring 1 was designed for device drivers and hardware abstraction layers that need some hardware access but shouldn't have full kernel privileges.
+
+**Intended capabilities:**
+
+- **Limited hardware access:** Can access specific I/O ports assigned to devices
+- **Kernel service calls:** Can call Ring 0 services for memory allocation
+- **Device management:** Direct control over assigned hardware devices
+- **Protected from user code:** User programs cannot directly call Ring 1 code
+
+**Why it's rarely used:**
+
+```
+Problems with Ring 1:
+┌─────────────────────────────────────────────────────────────┐
+│ • Complex permission management                             │
+│ • Performance overhead of privilege transitions             │
+│ • Difficult debugging across privilege boundaries           │
+│ • Limited benefits over Ring 0 drivers                      │
+│ • Most hardware needs either full access or none            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Historical usage:**
+
+- **Early OS/2:** Attempted to use Ring 1 for some device drivers
+- **Research systems:** Academic projects exploring multi-level protection
+- **Embedded systems**: Some real-time systems with strict separation requirements
+
+### Ring 2: System Services Layer
+
+Ring 2 was envisioned as a middle layer for system services that needed more privilege than user applications but less than the kernel.
+
+**Intended purposes:**
+
+- **File system services:** Higher-level file operations
+- **Network protocol stacks:** TCP/IP implementation
+- **Graphics subsystems:** Advanced display management
+- **Database engines:** System-level data management
+
+**Why it failed in practice:**
+
+```
+Ring 2 Challenges:
+┌─────────────────────────────────────────────────────────────┐
+│ • Unclear boundaries between Ring 1 and Ring 2              │
+│ • Most services either needed full kernel access or none    │
+│ • Complex inter-ring communication protocols                │
+│ • Performance penalties for frequent ring transitions       │
+│ • Debugging and troubleshooting complexity                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Ring 3: User Application Space
+
+Ring 3 is where all user applications run - from simple utilities to complex programs like word processors and games.
+
+**Restrictions:**
+
+- **No direct hardware access:** Cannot use IN/OUT instructions
+- **No privileged instructions:** Cannot modify system registers
+- **Limited memory access:** Can only access memory explicitly allocated to the process
+- **No interrupt control:** Cannot disable interrupts or modify interrupt vectors
+- **No system structure modification:** Cannot change GDT, LDT, or page tables
+
+**What Ring 3 can do:**
+
+```
+Ring 3 Capabilities:
+┌─────────────────────────────────────────────────────────────┐
+│ • Access own allocated memory                               │
+│ • Perform computational operations                          │
+│ • Call system services via controlled interfaces            │
+│ • Communicate with other Ring 3 processes (if permitted)    │
+│ • Use standard library functions                            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Privilege Enforcement Mechanisms
+
+#### Current Privilege Level (CPL)
+
+The Current Privilege Level determines what the processor can do at any given moment. It's stored in the lowest 2 bits of the CS (Code Segment) register.
+
+```
+CS Register Structure:
+┌─────────────────────────────────────────────────────────---────┐
+│ 15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0 │
+├─────────────────────────────────────────────────────┬───┬───-──┤
+│              Segment Index                          │TI │ CPL  │
+└─────────────────────────────────────────────────────┴───┴──-───┘
+                                                           │
+                                                           └─ Current Privilege Level (0-3)
+Level (0-3)
+```
+
+
+**CPL Examples:**
+
+- **CPL = 0:** Currently executing Ring 0 (kernel) code
+- **CPL = 3:** Currently executing Ring 3 (user) code
+
+
+#### Descriptor Privilege Level (DPL)
+
+Every segment descriptor (GDT entries) contains a Descriptor Privilege Level that specifies what privilege level is required to access that segment.
+
+```
+Access Control Rule:
+CPL ≤ DPL  (numerically)
+
+Examples:
+- CPL = 0, DPL = 2  →  0 ≤ 2  ✓ Access Allowed
+- CPL = 3, DPL = 0  →  3 ≤ 0  ✗ Access Denied
+- CPL = 1, DPL = 3  →  1 ≤ 3  ✓ Access Allowed
+```
+
+#### Privilege Checking Process
+
+When code attempts to access a segment, the 80286 MMU performs automatic privilege checking:
+
+```
+Memory Access Privilege Check:
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Extract CPL from CS register                             │
+│ 2. Load descriptor for target segment                       │
+│ 3. Extract DPL from descriptor                              │
+│ 4. Check: CPL ≤ DPL?                                        │
+│    - YES: Allow access                                      │
+│    - NO:  Generate General Protection Fault (#GP)           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Privilege Transitions
+
+##### 1. System Calls: Ring 3 to Ring 0
+
+User programs cannot directly call kernel functions. Instead, they use controlled entry points called system calls.
+
+```
+System Call Process:
+┌─────────────────────────────────────────────────────────────┐
+│ User Program (Ring 3):                                      │
+│ INT 21h          ; Software interrupt for DOS services      │
+│                                                             │
+│ Hardware automatically:                                     │
+│ 1. Save current state (CS:IP, FLAGS, SS:SP)                 │
+│ 2. Look up interrupt handler in IDT                         │
+│ 3. Check privilege level of handler                         │
+│ 4. Switch to Ring 0 stack (from TSS)                        │
+│ 5. Load Ring 0 code segment                                 │
+│ 6. Jump to interrupt handler                                │
+│                                                             │
+│ Kernel Handler (Ring 0):                                    │
+│ ; Process the system call                                   │
+│ ; Perform privileged operations                             │
+│ IRET             ; Return to user program                   │
+│                                                             │
+│ Hardware automatically:                                     │
+│ 1. Restore user state (CS:IP, FLAGS, SS:SP)                 │
+│ 2. Switch back to Ring 3 stack                              │
+│ 3. Continue user program execution                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+##### 2. Call Gates: Controlled Ring Transitions
+
+Call gates provide a mechanism for controlled transitions between privilege levels without using interrupts.
+
+```
+
+Call Gate Structure:
+┌─────────────────────────────────────────────────────────────┐
+│ • Target segment selector                                   │
+│ • Target offset within segment                              │
+│ • Parameter count (for stack copying)                       │
+│ • Access rights (privilege levels)                          │
+└─────────────────────────────────────────────────────────────┘
+
+Usage:
+CALL gate_selector    ; Far call through call gate
+                      ; Hardware handles privilege transition
+```
+
+##### 3. Interrupt and Trap Gates
+
+Interrupt gates and trap gates handle hardware interrupts and software exceptions while managing privilege transitions.
+
+```
+Interrupt Handling:
+┌─────────────────────────────────────────────────────────────┐
+│ Hardware Interrupt (e.g., keyboard, timer):                 │
+│ 1. Save current privilege level                             │
+│ 2. Switch to Ring 0 (interrupt handlers run in Ring 0)      │
+│ 3. Execute interrupt service routine                        │
+│ 4. Restore previous privilege level                         │
+│                                                             │
+│ This allows Ring 3 programs to be interrupted safely        │
+│ without compromising system security                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### How Does CPU/MMU Enforces the Privilege Check at Hardware Level?
+
+The CPU/MMU has no concept of "operating system" vs "application program." It only understands: 
+- Current Privilege Level (CPL)
+- Descriptor Privilege Levels (DPL)
+- Access permissions based on these levels
+
+So CPU doesn't know the difference between the Operating System's code and a User Space program's code. How does it know who should actually have higher level of privileges and who doesn't?
+
+##### The "First Mover Advantage" Principle
+
+**1. Bootstrap Sequence:**
+
+```
+1. CPU powers on in Real Mode (no protection)
+2. BIOS/Bootloader runs (still no protection)
+3. First OS code loads and runs (still no protection)
+4. OS sets up GDT with itself as Ring 0
+5. OS switches to Protected Mode
+6. NOW protection is active - OS controls everything
+```
+
+**2. OS Establishes Its Authority:**
+
+```C
+// OS creates GDT during boot (while still unprotected)
+GDT[0] = NULL_DESCRIPTOR;
+GDT[1] = {base: 0, limit: 4GB, DPL: 0, type: CODE};  // OS code
+GDT[2] = {base: 0, limit: 4GB, DPL: 0, type: DATA};  // OS data  
+GDT[3] = {base: 0, limit: 4GB, DPL: 3, type: CODE};  // User code
+GDT[4] = {base: 0, limit: 4GB, DPL: 3, type: DATA};  // User data
+
+// OS loads itself into Ring 0
+CS = 0x08;  // Ring 0 code segment
+// Now CPL = 0, and OS controls all privilege decisions
+```
+
+##### But There's a Catch - Memory Segmentation Isn't Full Protection
+
+**80286 Segmentation Limitations:**
+
+- **Same linear address space:** All segments can point to the same memory
+- **No memory isolation:** Ring 3 code can potentially read Ring 0 memory if descriptors allow it
+- **Descriptor-dependent:** Protection
+
+Example Problem:
+
+```C
+// OS sets up segments (Ring 0 privilege required)
+GDT[1] = {base: 0x100000, limit: 64KB, DPL: 0};  // OS memory
+GDT[3] = {base: 0x100000, limit: 64KB, DPL: 3};  // User memory
+
+// Problem: Both point to SAME physical memory!
+// User can read OS memory through their own descriptor
+```
+
+## How 80286 Changed the CPU-OS Relationship Forever
+
+### 8086 Era: OS as Optional Helper
+
+In the 8086 real mode world, the relationship between CPU and operating system was surprisingly casual:
+
+- **No memory protection** - any program could access any memory location
+- **No privilege levels** - all code ran with identical hardware access
+- **Direct hardware control** - programs could manipulate I/O ports, interrupts, and system resources directly
+- **OS was essentially a library** - DOS functioned as a collection of utility functions that programs could call, but could easily bypass
+
+You could write a program that completely ignored DOS, accessed hardware directly, modified interrupt vectors, or even overwrote parts of DOS in memory. Running a program "with" or "without" an operating system made little architectural difference - the CPU imposed no restrictions.
+
+### 80286: The Partnership Revolution
+
+The 80286 introduced a radical concept: hardware features that required OS cooperation. Neither the CPU nor the OS could provide modern computing features alone - they had to work as partners.
+
+#### Hardware Features Demanding OS Management:
+
+- **GDT/LDT setup** - CPU provides descriptor table mechanism, but OS must create and manage the actual tables
+- **TSS management** - CPU can switch tasks via hardware, but OS must set up Task State Segments for each process
+- **Privilege level enforcement** - CPU enforces ring-based protection, but OS must define what gets what privileges
+- **Segment descriptors** - CPU checks access rights, but OS must create proper access permissions and memory limits
+- **Protected mode switching** - Complex initialization sequence requiring intimate OS-hardware coordination
+
+#### The New Partnership Model:
+
+```
+Hardware provides MECHANISMS
+    ↓
+OS provides POLICIES  
+    ↓
+CPU enforces what OS defines
+```
+
+#### Why This Partnership Was Essential:
+
+- **1. Memory Protection:** CPU can only protect memory if OS properly sets up segment descriptors
+- **2. Multitasking:** TSS structure is meaningless without OS task scheduling to utilize it
+- **3. Privilege Separation:** Ring levels only work if OS correctly manages user/kernel boundaries
+- **4. Resource Management:** I/O permission bitmaps need OS policy to define task capabilities
 
 [^address-bus]: An address bus is a collection of wires (or electrical pathways) that carries memory addresses from the processor to memory and other components. Think of it as the "postal system" of the computer - when the CPU wants to read from or write to a specific location in memory, it sends that location's address through the address bus. Each wire in the address bus represents one bit of the address. The CPU sets each wire to either high voltage (representing binary 1) or low voltage (representing binary 0) to form the complete binary address.
 
