@@ -1974,6 +1974,66 @@ The 80286 MMU was revolutionary for its time because it:
 
 While the 80286's MMU was simpler than modern MMUs, it represented the crucial first step from the 8086's "wild west" of direct memory access to the protected, managed memory systems we use today. The 80386 would later add paging to create the "full" MMU architecture that became the standard for modern computing.
 
+## How 80286 Keeps Track of the CPU Mode
+
+CR0 (Control Register 0) also called as MSW (Machine Status Word) stored PE bit (bit 0) which kept track of thr current processor mode. 
+
+
+### CR0 Register and the PE Bit
+
+```
+CR0 Register (16-bit in 80286):
+┌─────────────────────────────────────────────────────────────---┐
+│ 15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0 │
+├───────────────────────────────────────────────────────────---──┤
+│                    Reserved                                │PE │
+│                    (bits 15-1)                             │   │
+└──────────────────────────────────────────────────---───────────┘
+                                                              │
+                                                              └─ PE (Protection Enable) bit
+```                                                       
+
+**PE Bit (Bit 0):**
+
+- PE = 0: Real mode (8086 compatibility mode)
+- PE = 1: Protected mode (full 80286 protection features)
+
+### Real Mode to Protected Mode Switch
+
+
+```
+; Switching from real mode to protected mode
+enter_protected_mode:
+    cli                  ; Disable interrupts
+    
+    ; Set up GDT
+    lgdt [gdt_descriptor]
+    
+    ; Set up IDT  
+    lidt [idt_descriptor]
+    
+    ; Enable protected mode
+    mov ax, cr0
+    or ax, 1             ; Set PE bit (bit 0)
+    mov cr0, ax          ; CR0.PE = 1 → Protected mode
+    
+    ; Far jump to flush instruction queue
+    jmp 0x0008:protected_start  ; Jump to protected mode code
+    
+protected_start:
+    ; Now in protected mode
+    ; Set up segment registers
+    mov ax, 0x0010       ; Data segment selector
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    
+    sti                  ; Re-enable interrupts
+    ret
+```
+
+Only Ring 0 code can modify CR0 - this is one of the most fundamental privilege restrictions in the 80286. There was no way to switch back to real mode once the CPU enters protected mode in 80286. 
+
 ## Ring Level Privileges in 80286
 
 One of the most revolutionary features introduced by the Intel 80286 was its ring-based privilege system - a hardware-enforced security mechanism that fundamentally changed how computer systems protect themselves from malicious or buggy software. Before the 80286, programs had unrestricted access to all system resources, meaning a single misbehaving application could crash the entire computer or corrupt critical system data.
