@@ -1,7 +1,7 @@
 ---
 title:  "Processor Modes in x86"
 date:   2025-07-18
-draft: true
+draft: false
 categories: ["cpu"]
 tags: ["cpu", "x86"]
 author: Sanketh
