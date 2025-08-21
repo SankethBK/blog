@@ -16,13 +16,13 @@ references:
       url: https://blogsystem5.substack.com/p/from-0-to-1-mb-in-dos
 
     - title: Intel 80286 Manual
-      url: https://ragestorm.net/downloads/286intel.txt
+      url: https://bitsavers.trailing-edge.com/components/intel/80286/210498-005_80286_and_80287_Programmers_Reference_Manual_1987.pdf
 
     - title: Task State Segment
       url: https://pdos.csail.mit.edu/6.828/2017/readings/i386/s07_01.htm
 
     - title: Intel 80386 Manual
-      url: https://pdos.csail.mit.edu/6.828/2017/readings/i386/toc.htm
+      url: https://pdos.csail.mit.edu/6.828/2018/readings/i386.pdf
 
     - title: Global Descriptor Table
       url: https://wiki.osdev.org/Global_Descriptor_Table
