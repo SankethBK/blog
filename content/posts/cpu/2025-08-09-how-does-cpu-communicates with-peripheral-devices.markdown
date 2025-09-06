@@ -558,6 +558,135 @@ Key Advancements in 80386:
 - **Stability:** Built-in exception interrupts caught common bugs (e.g., division by zero crash
 - **Foundation:** Established the basic interrupt model still used today in x86 (with refinements in 386 and beyond).
 
+### 80386: Virtual Memory and Exceptions (1985)
+
+The Intel 80386 took the protected mode ideas of the 80286 and extended them into a 32-bit architecture with much richer interrupt handling. This CPU made interrupts not just a hardware feature, but a core part of operating system design.
+
+#### Key Advancements
+
+##### 1. 32-bit Protected Mode
+
+- Interrupt Descriptor Table (IDT) entries expanded to support full 32-bit offsets.
+- Handlers could be located anywhere in the 4 GB address space.
+
+##### 2. Exceptions Added
+
+- New interrupt types defined for CPU-detected faults:
+  - **#PF (Page Fault, vector 14):** triggered when memory access violates paging rules.
+  - **#GP (General Protection Fault):** illegal access across privilege levels.
+  - **#DE (Divide Error):** divide by zero or overflow.
+- Gave the OS a way to handle memory protection and recovery gracefully.
+
+##### 3. Privilege Levels (Rings 0–3)
+
+- Interrupts could only enter more privileged rings (e.g., user → kernel).
+- Prevented user programs from hijacking kernel-level interrupt handlers.
+
+##### 4. Task Gates and TSS (Task State Segment)
+
+- The 80386 supported hardware-based task switching.
+- An interrupt could automatically switch to another task using a TSS descriptor.
+- In practice, OSes avoided this (too slow), but it showed Intel’s push to make multitasking easier.
+
+#### Interrupt Handling Flow (80386 Protected Mode)
+
+1. Interrupt occurs (device IRQ, CPU exception, or software INT n).
+2. CPU looks up IDT entry for the interrupt vector.
+  - IDT can now reside anywhere in linear memory (pointed to by IDTR).
+3. Privilege checks are enforced:
+  - User-space cannot directly install or jump to kernel-level handlers.
+  - Interrupts automatically switch to a kernel stack if needed.
+4. State saving: CPU pushes EFLAGS, CS:EIP, and possibly an error code (for faults).
+5. Jump to handler: CPU transfers control to the handler address in IDT.
+
+#### Why It Mattered?
+
+- **Paging + Page Faults:** Interrupts became the backbone of virtual memory. Every time a program accessed memory not in RAM, the CPU raised a page fault, letting the OS load data from disk.
+- **True Multitasking:** Interrupts and exceptions combined with privilege levels enabled safe, preemptive multitasking.
+- **System Call Refinement:** Software interrupts (INT 0x80 in Unix-like systems) became the standard way to enter the kernel from user space.
+
+### Pentium Era
+
+#### APICs
+
+- The old 8259 PIC design (used since 8086/286 PCs) was fine for single-CPU systems.
+- But with Pentium (and Pentium Pro), multiprocessor systems became common.
+- Needed:
+  - More interrupt lines (beyond 16 of the PIC).
+  - Smarter interrupt routing to multiple CPUs.
+  - Support for inter-processor interrupts (IPI).
+
+##### Local APIC (LAPIC)
+
+- Each CPU core got its own Local APIC unit.
+- Functions:
+  - Receives interrupts and delivers them to its CPU.
+  - Priority management (masking, nesting, vector priorities).
+  - Timer (each LAPIC had its own timer, often used by OS).
+  - Accepts Inter-Processor Interrupts (IPIs) → CPUs can signal each other (e.g., “reschedule,” “TLB shootdown”).
+
+##### I/O APIC
+
+- A separate chip, replacing the old 8259 PIC.
+- Connects external interrupt sources (like devices, PCI slots, NICs) to the system.
+- Supports:
+  - More than 16 interrupt lines (scalable, often 24, 64, or more).
+  - Redirection table: an interrupt can be routed to any CPU’s LAPIC, not just CPU0.
+  - Level-triggered interrupts (important for PCI devices).
+
+```
+[CPU 0] ←── Local APIC ←──┐
+[CPU 1] ←── Local APIC ←──┼── System Bus ←── I/O APIC ←── Devices
+[CPU 2] ←── Local APIC ←──┘
+[CPU 3] ←── Local APIC ←──┘
+```
+
+##### Advanced Features
+
+- **Interrupt Redirection:** Instead of all interrupts hitting the “bootstrap CPU,” the OS can balance them across multiple CPUs.
+- **Inter-Processor Interrupts (IPI):** CPUs can generate interrupts to each other via the APIC bus. Crucial for multiprocessing OS (Linux, Windows NT, BSD).
+- **Priority & Vectoring:** Each LAPIC has its own task-priority register; APIC ensures higher-priority interrupts are handled first.
+
+##### OS Impact
+
+- Required new OS support: Windows NT, Linux, Solaris adapted for APICs.
+- Allowed true **SMP (Symmetric Multi-Processing)**, with multiple CPUs handling interrupts and scheduling work.
+- Old DOS/Win9x mostly ignored APIC, stayed in 8259 compatibility mode.
+
+#### Advanced Exception Handling – Precise Exceptions
+
+- Pentium introduced precise exceptions, meaning:
+  - When an exception (e.g., divide-by-zero, page fault) occurs, the CPU guarantees that all instructions before the faulting instruction have completed, and no later instructions have modified state.
+  - This property is called the “precise exception model.”
+- Why it mattered:
+  - Pentium had pipelines and early forms of out-of-order execution. Without precise exceptions, the CPU could trigger a page fault after executing later instructions, leaving machine state inconsistent.
+  - With precise exceptions, the OS/debugger sees a clean, restartable point.
+  - Essential for:
+    - Reliable OS scheduling.
+    - Virtual memory (page faults).
+    - Debugging/traps (single step, breakpoints).
+
+
+#### Impact on OS & Software
+
+- OS could now depend on restartable faults → page fault handler could resume the instruction safely.
+- Debuggers became more powerful — they could trap and restart instructions deterministically.
+- Hardware exceptions became a core mechanism for system calls, copy-on-write, lazy allocation.
+
+
+### x86-64 Era (2003, AMD Opteron/Athlon64)
+
+#### Syscall / Sysret vs. INT Instruction
+
+- Software interrupts (INT n) became too slow for frequent system calls.
+- AMD introduced SYSCALL / SYSRET instructions (fast, direct transition between user and kernel mode).
+  - Avoids IDT lookup overhead.
+  - Uses MSRs (Model-Specific Registers) to store kernel entry points.
+- Intel later copied this with SYSENTER / SYSEXIT, then adopted AMD’s SYSCALL/SYSRET for 64-bit mode.
+- This split the world:
+  - Hardware/Device interrupts → IDT/ISR.
+  - System calls → SYSCALL (fast path).
+
 [^PCIe]: Peripheral Component Interconnect Express, is a high-speed interface standard used to connect various components within a computer, such as graphics cards, SSDs, and network adapters, to the motherboard. It uses a point-to-point connection with dedicated data lanes (e.g., x1, x16) to provide high bandwidth and low-latency communication, replacing older bus-based standards like PCI.
 
 
