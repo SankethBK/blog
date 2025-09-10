@@ -865,7 +865,35 @@ Modern CPUs provide extensive hardware support for interrupt virtualization, ena
 - **Source validation:** Ensures interrupts originate from authorized devices
 - **Scalability improvement:** Supports large numbers of guest VMs and devices
 
+### NUMA-Aware Interrupt Handling
 
+Modern servers often use NUMA (Non-Uniform Memory Access) architectures:
+- Multiple CPU sockets (or chiplets) are on the same motherboard.
+- Each socket has its own local memory (DRAM channels).
+- Accessing local memory is faster than accessing remote memory attached to another socket.
+
+#### Why Interrupts Care About NUMA
+
+- Devices like NICs, SSDs, and GPUs are physically attached to a particular CPU socket via PCIe lanes.
+- If the device’s interrupts are always delivered to a CPU on the other socket, two bad things happen:
+  1. The interrupt handler will often touch buffers or data structures in the device’s local memory — causing expensive remote memory access.
+  2. Cross-socket communication (via QPI/UPI or Infinity Fabric) increases latency and lowers throughput.
+
+
+#### How NUMA-Aware Interrupt Handling Works
+
+- The OS and interrupt controller (APIC/MSI-X + chipset) steer interrupts to the closest CPU core:
+  - NIC attached to Socket 0 → interrupts routed to cores on Socket 0.
+  - SSD attached to Socket 1 → interrupts routed to cores on Socket 1.
+- This is typically managed by:
+  - **ACPI tables / firmware** that tell the OS which NUMA node a device belongs to.
+  - **IRQ affinity settings** in the OS (e.g., Linux /proc/irq/*/smp_affinity).
+
+**Benefits**
+
+- **Lower latency:** Interrupt handler runs on the core nearest to the device.
+- **Higher throughput:** Avoids remote memory traffic.
+- **Better scalability:** In multi-socket servers, each socket handles its own I/O interrupts, preventing one socket from becoming a bottleneck.
 
 [^PCIe]: Peripheral Component Interconnect Express, is a high-speed interface standard used to connect various components within a computer, such as graphics cards, SSDs, and network adapters, to the motherboard. It uses a point-to-point connection with dedicated data lanes (e.g., x1, x16) to provide high bandwidth and low-latency communication, replacing older bus-based standards like PCI.
 
