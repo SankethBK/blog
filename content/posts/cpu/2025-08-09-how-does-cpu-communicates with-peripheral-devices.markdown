@@ -11,6 +11,9 @@ references:
 
   - title: Memory Mapped I/O Practical Demonstration
     url: https://www.youtube.com/watch?v=sp3mMwo3PO0
+
+  - title: Direct Memory Access
+    url: https://www.youtube.com/watch?v=s8RGHggL7ws
 ---
 
 # Introduction: The Communication Challenges
