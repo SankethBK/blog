@@ -895,6 +895,157 @@ Modern servers often use NUMA (Non-Uniform Memory Access) architectures:
 - **Higher throughput:** Avoids remote memory traffic.
 - **Better scalability:** In multi-socket servers, each socket handles its own I/O interrupts, preventing one socket from becoming a bottleneck.
 
+# DMA
+
+## What is DMA and Why It Exists
+
+- In early computer systems, all I/O data transfers passed through the CPU.
+- Example: When reading from disk to memory, the CPU had to fetch each word from the disk controller and then write it into RAM.
+- This caused a CPU bottleneck: the processor wasted cycles shuffling data instead of executing instructions.
+- **Direct Memory Access (DMA)** solves this by letting devices transfer data directly between I/O device and memory without CPU involvement.
+- The CPU only sets up the transfer and gets notified when it finishes, greatly improving efficiency.
+
+## DMA vs CPU-Mediated Transfers
+
+### CPU-mediated (Programmed I/O, PIO):
+
+- CPU explicitly moves each word/byte.
+- Simple but inefficient — CPU is stalled on data copies.
+- Works for low-speed devices (e.g., keyboard input).
+
+### DMA-based transfers:
+
+- Device controller performs bulk transfers directly into memory.
+- CPU overhead is minimal — just setup + completion interrupt.
+- Critical for high-speed devices like disks, NICs, GPUs, SSDs.
+
+### Performance advantage:
+
+- DMA reduces CPU load and increases throughput.
+- Enables parallelism: CPU executes instructions while DMA handles data movement.
+
+
+## Basic DMA Operation Cycle
+
+1. **Setup:**
+- CPU programs DMA controller with source address, destination address, and transfer length.
+
+2. **Request:**
+- Device signals DMA controller that it is ready to transfer.
+
+3. **Grant:**
+- DMA controller arbitrates for the system bus and gets permission to transfer.
+
+4. **Transfer:**
+- Data is moved directly between device and memory (single-cycle or block mode).
+
+5. **Completion:**
+- Once transfer is done, DMA controller sends an interrupt to CPU.
+- CPU resumes normal operation with new data in memory.
+
+## DMA Controller Architecture
+
+- **Core components:**
+  - **Control Register:** Holds command type (read/write, mode).
+  - **Address Register:** Stores starting memory address for transfer.
+  - **Count Register:** Number of bytes/words to transfer.
+  - **Status Register:** Signals completion or errors.
+
+- **Bus Arbitration Logic:** Decides when DMA controller can take control of the system bus (competes with CPU).
+
+- **Modes of Transfer:** Supports burst, cycle stealing, or demand modes.
+
+- **Interrupt Logic:** Triggers CPU notification after transfer.
+
+## Types of DMA Transfers
+
+### 1. Burst Mode DMA
+
+- DMA controller takes full control of the bus.
+- Transfers a large block of data in one continuous burst.
+- **Pros:** Fastest method, minimal bus overhead.
+- **Cons:** CPU is completely blocked during transfer (no bus access).
+- **Use case:** Disk/SSD block transfers.
+
+### 2. Cycle Stealing DMA
+
+- DMA controller transfers one word/byte at a time, temporarily “stealing” bus cycles from CPU.
+- CPU continues running, but with slightly reduced performance.
+- **Pros:** Balances CPU execution and I/O transfers.
+- **Cons:** Slower than burst mode.
+- **Use case:** Devices needing steady but non-blocking data movement (e.g., audio streaming).
+
+### 3. Transparent (or Demand) Mode DMA
+
+- DMA controller only uses the bus when CPU is not actively using it.
+- Appears “transparent” to the CPU.
+- **Pros:** No CPU slowdown.
+- **Cons:** DMA throughput depends on CPU’s bus usage (may be slow if CPU is busy).
+- **Use case:** Low-priority background transfers.
+
+### 4. Block Mode DMA
+
+- Similar to burst mode, but transfer happens in predefined blocks.
+- CPU is paused until a block transfer finishes, then regains bus access.
+- **Pros:** More predictable sharing between CPU and DMA.
+- **Cons:** Still stalls CPU intermittently.
+
+### 5. Scatter-Gather DMA
+
+- Advanced mode where DMA controller can handle non-contiguous memory regions.
+- Instead of transferring a single continuous block, it uses a list of memory segments (scatter-gather list).
+- **Pros:** Reduces CPU overhead for fragmented buffers.
+- **Use case:** Networking (NICs handling multiple packets), modern SSDs.
+
+## Evolution of DMA
+
+### Centralized DMA (Classic Model)
+
+- In early PCs (8086/286 era), a separate DMA controller chip (e.g., Intel 8237) managed data transfers.
+- Devices (like floppy drives, sound cards, NICs) sent DMA requests to this central controller.
+- The DMA controller arbitrated bus ownership between CPU and devices.
+- It had multiple channels (typically 4 or 8), each mapped to a specific device.
+- When granted control, it directly transferred data between device I/O ports and system memory, bypassing the CPU.
+
+#### Limitations:
+
+- Single DMA controller could become a bottleneck.
+- Limited number of channels (e.g., 8 on PCs).
+- Fixed priority scheme — some devices could starve others.
+- Inefficient for modern high-throughput devices (NICs, GPUs, SSDs).
+
+### Bus Mastering DMA (Decentralized Model)
+
+- With faster peripherals (like hard disks, NICs, GPUs), relying on a single central DMA controller became a bottleneck.
+- Bus mastering allowed each capable device to act as a "master" on the system bus:
+  - Instead of asking a central DMA chip, the device itself arbitrates for bus ownership.
+  - Once it wins arbitration, it transfers data directly between its buffer and system memory.
+- This decentralized approach scales much better, since multiple devices can request DMA without overloading one controller.
+
+#### Advantages
+
+- Removes bottleneck of central DMA chip.
+- Higher throughput, essential for PCI/PCI-X/PCIe devices.
+- Per-device control — NICs can stream packets directly to memory, GPUs can fetch textures without CPU help.
+
+#### Challenges:
+
+- Devices now need to be trusted not to write anywhere in memory (security concern).
+- Memory addresses used by devices may not match physical memory addresses (especially in systems with paging/virtual memory).
+
+### IOMMU: Secure DMA for Modern Systems
+
+- To solve security and address translation issues, CPUs introduced the IOMMU (Input-Output Memory Management Unit).
+- Functions like an MMU but for devices:
+  - **Address translation:** Maps device-visible addresses (IOVAs) to physical memory.
+  - **Isolation:** Ensures a misbehaving device can’t overwrite arbitrary memory.
+  - **Virtualization support:** Each VM can be assigned a device with its own safe DMA address space.
+
+#### Examples:
+
+- Intel VT-d, AMD-Vi (a.k.a AMD IOMMU).
+- Essential for modern virtualization (e.g., PCIe passthrough to VMs).
+
 [^PCIe]: Peripheral Component Interconnect Express, is a high-speed interface standard used to connect various components within a computer, such as graphics cards, SSDs, and network adapters, to the motherboard. It uses a point-to-point connection with dedicated data lanes (e.g., x1, x16) to provide high bandwidth and low-latency communication, replacing older bus-based standards like PCI.
 
 
