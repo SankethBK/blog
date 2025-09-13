@@ -1,7 +1,6 @@
 ---
 title:  "How does CPU Communicates With Peripheral Devices"
 date:   2025-08-09
-draft: true
 categories: ["cpu"]
 tags: ["cpu", "x86"]
 author: Sanketh
