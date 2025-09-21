@@ -37,6 +37,7 @@ Modern CPUs may load or patch microcode from firmware to work around hardware er
 
 When you press the power button, electricity flows to the motherboard and the Basic Input/Output System (BIOS) or Unified Extensible Firmware Interface (UEFI) stored in non-volatile memory springs to life. This firmware is the first code that runs, and it immediately begins the Power-On Self-Test. During POST, the system checks critical hardware components like RAM, CPU, storage devices, and peripheral connections. You'll often hear beeps or see LED indicators during this phase - these are diagnostic codes indicating whether hardware is functioning properly. Sets up basic text or graphic mode so you can see firmware messages.
 
+
 ### 2. Core Hardware Initialization
 
 After POST completes successfully, the firmware initializes hardware components in a specific order. It configures the CPU, sets up memory controllers, initializes storage controllers, and establishes communication pathways between components. The firmware also detects and catalogs all connected hardware, building a map of available resources that will be passed to the operating system later.
@@ -210,7 +211,7 @@ This `initrd` is a temporary, compressed filesystem that contains the essential 
 - Windows: Boot Configuration Data (BCD) and hardware abstraction layer info
 - Hardware details: Available RAM, CPU features, device tree (on ARM systems)
 
-## 3. Kernel Initialization: Building the System
+## 6. Kernel Initialization: Building the System
 
 The moment the kernel begins executing, it runs in a highly constrained environment. It must bootstrap itself, initializing all its core subsystems to transform the raw hardware into a fully functional operating system.
 
