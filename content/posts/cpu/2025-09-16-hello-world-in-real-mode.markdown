@@ -261,3 +261,52 @@ msg db "Hello, World! (VRAM)", 0
 times 510-($-$$) db 0
 dw 0xAA55
 ```
+
+## Running the Boot Sector Program
+
+Let’s now see how to actually assemble and run the Hello World boot sector on your own system.
+
+### Step 1. Assemble the Code
+
+We use NASM (Netwide Assembler) to convert our assembly source into a raw binary image:
+
+```bash
+nasm -f bin boot.asm -o boot.bin
+```
+
+- `nasm` → The assembler tool.
+- `-f bin` → Output format is flat binary (no ELF/COFF headers, just raw bytes). Perfect for boot sectors since the BIOS just loads 512 bytes directly into memory.
+- `boot.asm` → Your source file containing the bootloader code.
+- `-o boot.bin` → Output file will be a 512-byte binary image.
+
+### Step 2. Run in QEMU
+
+We’ll use QEMU, a popular emulator, to test the binary safely (no need to risk your actual hard drive):
+
+```bash
+qemu-system-x86_64 -drive format=raw,file=boot.bin
+```
+
+- `qemu-system-x86_64` → Launches the QEMU emulator in x86-64 mode.
+- `-drive format=raw,file=boot.bin` → Tells QEMU to treat boot.bin as a raw disk image and boot from it.
+
+When executed, QEMU will emulate the BIOS loading your boot sector into memory at `0x7C00` and running it. You’ll see the "Hello World" message printed to the virtual screen.
+
+![Program Outout](/images/hello-world-real-mode.png)
+
+
+### Step 3. (Optional) Inspect the Binary
+
+To check that the boot sector is exactly 512 bytes and ends with the 0x55AA boot signature:
+
+```bash
+❯ hexdump -C boot.bin | tail
+00000000  31 c0 8e d8 8e c0 8e d0  bc 00 7c be 1b 7c ac 3c  |1.........|..|.<|
+00000010  00 74 06 b4 0e cd 10 eb  f5 eb fe 48 65 6c 6c 6f  |.t.........Hello|
+00000020  2c 20 57 6f 72 6c 64 21  00 00 00 00 00 00 00 00  |, World!........|
+00000030  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+000001f0  00
+```
+
+We can see the last two bytes 55 aa at the bottom.
