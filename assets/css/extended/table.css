@@ -1,50 +1,11 @@
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 1.5em 0;
-  font-size: 16px;
-  text-align: left;
+/* Make tables responsive */
+.post-content table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
 }
 
-thead,
-tbody {
-  width: 100%;
-  display: table;
-}
-
-th,
-td {
-  padding: 10px 15px !important;
-  border: 1px solid #ddd;
-  color: #333;
-  word-wrap: break-word; /* Ensures text wraps within the cell */
-  width: 30%;
-}
-
-th {
-  background-color: #f5f5f5;
-  font-weight: bold;
-}
-
-tr:nth-child(even) {
-  background-color: #f9f9f9;
-}
-
-/* 🌙 Dark Mode */
-body.dark th,
-body.dark td {
-  border: 1px solid #555;
-  color: #ddd;
-}
-
-body.dark th {
-  background-color: #222;
-}
-
-body.dark tr:nth-child(even) {
-  background-color: #2a2a2a;
-}
-
-body.dark tr:nth-child(odd) {
-  background-color: #1e1e1e;
+/* Optional: smaller font for tables */
+.post-content table {
+    font-size: 0.9em;
 }

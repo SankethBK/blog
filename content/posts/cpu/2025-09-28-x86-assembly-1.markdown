@@ -1,0 +1,311 @@
+---
+title:  "x86 Assembly Part 1: Registers"
+date:   2025-08-28
+categories: ["cpu"]
+tags: ["cpu", "x86"]
+author: Sanketh
+---
+
+When learning assembly, it’s easy to get lost in the “why” of CPU design, but this blog will stay focused on the x86 instruction set itself. The goal here isn’t to study computer architecture or dive into microarchitectural details — instead, we’ll build a working reference for how to write and understand x86 assembly code. Everything that follows is about the x86 family of processors, starting from the registers that form the foundation of all instructions.
+
+## Registers
+
+In assembly programming, registers are small, high-speed storage locations built directly into the CPU. Unlike memory, which sits outside the processor and takes more time to access, registers can be read from and written to in a single CPU cycle. They hold data, addresses, counters, flags, or other control information that instructions operate on. In x86, almost every instruction involves registers in some way, making them the most important place to start.
+
+One of the defining traits of the x86 family is its strong backward compatibility. Every new generation of processors has preserved the ability to run software written for earlier ones, all the way back to the original 8086 released in 1978. This means that even on modern x86-64 CPUs, the fundamental registers introduced with the 8086 are still present and usable. For that reason, when learning x86 assembly, it makes sense to start with the registers of the 8086 — they form the foundation on which later extensions (32-bit and 64-bit registers) were built.
+
+### Evolution of x86 Registers
+
+#### 8086 (1978)
+
+- First 16-bit processor in the family.
+- Introduced **8 general-purpose registers:** AX, BX, CX, DX, SP, BP, SI, DI.
+- Each could be accessed as 16-bit, with AX, BX, CX, DX further split into high/low 8-bit halves (AH/AL, etc.).
+- Added segment registers: CS, DS, SS, ES for memory addressing.
+- Also defined the IP (instruction pointer) and FLAGS register.
+
+#### 80286 (1982)
+
+- Still 16-bit general-purpose registers.
+- Expanded segment registers with protected mode and descriptors.
+
+#### 80386 (1985)
+
+- Extended all general-purpose registers to 32-bit: EAX, EBX, ECX, EDX, ESP, EBP, ESI, EDI.
+- Instruction pointer became EIP, flags became EFLAGS.
+- Added new segment registers FS and GS.
+
+#### x86-64 (2003)
+
+- Extended all general-purpose registers to 64-bit: RAX, RBX, RCX, etc.
+- Instruction pointer became RIP, flags became RFLAGS.
+- Added 8 new general-purpose registers: R8–R15.
+- Expanded SIMD registers (XMM0–XMM15, later XMM0–XMM31 in AVX-512).
+
+### General Purpose Registers (GPRs)
+
+General Purpose Registers are the core working registers of the CPU. They are called “general purpose” because they can hold operands for arithmetic, memory addresses, loop counters, function parameters, or return values — depending on how the instruction set or calling convention uses them.
+
+In the x86-64 era, all GPRs are 64 bits wide (RAX, RBX, …, R15). But these registers trace their roots back to the 8086, where they were just 16 bits. With the 80386, they were extended to 32-bit, and finally to 64-bit with AMD64.
+
+**Unlike ARM or MIPS "General Purpose” doesn’t mean the CPU never cares what’s inside.**
+
+On x86, all GPRs can hold arbitrary values, but some instructions implicitly use specific registers — so while you can put anything in them, certain instructions will overwrite or expect them.
+
+| Register | 8086 (16-bit) | 80286 (16-bit) | 80386 (32-bit) | x86-64 (64-bit) | 8-bit Low | 8-bit High | Primary Purpose | Why This Name? | Implicit Instructions |
+|----------|---------------|----------------|----------------|-----------------|-----------|------------|-----------------|----------------|----------------------|
+| RAX | AX | AX | EAX | RAX | AL | AH | Accumulator | Named "Accumulator" because it accumulates results from arithmetic operations. Historically the primary register for math operations, I/O, and function return values. The "A" stands for Accumulator. | MUL, IMUL, DIV, IDIV, IN, OUT, SYSCALL, LODS, STOS, SCAS, XLAT, CPUID |
+| RBX | BX | BX | EBX | RBX | BL | BH | Base | Called "Base" because it was originally used as a base pointer for indexed addressing modes, particularly for accessing arrays and data structures. The "B" stands for Base. Modern usage is mostly general purpose. | XLAT (AL = [DS:RBX+AL]) |
+| RCX | CX | CX | ECX | RCX | CL | CH | Counter | Named "Counter" because it serves as an implicit loop counter. Used by loop instructions and string operations that repeat a specific number of times. The "C" stands for Counter. CL (low byte) is used for variable shift/rotate counts. | LOOP, LOOPE, LOOPNE, REP/REPE/REPNE, JCXZ, SHL/SHR/SAL/SAR (CL), RCL/RCR/ROL/ROR (CL), SHLD/SHRD (CL) |
+| RDX | DX | DX | EDX | RDX | DL | DH | Data | Called "Data" because it holds data for I/O operations and serves as an extension of RAX for operations needing extra precision (like 128-bit multiplication/division results). The "D" stands for Data. | MUL, IMUL, DIV, IDIV, IN, OUT (DX as port) |
+| RSI | SI | SI | ESI | RSI | SIL | - | Source Index | "Source Index" because it points to the source location in string/memory operations. Automatically incremented/decremented during string operations. The "SI" stands for Source Index. | MOVS, CMPS, LODS, REP MOVS, REP CMPS |
+| RDI | DI | DI | EDI | RDI | DIL | - | Destination Index | "Destination Index" because it points to the destination location in string/memory operations. Works as the counterpart to RSI in block memory operations. The "DI" stands for Destination Index. | MOVS, CMPS, STOS, SCAS, REP MOVS, REP STOS, REP SCAS |
+| RBP | BP | BP | EBP | RBP | BPL | - | Base Pointer | "Base Pointer" refers to its conventional role as the base of the current stack frame. Points to a fixed location in the stack frame, allowing reliable access to local variables and parameters even as RSP changes. The "BP" stands for Base Pointer. | ENTER, LEAVE |
+| RSP | SP | SP | ESP | RSP | SPL | - | Stack Pointer | "Stack Pointer" because it always points to the top of the call stack. Automatically adjusted by push/pop operations and function calls. Critical for program execution flow and function calling. The "SP" stands for Stack Pointer. | PUSH, POP, CALL, RET, ENTER, LEAVE, INT, IRET, Interrupts/Exceptions |
+| R8 | - | - | - | R8 | R8B | - | Extended GPR | Part of the x86-64 extension. Named simply R8-R15 with no historical baggage. These were added to provide more truly general-purpose registers without implicit behaviors from legacy instructions. | None (truly general purpose) |
+| R9 | - | - | - | R9 | R9B | - | Extended GPR | Part of the x86-64 extension. Named simply R8-R15 with no historical baggage. These were added to provide more truly general-purpose registers without implicit behaviors from legacy instructions. | None (truly general purpose) |
+| R10 | - | - | - | R10 | R10B | - | Extended GPR | Part of the x86-64 extension. Named simply R8-R15 with no historical baggage. These were added to provide more truly general-purpose registers without implicit behaviors from legacy instructions. | None (truly general purpose) |
+| R11 | - | - | - | R11 | R11B | - | Extended GPR | Part of the x86-64 extension. Named simply R8-R15 with no historical baggage. These were added to provide more truly general-purpose registers without implicit behaviors from legacy instructions. | None (truly general purpose) |
+| R12 | - | - | - | R12 | R12B | - | Extended GPR | Part of the x86-64 extension. Named simply R8-R15 with no historical baggage. These were added to provide more truly general-purpose registers without implicit behaviors from legacy instructions. | None (truly general purpose) |
+| R13 | - | - | - | R13 | R13B | - | Extended GPR | Part of the x86-64 extension. Named simply R8-R15 with no historical baggage. These were added to provide more truly general-purpose registers without implicit behaviors from legacy instructions. | None (truly general purpose) |
+| R14 | - | - | - | R14 | R14B | - | Extended GPR | Part of the x86-64 extension. Named simply R8-R15 with no historical baggage. These were added to provide more truly general-purpose registers without implicit behaviors from legacy instructions. | None (truly general purpose) |
+| R15 | - | - | - | R15 | R15B | - | Extended GPR | Part of the x86-64 extension. Named simply R8-R15 with no historical baggage. These were added to provide more truly general-purpose registers without implicit behaviors from legacy instructions. | None (truly general purpose) |
+
+- The "E" prefix in 32-bit mode stands for "Extended"
+- The "R" prefix in 64-bit mode stands for "Register"
+- R8-R15 were introduced with x86-64 architecture
+- AH, BH, CH, DH (high 8-bit registers) are only available for the original four registers (RAX, RBX, RCX, RDX)
+- SIL, DIL, BPL, SPL (low 8-bit versions of SI, DI, BP, SP) are only accessible in 64-bit mode
+
+### Special Purpose Registers 
+
+Special Purpose Registers are registers inside the CPU that hold critical control or status information needed for program execution (like instruction pointer, flags, or stack pointer). They are not intended to be freely modified by the programmer like general-purpose registers, since the CPU itself updates and uses them to manage execution flow.
+
+#### Instruction Pointer (IP / EIP / RIP)
+
+- The Instruction Pointer (IP) in 8086 (later called EIP in 32-bit and RIP in 64-bit CPUs) is a special-purpose register that always points to the next instruction to be executed in memory.
+- It works together with the Code Segment (CS) register to form the address of the current instruction.
+- After fetching an instruction, the CPU automatically updates the IP to point to the following instruction, unless execution flow is changed by jumps, calls, interrupts, or returns.
+- Not directly writable by normal instructions – it changes as the program executes, though programmers can alter it indirectly using control-transfer instructions (e.g., JMP, CALL, RET).
+
+
+#### Flags Register (FLAGS / EFLAGS / RFLAGS)
+
+- The Flags Register is a special-purpose register that holds status flags and control flags, reflecting the results of operations and controlling CPU behavior.
+- Status flags indicate outcomes of arithmetic or logical operations, e.g.:
+  - CF – Carry Flag
+  - ZF – Zero Flag
+  - SF – Sign Flag
+  - OF – Overflow Flag
+  - PF – Parity Flag
+- Control flags influence CPU operation, e.g.:
+  - IF – Interrupt Enable Flag
+  - DF – Direction Flag (for string instructions)
+- Implicit usage by instructions:
+  - Many instructions check flags automatically. For example:
+    - JZ / JE (Jump if Zero / Equal) → uses ZF
+    - JNZ / JNE (Jump if Not Zero / Not Equal) → uses ZF
+    - LOOP uses ECX/RCX and modifies ZF indirectly in some cases
+- The CPU automatically updates most flags during arithmetic/logical instructions. Some flags (like DF) can be set/cleared with special instructions (CLD, STD).
+- Programmers usually do not write arbitrary values into RFLAGS; they read or modify specific flags as needed using dedicated instructions.
+
+
+### Stack Pointer (SP / ESP / RSP)
+
+- The Stack Pointer is a special-purpose register that points to the top of the stack in memory.
+  - SP in 8086
+  - ESP in 80386 (32-bit)
+  - RSP in x86-64 (64-bit)
+- The CPU uses it implicitly in all stack operations, making it critical for function calls, local variables, and return addresses.
+- Used by instructions implicitly:
+  - PUSH / POP – adjusts the stack pointer automatically while storing or loading values.
+  - CALL / RET – stores the return address on the stack and retrieves it using the stack pointer.
+  - ENTER / LEAVE – stack frame setup/teardown.
+- Normally, programmers do not modify SP/RSP directly, except in low-level assembly routines or context switching. Direct changes can easily corrupt the stack.
+- Works together with BP/EBP/RBP to manage stack frames and access function parameters or local variables.
+
+### Segment Registers (CS, DS, SS, ES, FS, GS)
+
+- Segment Registers are special-purpose registers used by the CPU to determine the base address of different memory segments.
+  - CS – Code Segment (points to the segment containing the currently executing instructions)
+  - DS – Data Segment (default segment for most data accesses)
+  - SS – Stack Segment (used for stack operations)
+  - ES – Extra Segment (used for string and memory operations)
+  - FS, GS – Additional segments (commonly used in modern x86-64 for thread-local storage or OS kernel data)
+- Each segment register works together with an offset to form a physical memory address (in real mode) or is part of a segment descriptor (in protected mode).
+- Implicit usage by instructions:
+  - CS is used automatically by CALL, RET, JMP, and interrupts.
+  - SS is used implicitly for PUSH, POP, CALL, RET.
+  - DS is typically the default for data accesses unless overridden.
+  - ES, FS, GS can be used with string or memory instructions and some system-level operations.
+- Programmers usually do not modify segment registers directly in modern 64-bit programming; they are mostly handled by the OS.
+
+## Code and Data Sections in Assembly
+
+When writing assembly programs, the source file is usually divided into sections. Each section has a specific purpose, and the assembler + linker use this division to organize the final executable.
+
+### 1. Code Section (.text)
+
+Contains the actual instructions (machine code) the CPU executes.
+
+Typically marked with the directive:
+
+```asm
+section .text
+global _start    ; or main, depending on OS/ABI
+_start:
+    mov eax, 1   ; system call number for exit (Linux 32-bit)
+    int 0x80     ; invoke system call
+```
+
+On most platforms, .text must be read-only + executable (no writable data here).
+
+### 2. Data Section (.data)
+
+Contains initialized global or static variables.
+Example:
+
+```asm
+section .data
+msg db "Hello, world!", 0xA
+len equ $ - msg
+```
+
+Variables here have a fixed value when the program starts.
+
+### 3. BSS Section (.bss)
+
+Contains uninitialized global or static variables.
+
+Memory is reserved but not explicitly initialized in the file; the OS zeroes it at runtime.
+
+Example:
+
+```asm
+section .bss
+buffer resb 64    ; reserve 64 bytes
+```
+
+**Why separate .bss from .data?**
+
+- Saves disk space in the executable - uninitialized data doesn't need to be stored in the file
+- The OS automatically zeros this memory when loading the program
+
+### 4. Stack Section (Runtime)
+
+Unlike the sections above, the stack is not defined in your assembly source code. Instead, it is created automatically at runtime by the operating system when your program starts.
+
+**Key characteristics:**
+
+- **Allocated by OS:** The OS sets up the stack before your program's first instruction executes
+- **RSP initialized:** The stack pointer (RSP) is set to point to the top of this allocated stack space
+- **Dynamic memory:** Used for function call frames, local variables, return addresses, and temporary storage
+- **Grows downward:** On x86/x86-64, the stack grows from high memory addresses toward low addresses
+- **Size varies:** Typical default sizes range from 1MB to 8MB, depending on the OS
+
+**You interact with the stack using:**
+
+```asm
+push rax        ; Decrements RSP, stores RAX at [RSP]
+pop rbx         ; Loads value from [RSP] into RBX, increments RSP
+call function   ; Pushes return address, jumps to function
+ret             ; Pops return address into RIP
+```
+
+### Defining Data in Assembly
+
+Inside the data or bss sections, we use directives to reserve memory and define constants. These don’t generate instructions — they just tell the assembler how to lay out memory.
+
+#### 1. Defining Data with db, dw, dd, dq
+- These directives allocate memory and optionally initialize it.
+- Suffix indicates the size:
+  - db → define byte (8-bit)
+  - dw → define word (16-bit)
+  - dd → define doubleword (32-bit)
+  - dq → define quadword (64-bit)
+
+Example
+```asm
+section .data
+byteVal db 0x1A        ; one byte
+wordVal dw 1234        ; two bytes (little-endian)
+arr     dd 1, 2, 3, 4  ; array of 4 dwords
+msg     db "Hello", 0  ; string with null terminator
+```
+
+#### 2. Reserving Space with res Directives
+
+- Used in the .bss section (uninitialized data).
+- Doesn’t take up space in the executable, only reserves memory at runtime.
+- Examples:
+  - resb → reserve bytes
+  - resw → reserve words
+  - resd → reserve doublewords
+  - resq → reserve quadwords
+
+Example:
+
+```asm
+section .bss
+buffer resb 64     ; reserve 64 bytes
+table  resd 16     ; reserve 16 dwords
+```
+
+#### 3. Constants with equ and %define
+
+- equ: creates a symbol with a fixed value (like a constant).
+  - Replaced by the assembler during assembly.
+  - Example:
+
+    ```asm
+    len equ 100
+    buffer resb len   ; reserve 100 bytes
+    ```
+- %define: macro-style substitution (similar to #define in C).
+  - Useful for constants or code snippets.
+  - Example:
+
+    ```asm
+    %define SYS_EXIT 60
+    %define STDOUT   1
+    ```
+
+#### 4. Using Labels to Reference Data
+
+When you declare data in .data or .bss, the label becomes a symbol that represents the address of that data in memory.
+
+```asm
+section .data
+msg db "Hi!", 0     ; 'msg' is the label, points to the start of the string
+num dw 1234         ; 'num' is the label for a 16-bit word
+```
+
+Here:
+- msg → address of the string "Hi!"
+- num → address of the word 1234
+
+#### 5. Dereferencing Data with []
+
+To access the contents stored at a label (rather than the address itself), we use square brackets `[]`.
+
+Example
+
+```asm
+mov rax, msg      ; loads the ADDRESS of msg into rax
+mov al, [msg]     ; loads the FIRST BYTE of msg ("H") into al
+mov ax, [num]     ; loads the 16-bit value 1234 into ax
+```
+
+- [label] → means "value stored at memory pointed by label."
+- label (without brackets) → means "the address of the label."
+
+#### 6. Using Labels with Offsets
+
+Since labels mark the start of data, you can access later elements by adding an offset.
+
+```asm
+mov al, [msg+1]   ; loads 'i' from "Hi!"
+mov al, [msg+2]   ; loads '!' 
+```
+
+This is especially useful for arrays and strings.
