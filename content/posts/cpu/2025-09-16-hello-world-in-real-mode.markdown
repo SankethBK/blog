@@ -5,7 +5,14 @@ categories: ["cpu"]
 tags: ["cpu", "x86"]
 author: Sanketh
 references:
+    - title: x86 Assembly Guide (CS Virginia)
+      url: https://www.cs.virginia.edu/~evans/cs216/guides/x86.html
 
+    - title: x86 and amd64 instruction reference 
+      url: https://www.felixcloutier.com/x86/
+
+    - title: Intel® 64 and IA-32 Architectures Software Developer Manuals
+      url: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
 ---
 
 When your x86 computer first starts up, it's in a surprisingly primitive state:
