@@ -4,6 +4,9 @@ date:   2025-08-28
 categories: ["cpu"]
 tags: ["cpu", "x86"]
 author: Sanketh
+references:
+  - title: x86 Assembly Guide (Yale University)
+    url: https://flint.cs.yale.edu/cs421/papers/x86-asm/asm.html
 ---
 
 When learning assembly, it’s easy to get lost in the “why” of CPU design, but this blog will stay focused on the x86 instruction set itself. The goal here isn’t to study computer architecture or dive into microarchitectural details — instead, we’ll build a working reference for how to write and understand x86 assembly code. Everything that follows is about the x86 family of processors, starting from the registers that form the foundation of all instructions.
