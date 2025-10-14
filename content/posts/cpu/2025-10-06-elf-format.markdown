@@ -1,5 +1,5 @@
 ---
-title:  "ELF Format"
+title:  "ELF Format: Part 1"
 date:   2025-10-01
 categories: ["elf"]
 tags: ["elf", "reverse engineering"]
