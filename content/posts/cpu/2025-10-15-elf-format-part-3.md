@@ -867,3 +867,292 @@ That’s because `.bss` doesn’t exist in the binary — it’s just a placehol
 2. It initializes all bytes to **zero** (per the C standard).
 3. The variables behave like normal globals at runtime.
 
+## Dynamic Linking Sections
+
+### 1. .got (Global Offset Table)
+
+- **Type**: `SHT_PROGBITS`
+- **Flags**: `SHF_WRITE | SHF_ALLOC` (WA)
+- **Contains**: Addresses of global variables and dynamically linked functions
+
+The Global Offset Table (GOT) is a key structure used in Position-Independent Code (PIC).
+When your program accesses a global variable or calls an external function, it doesn’t use a hardcoded address — instead, it looks it up through the GOT.
+
+Each GOT entry holds the actual runtime address of a symbol (variable or function).
+This indirection allows the program to be loaded at any memory address, which is essential for shared libraries and modern systems using ASLR (Address Space Layout Randomization).
+  
+Used for position-independent code to access global variables.
+
+```bash
+$ readelf -r main
+
+Relocation section '.rela.dyn' at offset 0x550 contains 8 entries:
+  Offset          Info           Type           Sym. Value    Sym. Name + Addend
+000000003db8  000000000008 R_X86_64_RELATIVE                    1140
+000000003dc0  000000000008 R_X86_64_RELATIVE                    1100
+000000004008  000000000008 R_X86_64_RELATIVE                    4008
+000000003fd8  000100000006 R_X86_64_GLOB_DAT 0000000000000000 __libc_start_main@GLIBC_2.34 + 0
+000000003fe0  000200000006 R_X86_64_GLOB_DAT 0000000000000000 _ITM_deregisterTM[...] + 0
+000000003fe8  000400000006 R_X86_64_GLOB_DAT 0000000000000000 __gmon_start__ + 0
+000000003ff0  000500000006 R_X86_64_GLOB_DAT 0000000000000000 _ITM_registerTMCl[...] + 0
+000000003ff8  000600000006 R_X86_64_GLOB_DAT 0000000000000000 __cxa_finalize@GLIBC_2.2.5 + 0
+
+Relocation section '.rela.plt' at offset 0x610 contains 1 entry:
+  Offset          Info           Type           Sym. Value    Sym. Name + Addend
+000000003fd0  000300000007 R_X86_64_JUMP_SLO 0000000000000000 puts@GLIBC_2.2.5 + 0
+```
+
+The entries there correspond to addresses stored in .got that are updated by the dynamic linker when the program starts.
+
+**What are these `.rela.dyn` and `.rela.plt` sections?**
+
+Both are their own types of ELF sections that hold relocation entries.
+
+| Section     | Type       | Purpose                                                                    |
+| ----------- | ---------- | -------------------------------------------------------------------------- |
+| `.rela.dyn` | `SHT_RELA` | Relocations for global/static **data** (in `.data`, `.got`, etc.)          |
+| `.rela.plt` | `SHT_RELA` | Relocations for **function calls** (entries in `.got.plt`, used by `.plt`) |
+
+
+In short:
+
+- `.rela.dyn` → data relocations
+- `.rela.plt` → function relocations
+
+Both are processed by the dynamic linker (`ld.so`) at program startup or during lazy binding.
+
+All the offsets shown in `.rela.dyn` and `.rela.plt` refer to memory locations that will be part of the Global Offset Table (GOT) in your process at runtime.
+
+The GOT is just a table of addresses.
+Before relocation, entries may be zero or placeholders.
+After relocation, the dynamic linker fills them with real addresses of variables or functions.
+
+### 2. Here’s a nicely written section for your blog on **`.got.plt`**, consistent with your other ELF notes 👇
+
+---
+
+### 2. .got.plt — Global Offset Table for PLT
+
+* **Type:** `SHT_PROGBITS`
+* **Flags:** `SHF_WRITE | SHF_ALLOC` (WA)
+* **Contains:** Addresses of dynamically linked functions used by the PLT
+
+The `.got.plt` section is a special part of the **Global Offset Table (GOT)** that works hand-in-hand with the **Procedure Linkage Table (PLT)**.
+
+When your program calls an external function (like `puts`, `printf`, or `malloc`), it doesn’t know their real addresses at compile time. Instead, it goes through a small trampoline in `.plt`, which uses the `.got.plt` entries to eventually reach the actual function in the shared library.
+
+**How It Works**
+
+- Each entry in `.got.plt` holds the **runtime-resolved address** of an external function.
+- Initially, these entries point to the **PLT stubs** (so the dynamic linker can intercept the first call).
+- After the function is resolved, the dynamic linker **updates the GOT entry** with the real function address — so the next call goes directly there.
+
+This mechanism enables **lazy binding** — external symbols are resolved only when first used, improving startup performance.
+
+Example
+
+```bash
+$ readelf -x .got.plt main
+
+Hex dump of section '.got.plt':
+  0x00003fb8  00000000 00000000 00000000 00000000  ................
+  0x00003fc8  00000000 00000000 b5110000 00000000  ................
+```
+
+And from the relocation table:
+
+```bash
+$ readelf -r main | grep plt
+
+000000003fd0  000300000007 R_X86_64_JUMP_SLOT  puts@GLIBC_2.2.5 + 0
+```
+
+This means:
+
+- The entry at address `0x3fd0` in `.got.plt` corresponds to the symbol `puts`.
+- The relocation type `R_X86_64_JUMP_SLOT` tells the dynamic linker to fill this slot with the runtime address of `puts()` when first called.
+
+### 3. .dynamic
+
+- **Type**: `SHT_DYNAMIC`
+- **Flags**: `SHF_WRITE | SHF_ALLOC` (WA)
+- **Contains**: Dynamic linking information
+
+When you compile a dynamically linked program (default in Linux), the compiler embeds a `.dynamic` section in your binary.
+This section acts as a directory of pointers and configuration values that tell the dynamic linker:
+  
+Array of `Elf64_Dyn` structures containing tags like:
+- `DT_NEEDED`: Required shared libraries
+- `DT_SYMTAB`: Address of symbol table
+- `DT_STRTAB`: Address of string table
+- `DT_RELA`: Address of relocation table
+
+
+```bash
+
+$ readelf -d main
+
+Dynamic section at offset 0x2dc8 contains 27 entries:
+  Tag        Type                         Name/Value
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+ 0x000000000000000c (INIT)               0x1000
+ 0x000000000000000d (FINI)               0x117c
+ 0x0000000000000019 (INIT_ARRAY)         0x3db8
+ 0x000000000000001b (INIT_ARRAYSZ)       8 (bytes)
+ 0x000000000000001a (FINI_ARRAY)         0x3dc0
+ 0x000000000000001c (FINI_ARRAYSZ)       8 (bytes)
+ 0x000000006ffffef5 (GNU_HASH)           0x3b0
+ 0x0000000000000005 (STRTAB)             0x480
+ 0x0000000000000006 (SYMTAB)             0x3d8
+ 0x000000000000000a (STRSZ)              141 (bytes)
+ 0x000000000000000b (SYMENT)             24 (bytes)
+ 0x0000000000000015 (DEBUG)              0x0
+ 0x0000000000000003 (PLTGOT)             0x3fb8
+ 0x0000000000000002 (PLTRELSZ)           24 (bytes)
+ 0x0000000000000014 (PLTREL)             RELA
+ 0x0000000000000017 (JMPREL)             0x610
+ 0x0000000000000007 (RELA)               0x550
+ 0x0000000000000008 (RELASZ)             192 (bytes)
+ 0x0000000000000009 (RELAENT)            24 (bytes)
+ 0x000000000000001e (FLAGS)              BIND_NOW
+ 0x000000006ffffffb (FLAGS_1)            Flags: NOW PIE
+ 0x000000006ffffffe (VERNEED)            0x520
+ 0x000000006fffffff (VERNEEDNUM)         1
+ 0x000000006ffffff0 (VERSYM)             0x50e
+ 0x000000006ffffff9 (RELACOUNT)          3
+ 0x0000000000000000 (NULL)               0x0
+ ```
+
+At runtime, the loader (`ld-linux.so`) reads these entries to correctly link your program with shared libraries before it starts executing `main()`.
+
+## Symbol and String Tables
+
+### 1. .symtab - Symbol Table
+
+- Type: `SHT_SYMTAB`
+- Flags: None (not loaded)
+- Contains: All symbols (functions, global/static variables) used for linking and debugging
+
+The `.symtab` section holds a table of symbols that represent every significant entity in your program — functions, variables, and sections.
+
+Each entry is an `Elf64_Sym` structure:
+
+```c
+typedef struct {
+  Elf64_Word    st_name;   // Symbol name (string table offset)
+  unsigned char st_info;   // Type and binding
+  unsigned char st_other;  // Visibility
+  Elf64_Half    st_shndx;  // Section index
+  Elf64_Addr    st_value;  // Symbol value (address)
+  Elf64_Xword   st_size;   // Symbol size
+} Elf64_Sym;
+```
+
+**How it’s used**
+
+- The linker uses `.symtab` to match symbol definitions (e.g., `int x`;) with their references (e.g., `extern int x`;) across multiple object files.
+- Each symbol name in `.symtab` corresponds to an offset in the `.strtab` (string table) section, where actual names are stored.
+
+```bash
+$ readelf -s main | head
+
+Symbol table '.dynsym' contains 7 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+     1: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND _[...]@GLIBC_2.34 (2)
+     2: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_deregisterT[...]
+     3: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND puts@GLIBC_2.2.5 (3)
+     4: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND __gmon_start__
+     5: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_registerTMC[...]
+     6: 0000000000000000     0 FUNC    WEAK   DEFAULT  UND [...]@GLIBC_2.2.5 (3)
+```
+
+**Interpretation:**
+
+- **Type**: Describes what the symbol is (FUNC, OBJECT, etc.)
+- **Bind**: Whether it’s LOCAL (visible only in file) or GLOBAL (visible to linker)
+- **Ndx**: Section index where the symbol is defined (e.g., .text, .data)
+- **Value**: Its address (if defined)
+- **Name**: Symbol name (resolved from .strtab)
+
+
+Here’s the detailed explanation for **`.strtab` (String Table)**:
+
+### 2. .strtab – String Table
+
+* **Type**: `SHT_STRTAB`
+* **Flags**: *(none)* (not loaded into memory)
+* **Contains**: Null-terminated strings used by other sections like `.symtab` and relocation entries.
+
+Each symbol in `.symtab` doesn’t store its name directly — instead, the `st_name` field holds an **offset** into `.strtab`, where the actual string (symbol name) is stored.
+
+Example
+
+Suppose you have these symbols:
+
+```c
+int var;
+void func() {}
+```
+
+The `.symtab` entries might look like this:
+
+| Symbol | st_name (offset) | st_value | ... |
+| ------ | ---------------- | -------- | --- |
+| var    | 0x00             | 0x601000 | ... |
+| func   | 0x04             | 0x401020 | ... |
+
+And the `.strtab` will actually contain:
+
+```
+0x00: "var\0func\0"
+```
+
+Notes
+
+- `.strtab` appears **alongside `.symtab`**, used mainly by the **linker and debugger**, not at runtime.
+- It’s **not loaded into memory** (unlike `.rodata` or `.data`).
+- There’s often also a **`.shstrtab`** — the *section header string table*, which stores **section names** (like `.text`, `.data`, `.bss`).
+
+
+### 3. .dynstr – Dynamic String Table
+
+* **Type**: `SHT_STRTAB`
+* **Flags**: `SHF_ALLOC` (A) — loaded into memory
+* **Contains**: Null-terminated strings used **by dynamic linking sections** such as `.dynsym`, `.rela.plt`, and `.dynamic`.
+
+
+**Purpose**
+
+`.dynstr` serves the same purpose as `.strtab`, but only for **symbols needed at runtime** — i.e., dynamic symbols that the loader (`ld.so`) must resolve when the program is loaded.
+
+
+
+**Example**
+
+If your program uses shared libraries like:
+
+```c
+printf("Hi");
+```
+
+Then the **dynamic symbol table (`.dynsym`)** will contain an entry for `printf`,
+and its `st_name` field will point to an offset inside `.dynstr`:
+
+| Symbol | st_name (offset) | st_value | ... |
+| ------ | ---------------- | -------- | --- |
+| printf | 0x00             | 0x0000   | ... |
+
+And `.dynstr` will contain:
+
+```
+0x00: "printf\0libc.so.6\0"
+```
+
+Comparison
+
+| Section   | Used By                  | Loaded? | Contains        | Purpose                          |
+| --------- | ------------------------ | ------- | --------------- | -------------------------------- |
+| `.strtab` | Linker / Debugger        | ❌       | All symbols     | For static linking and debugging |
+| `.dynstr` | Runtime linker (`ld.so`) | ✅       | Dynamic symbols | For dynamic linking              |
+
