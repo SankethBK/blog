@@ -215,7 +215,7 @@ It contains a path string, typically something like: `/lib64/ld-linux-x86-64.so.
 
 - PIE executables: Have `PT_INTERP` segment
 - Shared libraries: Do NOT have `PT_INTERP` segment
-- Both have type ET_DYN, but `PT_INTERP` tells them apart
+- Both have type `ET_DYN`, but `PT_INTERP` tells them apart
 
 ##### Role during Program Startup
 
@@ -310,7 +310,7 @@ The ELF header has:
 
 This helps the OS loader (like the kernel) find and load the segments from the file into memory.
 
-e the executable is loaded, those headers are relocated into virtual memory.
+Once the executable is loaded, those headers are relocated into virtual memory.
 The dynamic linker (and sometimes the program itself) might need to find them after relocation, i.e., in memory space — not the original file offset.
 
 That’s where PT_PHDR comes in.
