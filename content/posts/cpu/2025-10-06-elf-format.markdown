@@ -31,6 +31,7 @@ An ELF file is organized into several key components that serve different purpos
 ### The Big Picture
 
 At a high level, every ELF file contains:
+
 **1. ELF Header:** Always at the beginning (offset 0x0)
 - Identifies the file as ELF
 - Contains metadata about the file (architecture, entry point, etc.)
