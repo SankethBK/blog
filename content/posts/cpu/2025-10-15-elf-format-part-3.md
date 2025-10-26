@@ -654,32 +654,218 @@ Hex dump of section '.rodata':
 
 The Procedure Linkage Table (PLT) is a section in ELF executables and shared libraries that enables lazy binding — meaning, external (shared library) functions like printf, puts, or malloc are resolved only when first called, not when the program starts.
 
-When your program calls puts("hi");, the compiler doesn’t know where puts actually lives — it’s defined in the C library (libc.so.6).
-So instead of a direct call, it generates a call to a stub in `.plt`.
+When your program calls `puts("hi");`, the compiler doesn’t know where puts actually lives — it’s defined in the C library (`libc.so.6`). So instead of a direct call, it generates a call to a stub in `.plt`.
 This stub is responsible for eventually reaching the real puts function in memory.
 
-To inspect the PLT of our program
+Despite the name "Procedure Linkage Table", the PLT is NOT a table - it's continuous executable code (an array of small code stubs).
+
+```
+.plt section (executable code):
+┌─────────────────────────────────┐
+│ PLT[0]: Resolver stub (code)    │  ← 16 bytes of code
+├─────────────────────────────────┤
+│ PLT[1]: printf stub (code)      │  ← 16 bytes of code
+├─────────────────────────────────┤
+│ PLT[2]: malloc stub (code)      │  ← 16 bytes of code
+├─────────────────────────────────┤
+│ PLT[3]: free stub (code)        │  ← 16 bytes of code
+└─────────────────────────────────┘
+```
+
+Each "entry" is a small function (code snippet), not a data structure.
+
+#### PLT Entry "Format" 
+
+Each PLT entry is 16 bytes of x86-64 assembly:
+
+```
+# Generic PLT entry format (16 bytes):
+<function@plt>:
+   0: endbr64              # 4 bytes - security feature
+   4: jmp    *GOT[n]       # 6 bytes - indirect jump through GOT
+  10: push   $index        # 5 bytes - push relocation index
+  15: jmp    PLT[0]        # 5 bytes - jump to resolver
+  (total: 16 bytes, but padding makes them aligned)
+```
+
+**Why It's Called a "Table"**
+
+Historical reasons! It's organized like a table:
+- **Fixed-size entries** (16 bytes each)
+- **Array-like access** (PLT[0], PLT[1], PLT[2]...)
+- **Indexed by relocation number**
+
+Let's take this C program
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    printf("Before malloc\n");
+
+    void *ptr = malloc(100);
+    printf("Allocated at: %p\n", ptr);
+
+    free(ptr);
+    printf("After free\n");
+
+    return 0;
+}
+```
+
+We can get its `.plt` by 
 
 ```bash
-$ objdump -d -j .plt main
+$ objdump -d -j .plt demo
 
-main:     file format elf64-x86-64
+demo:     file format elf64-x86-64
 
 
 Disassembly of section .plt:
 
-0000000000001020 <.plt>:
-    1020:	ff 35 9a 2f 00 00    	push   0x2f9a(%rip)        # 3fc0 <_GLOBAL_OFFSET_TABLE_+0x8>
-    1026:	ff 25 9c 2f 00 00    	jmp    *0x2f9c(%rip)        # 3fc8 <_GLOBAL_OFFSET_TABLE_+0x10>
-    102c:	0f 1f 40 00          	nopl   0x0(%rax)
-    1030:	f3 0f 1e fa          	endbr64
-    1034:	68 00 00 00 00       	push   $0x0
-    1039:	e9 e2 ff ff ff       	jmp    1020 <_init+0x20>
-    103e:	66 90                	xchg   %ax,%ax
+0000000000401020 <.plt>:
+  401020:	ff 35 ca 2f 00 00    	push   0x2fca(%rip)        # 403ff0 <_GLOBAL_OFFSET_TABLE_+0x8>
+  401026:	ff 25 cc 2f 00 00    	jmp    *0x2fcc(%rip)        # 403ff8 <_GLOBAL_OFFSET_TABLE_+0x10>
+  40102c:	0f 1f 40 00          	nopl   0x0(%rax)
+  401030:	f3 0f 1e fa          	endbr64
+  401034:	68 00 00 00 00       	push   $0x0
+  401039:	e9 e2 ff ff ff       	jmp    401020 <_init+0x20>
+  40103e:	66 90                	xchg   %ax,%ax
+  401040:	f3 0f 1e fa          	endbr64
+  401044:	68 01 00 00 00       	push   $0x1
+  401049:	e9 d2 ff ff ff       	jmp    401020 <_init+0x20>
+  40104e:	66 90                	xchg   %ax,%ax
+  401050:	f3 0f 1e fa          	endbr64
+  401054:	68 02 00 00 00       	push   $0x2
+  401059:	e9 c2 ff ff ff       	jmp    401020 <_init+0x20>
+  40105e:	66 90                	xchg   %ax,%ax
+  401060:	f3 0f 1e fa          	endbr64
+  401064:	68 03 00 00 00       	push   $0x3
+  401069:	e9 b2 ff ff ff       	jmp    401020 <_init+0x20>
+  40106e:	66 90                	xchg   %ax,%ax
+
+$ readelf -r demo
+
+Relocation section '.rela.dyn' at offset 0x518 contains 2 entries:
+  Offset          Info           Type           Sym. Value    Sym. Name + Addend
+000000403fd8  000200000006 R_X86_64_GLOB_DAT 0000000000000000 __libc_start_main@GLIBC_2.34 + 0
+000000403fe0  000500000006 R_X86_64_GLOB_DAT 0000000000000000 __gmon_start__ + 0
+
+Relocation section '.rela.plt' at offset 0x548 contains 4 entries:
+  Offset          Info           Type           Sym. Value    Sym. Name + Addend
+000000404000  000100000007 R_X86_64_JUMP_SLO 0000000000000000 free@GLIBC_2.2.5 + 0
+000000404008  000300000007 R_X86_64_JUMP_SLO 0000000000000000 puts@GLIBC_2.2.5 + 0
+000000404010  000400000007 R_X86_64_JUMP_SLO 0000000000000000 printf@GLIBC_2.2.5 + 0
+000000404018  000600000007 R_X86_64_JUMP_SLO 0000000000000000 malloc@GLIBC_2.2.5 + 0
 ```
 
-- The first instruction jumps via the GOT (Global Offset Table).
-- The push+jump sequence helps the dynamic linker resolve the symbol the first time it’s used
+
+
+Let's analyze this output
+
+```
+PLT[0]: Resolver (0x401020)      ← Common trampoline
+PLT[1]: free   (0x401030)        
+PLT[2]: puts   (0x401040)     
+PLT[3]: printf     (0x401050)
+PLT[3]: malloc     (0x401050)     
+
+```
+
+#### PLT[0] - The Resolver Trampoline (0x401020)
+
+```
+0000000000401020 <.plt>:
+  401020: ff 35 ca 2f 00 00    push   0x2fca(%rip)    # 403ff0 <_GLOBAL_OFFSET_TABLE_+0x8>
+  401026: ff 25 cc 2f 00 00    jmp    *0x2fcc(%rip)   # 403ff8 <_GLOBAL_OFFSET_TABLE_+0x10>
+  40102c: 0f 1f 40 00          nopl   0x0(%rax)
+```
+
+1. `push 0x2fca(%rip)` → Pushes `GOT[1]` (link_map structure)
+  - Address: `0x401020 + 6 + 0x2fca = 0x403ff0`
+  - This is `_GLOBAL_OFFSET_TABLE_+0x8` (GOT[1])
+  - Contains runtime info about loaded libraries
+
+2. `jmp *0x2fcc(%rip)` → Jumps to `GOT[2]` (resolver function)
+  - Address: `0x401026 + 6 + 0x2fcc = 0x403ff8`
+  - This is `_GLOBAL_OFFSET_TABLE_+0x10` (GOT[2])
+  - Contains address of `_dl_runtime_resolve` in `ld.so`
+
+3. `nopl` → Padding/alignment
+
+#### The subsequent PLT entries (PLT1, PLT2, etc.)
+
+Example: `PLT1` (for `free`):
+
+```
+401030: f3 0f 1e fa           endbr64
+401034: 68 00 00 00 00        push   $0x0
+401039: e9 e2 ff ff ff        jmp    401020 <.plt>
+```
+
+Breakdown:
+- `endbr64` - security
+- `push $0x0` — push the function index (here 0 → corresponds to first relocation entry).
+- `jmp 401020` — jump back to `PLT0`, which will now use that index to find the corresponding GOT entry (GOT[3] onwards).
+- `xchg %ax,%ax` - Padding (2-byte NOP)
+
+Now let's track the entre process 
+
+If we disassemble the code, we can see the call to printf jumps to address `0x401090`
+```
+  4011d5:	e8 b6 fe ff ff       	call   401090 <printf@plt>
+```
+
+The address `0x401090` falls inside `.plt.sec` section. Modern GCC uses .plt.sec (PLT secondary) for Intel CET (Control-flow Enforcement Technology).
+
+```
+sanketh@sanketh-81de:~/assembly/plt$ objdump -d -j .plt.sec demo
+
+demo:     file format elf64-x86-64
+
+
+Disassembly of section .plt.sec:
+
+0000000000401070 <free@plt>:
+  401070:	f3 0f 1e fa          	endbr64
+  401074:	ff 25 86 2f 00 00    	jmp    *0x2f86(%rip)        # 404000 <free@GLIBC_2.2.5>
+  40107a:	66 0f 1f 44 00 00    	nopw   0x0(%rax,%rax,1)
+
+0000000000401080 <puts@plt>:
+  401080:	f3 0f 1e fa          	endbr64
+  401084:	ff 25 7e 2f 00 00    	jmp    *0x2f7e(%rip)        # 404008 <puts@GLIBC_2.2.5>
+  40108a:	66 0f 1f 44 00 00    	nopw   0x0(%rax,%rax,1)
+
+0000000000401090 <printf@plt>:
+  401090:	f3 0f 1e fa          	endbr64
+  401094:	ff 25 76 2f 00 00    	jmp    *0x2f76(%rip)        # 404010 <printf@GLIBC_2.2.5>
+  40109a:	66 0f 1f 44 00 00    	nopw   0x0(%rax,%rax,1)
+
+00000000004010a0 <malloc@plt>:
+  4010a0:	f3 0f 1e fa          	endbr64
+  4010a4:	ff 25 6e 2f 00 00    	jmp    *0x2f6e(%rip)        # 404018 <malloc@GLIBC_2.2.5>
+  4010aa:	66 0f 1f 44 00 00    	nopw   0x0(%rax,%rax,1)
+```
+
+Our binary has **two PLT-related sections:**
+
+ **1. `.plt` - Lazy binding resolver stubs**
+```
+0x401020: PLT[0] - Common resolver
+0x401030: PLT[1] - free resolver stub
+0x401040: PLT[2] - puts resolver stub  
+0x401050: PLT[3] - printf resolver stub
+0x401060: PLT[4] - malloc resolver stub
+```
+
+ **2. `.plt.sec` - Actual PLT entries (with CET security)**
+```
+0x401070: free@plt
+0x401080: puts@plt
+0x401090: printf@plt  ← Your code calls this!
+0x4010a0: malloc@plt
+```
 
 ### 3. .plt.got
 
@@ -873,63 +1059,71 @@ That’s because `.bss` doesn’t exist in the binary — it’s just a placehol
 
 - **Type**: `SHT_PROGBITS`
 - **Flags**: `SHF_WRITE | SHF_ALLOC` (WA)
-- **Contains**: Addresses of global variables and dynamically linked functions
+- **Contains**: Holds addresses of global variables and dynamically linked functions used by position-independent code (PIC).
 
-The Global Offset Table (GOT) is a key structure used in Position-Independent Code (PIC).
-When your program accesses a global variable or calls an external function, it doesn’t use a hardcoded address — instead, it looks it up through the GOT.
 
-Each GOT entry holds the actual runtime address of a symbol (variable or function).
-This indirection allows the program to be loaded at any memory address, which is essential for shared libraries and modern systems using ASLR (Address Space Layout Randomization).
-  
-Used for position-independent code to access global variables.
+In Position-Independent Code (PIC) — used in shared libraries and ASLR-enabled executables, the compiler cannot assume any fixed address for globals or external functions. Instead of hardcoding addresses, the code goes through an indirect table of addresses called the Global Offset Table (GOT).
 
-```bash
-$ readelf -r main
+Each GOT entry holds the actual runtime address of a symbol (variable or function). At runtime, the dynamic linker (`ld.so`) fills in the correct addresses so that your program can access everything correctly no matter where it’s loaded in memory.
 
-Relocation section '.rela.dyn' at offset 0x550 contains 8 entries:
-  Offset          Info           Type           Sym. Value    Sym. Name + Addend
-000000003db8  000000000008 R_X86_64_RELATIVE                    1140
-000000003dc0  000000000008 R_X86_64_RELATIVE                    1100
-000000004008  000000000008 R_X86_64_RELATIVE                    4008
-000000003fd8  000100000006 R_X86_64_GLOB_DAT 0000000000000000 __libc_start_main@GLIBC_2.34 + 0
-000000003fe0  000200000006 R_X86_64_GLOB_DAT 0000000000000000 _ITM_deregisterTM[...] + 0
-000000003fe8  000400000006 R_X86_64_GLOB_DAT 0000000000000000 __gmon_start__ + 0
-000000003ff0  000500000006 R_X86_64_GLOB_DAT 0000000000000000 _ITM_registerTMCl[...] + 0
-000000003ff8  000600000006 R_X86_64_GLOB_DAT 0000000000000000 __cxa_finalize@GLIBC_2.2.5 + 0
+#### GOT Entry Format
 
-Relocation section '.rela.plt' at offset 0x610 contains 1 entry:
-  Offset          Info           Type           Sym. Value    Sym. Name + Addend
-000000003fd0  000300000007 R_X86_64_JUMP_SLO 0000000000000000 puts@GLIBC_2.2.5 + 0
+The GOT is just a contiguous array of addresses.
+Each entry is 8 bytes (on x86-64):
+
+```c
+typedef struct {
+    Elf64_Addr address;   // The resolved runtime address of the symbol
+} GOTEntry;
 ```
 
-The entries there correspond to addresses stored in .got that are updated by the dynamic linker when the program starts.
+So effectively:
 
-**What are these `.rela.dyn` and `.rela.plt` sections?**
+```bash
+.got:
+  +0x00 -> address of _DYNAMIC
+  +0x08 -> address of __libc_start_main
+  +0x10 -> address of puts
+  ...
+```
 
-Both are their own types of ELF sections that hold relocation entries.
+But logically we can think of GOT as 
 
-| Section     | Type       | Purpose                                                                    |
-| ----------- | ---------- | -------------------------------------------------------------------------- |
-| `.rela.dyn` | `SHT_RELA` | Relocations for global/static **data** (in `.data`, `.got`, etc.)          |
-| `.rela.plt` | `SHT_RELA` | Relocations for **function calls** (entries in `.got.plt`, used by `.plt`) |
+```bash
+| Symbol              | GOT Entry (before relocation) | GOT Entry (after relocation) |
+| ------------------- | ----------------------------- | ---------------------------- |
+| `puts@GLIBC_2.2.5`  | 0x0000000000000000            | 0x00007ffff7e2e6b0           |
+| `__libc_start_main` | 0x0000000000000000            | 0x00007ffff7e1e170           |
+| `global_var`        | 0x0000000000000000            | 0x0000555555556020           |
+```
+
+**If GOT is just a list of addresses, then how does linker know which address maps to which symbol?**
+
+The relocation entries map GOT addresses to symbols.
+
+Each relocation entry says:
+
+```bash
+Offset: 0x3fc0          ← GOT entry address
+Symbol: malloc          ← What symbol this entry is for
+Type: R_X86_64_JUMP_SLOT
+```
+
+So the dynamic linker knows: "GOT entry at address 0x3fc0 should contain the address of malloc"
+
+We will dive deep into relocations in later parts. 
+
+#### How the GOT Gets Filled?
+
+1. **Compiler phase:** Generates code with placeholders referring to GOT offsets.
+2. **Linker phase (`ld`):** Emits relocation entries:
+   - `.rela.dyn` → global variables and data symbols
+   - `.rela.plt` → functions called through the PLT
+3. **Runtime (`ld.so`):** When the program loads:
+   - Reads relocations from `.rela.dyn` and `.rela.plt`
+   - Writes real addresses into `.got` and `.got.plt` entries
 
 
-In short:
-
-- `.rela.dyn` → data relocations
-- `.rela.plt` → function relocations
-
-Both are processed by the dynamic linker (`ld.so`) at program startup or during lazy binding.
-
-All the offsets shown in `.rela.dyn` and `.rela.plt` refer to memory locations that will be part of the Global Offset Table (GOT) in your process at runtime.
-
-The GOT is just a table of addresses.
-Before relocation, entries may be zero or placeholders.
-After relocation, the dynamic linker fills them with real addresses of variables or functions.
-
-### 2. Here’s a nicely written section for your blog on **`.got.plt`**, consistent with your other ELF notes 👇
-
----
 
 ### 2. .got.plt — Global Offset Table for PLT
 
@@ -937,7 +1131,8 @@ After relocation, the dynamic linker fills them with real addresses of variables
 * **Flags:** `SHF_WRITE | SHF_ALLOC` (WA)
 * **Contains:** Addresses of dynamically linked functions used by the PLT
 
-The `.got.plt` section is a special part of the **Global Offset Table (GOT)** that works hand-in-hand with the **Procedure Linkage Table (PLT)**.
+The `.got.plt` section is a special part of the **Global Offset Table (GOT)** that works hand-in-hand with the **Procedure Linkage Table (PLT)**. When the linker creates a PLT (Procedure Linkage Table), it also allocates a small .got.plt table alongside it.
+
 
 When your program calls an external function (like `puts`, `printf`, or `malloc`), it doesn’t know their real addresses at compile time. Instead, it goes through a small trampoline in `.plt`, which uses the `.got.plt` entries to eventually reach the actual function in the shared library.
 
@@ -949,28 +1144,35 @@ When your program calls an external function (like `puts`, `printf`, or `malloc`
 
 This mechanism enables **lazy binding** — external symbols are resolved only when first used, improving startup performance.
 
-Example
+The first 3 entries in `.got.plt` are reserved for the dynamic linker’s internal use:
 
-```bash
-$ readelf -x .got.plt main
+| GOT Entry  | Initially Contains                                                        | Purpose / Explanation                                                                                                                                                                                                                                                                                 |
+| ---------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **GOT[0]** | Address of `_DYNAMIC` section                                             | Points to the `.dynamic` section of the current ELF object. This section holds metadata like needed shared libraries, symbol tables, relocation info, etc. The dynamic linker uses this to locate all dynamic linking data for the object being relocated.                                            |
+| **GOT[1]** | Address of the `link_map` structure (set at runtime by `ld.so`)           | Each loaded shared object (executable or `.so`) has a `link_map` entry describing it — base address, name, dependencies, relocation tables, etc. The dynamic linker uses GOT[1] to know *which object’s context* it’s resolving symbols for when a lazy PLT call happens.                             |
+| **GOT[2]** | Address of `dl_runtime_resolve` (or `dl_runtime_resolve_xsave` on x86_64) | This is the resolver function inside `ld.so`. When a function call through the PLT occurs for the first time, control jumps through PLT[0], which uses GOT[2] to call the resolver. The resolver looks up the symbol, fixes the GOT entry for future calls, and finally jumps to the actual function. |
 
-Hex dump of section '.got.plt':
-  0x00003fb8  00000000 00000000 00000000 00000000  ................
-  0x00003fc8  00000000 00000000 b5110000 00000000  ................
-```
+After these 3, the remaining GOT entries in `.got.plt` correspond to function symbols (e.g. `printf`, `malloc`, etc.), one per PLT entry.
 
-And from the relocation table:
+#### How they’re used during lazy binding
 
-```bash
-$ readelf -r main | grep plt
+When a program calls a function (say `printf`) for the first time:
 
-000000003fd0  000300000007 R_X86_64_JUMP_SLOT  puts@GLIBC_2.2.5 + 0
-```
+1. The call goes through the **PLT** (Procedure Linkage Table).
+2. The first PLT entry (`PLT[0]`) is special — it sets up a call like this (simplified):
+   ```
+   jmp *GOT[2]          # Jump to the dynamic resolver (ld.so)
+   pushq $reloc_index   # Index of the relocation to resolve
+   jmp *GOT[1]          # Linker uses link_map + reloc_index
+   ```
+3. The resolver (`dl_runtime_resolve`) uses:
+  - **GOT[1]** → to find the `link_map` of the current object
+  - **GOT[0]** → to access `_DYNAMIC` metadata if needed
+4. It then patches the GOT entry for `printf` with its actual address.
+5. Future calls to `printf` jump directly to the resolved address — no more resolver overhead.
 
-This means:
 
-- The entry at address `0x3fd0` in `.got.plt` corresponds to the symbol `puts`.
-- The relocation type `R_X86_64_JUMP_SLOT` tells the dynamic linker to fill this slot with the runtime address of `puts()` when first called.
+
 
 ### 3. .dynamic
 
@@ -1156,3 +1358,496 @@ Comparison
 | `.strtab` | Linker / Debugger        | ❌       | All symbols     | For static linking and debugging |
 | `.dynstr` | Runtime linker (`ld.so`) | ✅       | Dynamic symbols | For dynamic linking              |
 
+## Relocations
+
+Relocation sections follow the pattern:` .rela.<target_section>` or `.rel.<target_section>`
+
+Each `.rela.*` section contains relocations that need to be applied to a specific target section. However, relocations serve different purposes depending on when and how they're resolved.
+
+**Why do we need them?**
+
+When compiling a single `.o` file, the compiler doesn't know:
+
+- Where other functions will be located (like `printf`, `helper_function`)
+- Where data from other files will be
+- What the final memory layout will be after linking
+- Where the code itself will be loaded in memory
+
+So the compiler:
+
+1. Puts placeholder values (usually zeros) in the machine code
+2. Creates relocation entries that tell the linker how to fix these placeholders
+
+### Anatomy of a relocation entry
+
+Each entry has these fields:
+
+```bash
+Offset: 0x000000002f
+Info: 000600000004
+Type: R_X86_64_PLT32
+Sym. Value: 0000000000000000
+Sym. Name: add_numbers
+Addend: -4
+```
+
+**1. Offset**
+- **Where** in the target section to apply the patch
+- For `.rela.text`: offset within `.text` section
+- This is the location of the placeholder bytes
+
+**2. Type**
+- **How** to calculate the patch value
+- Different types = different formulas
+
+Common types
+
+| Relocation           | Description                             | Typical Use                                                             |
+| -------------------- | --------------------------------------- | ----------------------------------------------------------------------- |
+| `R_X86_64_64`        | Absolute 64-bit address                 | Global/static data, function pointers                                   |
+| `R_X86_64_PC32`      | 32-bit PC-relative address              | References to globals or functions (when in same module)                |
+| `R_X86_64_PLT32`     | 32-bit PC-relative address to PLT entry | Function calls to external symbols                                      |
+| `R_X86_64_GOT32`     | 32-bit offset to GOT entry              | Access via GOT (rare now, replaced by `GOTPCREL`)                       |
+| `R_X86_64_GOTPCREL`  | 32-bit PC-relative offset to GOT entry  | Access to globals through GOT (PIC/PIE code)                            |
+| `R_X86_64_GLOB_DAT`  | Set GOT entry to absolute address       | Used in dynamic linking (e.g. for globals)                              |
+| `R_X86_64_JUMP_SLOT` | Set PLT entry to function address       | Used by dynamic linker for function calls                               |
+| `R_X86_64_RELATIVE`  | Adjust by base address                  | Used by dynamic loader for position-independent executables             |
+| `R_X86_64_COPY`      | Copy data from shared object            | Used for global variables defined in executable and shared in libraries |
+
+
+**3. Symbol Name**
+- **What** symbol this relocation refers to
+- Could be a function name, section name, or variable name
+- Linker looks up where this symbol ended up
+
+**4. Addend**
+- **Extra offset** to add to the calculation
+- Often `-4` for PC-relative calls (compensates for instruction size)
+
+**5. Info** (encoded field)
+- Contains both the symbol table index and type
+- You usually ignore this - `readelf` decodes it for you
+
+
+### Relocation Categories
+
+#### 1. Static/Link-Time Relocations
+
+Resolved by the static linker (`ld`) when creating the executable.
+
+These appear in `.o` (object) files and are resolved during the linking phase. Once linking is complete, these sections are removed from the final executable.
+
+| Relocation Section     | Applies To       | Contains Relocations For                                | When Resolved |
+|-------------------------|------------------|-----------------------------------------------------------|----------------|
+| `.rela.text`            | `.text` section  | Function calls, data references in code                  | Link time      |
+| `.rela.data`            | `.data` section  | Pointers in initialized global variables                 | Link time      |
+| `.rela.rodata`          | `.rodata` section| Pointers in constant data (e.g., string arrays)           | Link time      |
+| `.rela.eh_frame`        | `.eh_frame` section | Exception handling metadata, stack unwinding          | Link time      |
+| `.rela.init_array`      | `.init_array` section | Constructor function pointers                        | Link time      |
+| `.rela.fini_array`      | `.fini_array` section | Destructor function pointers                          | Link time      |
+
+**What happens:**
+
+- Compiler creates these when generating `.o` files
+- Static linker (`ld`) reads these relocations
+- Patches the placeholder bytes with calculated addresses
+- Removes these sections from the final executable
+
+#### 2. Runtime/Dynamic Relocations
+
+Resolved by the dynamic linker (`ld.so`) when loading the program
+
+These appear in dynamically linked executables and shared libraries. They are kept in the binary because they must be processed every time the program runs (due to ASLR and shared library loading).
+
+| Relocation Section | Applies To             | Contains Relocations For                            | When Resolved                                   |
+|--------------------|------------------------|-----------------------------------------------------|------------------------------------------------|
+| `.rela.dyn`        | `.got`, `.data`, `.bss`| Global variables, data pointers, GOT entries        | Program startup                                |
+| `.rela.plt`        | `.got.plt` (or merged `.got`) | Function calls through PLT/GOT               | Lazy binding (on first call) or at startup     |
+
+
+**What happens:**
+- Present in the final executable
+- Dynamic linker (`ld.so`) processes them at runtime
+- Adjusts for ASLR (random base address)
+- Resolves symbols from shared libraries
+- **Sections remain** (needed for every program execution)
+
+#### 3. Complete Relocation Process
+
+**Initial State (After Loading, Before Any Calls)**
+
+- Each external function has three related components:
+  - A `.plt.sec` entry (small code stub)
+  - A `.plt` resolver stub (fallback code)
+  - A `.got.plt` entry (8-byte address slot)
+- All GOT entries initially point to the `.plt` (`PLT[0]`) resolver stubs, not to real functions
+The dynamic linker has filled `GOT[1]` (link_map) and `GOT[2]` (`_dl_runtime_resolve`)
+
+**First Call to an External Function**
+
+1. Code calls `printf@plt` (jumps to `.plt.sec` entry)
+2. `.plt.sec` stub contains the jump to `.got.plt` entry for that function (address in `.got.plt` is present in relocation for that function)
+3. `.got.plt` still contains stub which takes it to the corresponding entry for that function in `.plt`
+4. `.plt` entry will push the relocation index for that function and jump to PLT resolver at PLT[0]
+5. Resolver stub pushes relocation index (identifies which function) and jumps to `PLT[0]` (common resolver trampoline)
+6. `PLT[0]` pushes `GOT[1]` (context) and jumps through `GOT[2]` (to dynamic linker)
+7. Dynamic linker receives control with relocation index and context
+8. Dynamic linker looks up the function symbol in loaded shared libraries
+9. Dynamic linker finds function address in appropriate library (e.g., libc.so)
+10. Dynamic linker writes real function address into the `.got.plt` entry (key step!)
+11. Dynamic linker jumps to the real function and returns to caller
+
+**Subsequent Calls to Same function**
+
+1. Code calls `printf@plt` (jumps to `.plt.sec` entry)
+2. `.plt.sec` stub jumps to the entry in `.got.plt`
+3. `.got.plt` now contains real function address → lands directly in the function
+4.  Function executes and returns to call
+
+```c
+// demo.c
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    printf("Before malloc\n");
+
+    void *ptr = malloc(100);
+    printf("Allocated at: %p\n", ptr);
+
+    free(ptr);
+    printf("After free\n");
+
+    return 0;
+}
+```
+
+This is the section header table
+
+```
+$ readelf -S demo
+There are 31 section headers, starting at offset 0x36d0:
+
+Section Headers:
+  [Nr] Name              Type             Address           Offset
+       Size              EntSize          Flags  Link  Info  Align
+  [ 0]                   NULL             0000000000000000  00000000
+       0000000000000000  0000000000000000           0     0     0
+  [ 1] .interp           PROGBITS         0000000000400318  00000318
+       000000000000001c  0000000000000000   A       0     0     1
+  [ 2] .note.gnu.pr[...] NOTE             0000000000400338  00000338
+       0000000000000030  0000000000000000   A       0     0     8
+  [ 3] .note.gnu.bu[...] NOTE             0000000000400368  00000368
+       0000000000000024  0000000000000000   A       0     0     4
+  [ 4] .note.ABI-tag     NOTE             000000000040038c  0000038c
+       0000000000000020  0000000000000000   A       0     0     4
+  [ 5] .gnu.hash         GNU_HASH         00000000004003b0  000003b0
+       000000000000001c  0000000000000000   A       6     0     8
+  [ 6] .dynsym           DYNSYM           00000000004003d0  000003d0
+       00000000000000a8  0000000000000018   A       7     1     8
+  [ 7] .dynstr           STRTAB           0000000000400478  00000478
+       000000000000005b  0000000000000000   A       0     0     1
+  [ 8] .gnu.version      VERSYM           00000000004004d4  000004d4
+       000000000000000e  0000000000000002   A       6     0     2
+  [ 9] .gnu.version_r    VERNEED          00000000004004e8  000004e8
+       0000000000000030  0000000000000000   A       7     1     8
+  [10] .rela.dyn         RELA             0000000000400518  00000518
+       0000000000000030  0000000000000018   A       6     0     8
+  [11] .rela.plt         RELA             0000000000400548  00000548
+       0000000000000060  0000000000000018  AI       6    24     8
+  [12] .init             PROGBITS         0000000000401000  00001000
+       000000000000001b  0000000000000000  AX       0     0     4
+  [13] .plt              PROGBITS         0000000000401020  00001020
+       0000000000000050  0000000000000010  AX       0     0     16
+  [14] .plt.sec          PROGBITS         0000000000401070  00001070
+       0000000000000040  0000000000000010  AX       0     0     16
+  [15] .text             PROGBITS         00000000004010b0  000010b0
+       000000000000014c  0000000000000000  AX       0     0     16
+  [16] .fini             PROGBITS         00000000004011fc  000011fc
+       000000000000000d  0000000000000000  AX       0     0     4
+  [17] .rodata           PROGBITS         0000000000402000  00002000
+       000000000000002f  0000000000000000   A       0     0     4
+  [18] .eh_frame_hdr     PROGBITS         0000000000402030  00002030
+       0000000000000034  0000000000000000   A       0     0     4
+  [19] .eh_frame         PROGBITS         0000000000402068  00002068
+       00000000000000a4  0000000000000000   A       0     0     8
+  [20] .init_array       INIT_ARRAY       0000000000403df8  00002df8
+       0000000000000008  0000000000000008  WA       0     0     8
+  [21] .fini_array       FINI_ARRAY       0000000000403e00  00002e00
+       0000000000000008  0000000000000008  WA       0     0     8
+  [22] .dynamic          DYNAMIC          0000000000403e08  00002e08
+       00000000000001d0  0000000000000010  WA       7     0     8
+  [23] .got              PROGBITS         0000000000403fd8  00002fd8
+       0000000000000010  0000000000000008  WA       0     0     8
+  [24] .got.plt          PROGBITS         0000000000403fe8  00002fe8
+       0000000000000038  0000000000000008  WA       0     0     8
+  [25] .data             PROGBITS         0000000000404020  00003020
+       0000000000000010  0000000000000000  WA       0     0     8
+  [26] .bss              NOBITS           0000000000404030  00003030
+       0000000000000008  0000000000000000  WA       0     0     1
+  [27] .comment          PROGBITS         0000000000000000  00003030
+       000000000000002b  0000000000000001  MS       0     0     1
+  [28] .symtab           SYMTAB           0000000000000000  00003060
+       0000000000000378  0000000000000018          29    18     8
+  [29] .strtab           STRTAB           0000000000000000  000033d8
+       00000000000001d7  0000000000000000           0     0     1
+  [30] .shstrtab         STRTAB           0000000000000000  000035af
+       000000000000011f  0000000000000000           0     0     1
+Key to Flags:
+  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
+  L (link order), O (extra OS processing required), G (group), T (TLS),
+  C (compressed), x (unknown), o (OS specific), E (exclude),
+  D (mbind), l (large), p (processor specific)
+```
+
+We can see relocation entries for `free`, `puts`, `printf` and `malloc`.
+
+```
+$ readelf -r demo
+
+Relocation section '.rela.dyn' at offset 0x518 contains 2 entries:
+  Offset          Info           Type           Sym. Value    Sym. Name + Addend
+000000403fd8  000200000006 R_X86_64_GLOB_DAT 0000000000000000 __libc_start_main@GLIBC_2.34 + 0
+000000403fe0  000500000006 R_X86_64_GLOB_DAT 0000000000000000 __gmon_start__ + 0
+
+Relocation section '.rela.plt' at offset 0x548 contains 4 entries:
+  Offset          Info           Type           Sym. Value    Sym. Name + Addend
+000000404000  000100000007 R_X86_64_JUMP_SLO 0000000000000000 free@GLIBC_2.2.5 + 0
+000000404008  000300000007 R_X86_64_JUMP_SLO 0000000000000000 puts@GLIBC_2.2.5 + 0
+000000404010  000400000007 R_X86_64_JUMP_SLO 0000000000000000 printf@GLIBC_2.2.5 + 0
+000000404018  000600000007 R_X86_64_JUMP_SLO 0000000000000000 malloc@GLIBC_2.2.5 + 0
+```
+
+Let's dosassemble the `.text` section
+
+```
+$ objdump -d -j .text demo
+
+demo:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+00000000004010b0 <_start>:
+  4010b0:	f3 0f 1e fa          	endbr64
+  4010b4:	31 ed                	xor    %ebp,%ebp
+  4010b6:	49 89 d1             	mov    %rdx,%r9
+  4010b9:	5e                   	pop    %rsi
+  4010ba:	48 89 e2             	mov    %rsp,%rdx
+  4010bd:	48 83 e4 f0          	and    $0xfffffffffffffff0,%rsp
+  4010c1:	50                   	push   %rax
+  4010c2:	54                   	push   %rsp
+  4010c3:	45 31 c0             	xor    %r8d,%r8d
+  4010c6:	31 c9                	xor    %ecx,%ecx
+  4010c8:	48 c7 c7 96 11 40 00 	mov    $0x401196,%rdi
+  4010cf:	ff 15 03 2f 00 00    	call   *0x2f03(%rip)        # 403fd8 <__libc_start_main@GLIBC_2.34>
+  4010d5:	f4                   	hlt
+  4010d6:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+  4010dd:	00 00 00
+
+00000000004010e0 <_dl_relocate_static_pie>:
+  4010e0:	f3 0f 1e fa          	endbr64
+  4010e4:	c3                   	ret
+  4010e5:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+  4010ec:	00 00 00
+  4010ef:	90                   	nop
+
+00000000004010f0 <deregister_tm_clones>:
+  4010f0:	b8 30 40 40 00       	mov    $0x404030,%eax
+  4010f5:	48 3d 30 40 40 00    	cmp    $0x404030,%rax
+  4010fb:	74 13                	je     401110 <deregister_tm_clones+0x20>
+  4010fd:	b8 00 00 00 00       	mov    $0x0,%eax
+  401102:	48 85 c0             	test   %rax,%rax
+  401105:	74 09                	je     401110 <deregister_tm_clones+0x20>
+  401107:	bf 30 40 40 00       	mov    $0x404030,%edi
+  40110c:	ff e0                	jmp    *%rax
+  40110e:	66 90                	xchg   %ax,%ax
+  401110:	c3                   	ret
+  401111:	66 66 2e 0f 1f 84 00 	data16 cs nopw 0x0(%rax,%rax,1)
+  401118:	00 00 00 00
+  40111c:	0f 1f 40 00          	nopl   0x0(%rax)
+
+0000000000401120 <register_tm_clones>:
+  401120:	be 30 40 40 00       	mov    $0x404030,%esi
+  401125:	48 81 ee 30 40 40 00 	sub    $0x404030,%rsi
+  40112c:	48 89 f0             	mov    %rsi,%rax
+  40112f:	48 c1 ee 3f          	shr    $0x3f,%rsi
+  401133:	48 c1 f8 03          	sar    $0x3,%rax
+  401137:	48 01 c6             	add    %rax,%rsi
+  40113a:	48 d1 fe             	sar    $1,%rsi
+  40113d:	74 11                	je     401150 <register_tm_clones+0x30>
+  40113f:	b8 00 00 00 00       	mov    $0x0,%eax
+  401144:	48 85 c0             	test   %rax,%rax
+  401147:	74 07                	je     401150 <register_tm_clones+0x30>
+  401149:	bf 30 40 40 00       	mov    $0x404030,%edi
+  40114e:	ff e0                	jmp    *%rax
+  401150:	c3                   	ret
+  401151:	66 66 2e 0f 1f 84 00 	data16 cs nopw 0x0(%rax,%rax,1)
+  401158:	00 00 00 00
+  40115c:	0f 1f 40 00          	nopl   0x0(%rax)
+
+0000000000401160 <__do_global_dtors_aux>:
+  401160:	f3 0f 1e fa          	endbr64
+  401164:	80 3d c5 2e 00 00 00 	cmpb   $0x0,0x2ec5(%rip)        # 404030 <__TMC_END__>
+  40116b:	75 13                	jne    401180 <__do_global_dtors_aux+0x20>
+  40116d:	55                   	push   %rbp
+  40116e:	48 89 e5             	mov    %rsp,%rbp
+  401171:	e8 7a ff ff ff       	call   4010f0 <deregister_tm_clones>
+  401176:	c6 05 b3 2e 00 00 01 	movb   $0x1,0x2eb3(%rip)        # 404030 <__TMC_END__>
+  40117d:	5d                   	pop    %rbp
+  40117e:	c3                   	ret
+  40117f:	90                   	nop
+  401180:	c3                   	ret
+  401181:	66 66 2e 0f 1f 84 00 	data16 cs nopw 0x0(%rax,%rax,1)
+  401188:	00 00 00 00
+  40118c:	0f 1f 40 00          	nopl   0x0(%rax)
+
+0000000000401190 <frame_dummy>:
+  401190:	f3 0f 1e fa          	endbr64
+  401194:	eb 8a                	jmp    401120 <register_tm_clones>
+
+0000000000401196 <main>:
+  401196:	f3 0f 1e fa          	endbr64
+  40119a:	55                   	push   %rbp
+  40119b:	48 89 e5             	mov    %rsp,%rbp
+  40119e:	48 83 ec 10          	sub    $0x10,%rsp
+  4011a2:	48 8d 05 5b 0e 00 00 	lea    0xe5b(%rip),%rax        # 402004 <_IO_stdin_used+0x4>
+  4011a9:	48 89 c7             	mov    %rax,%rdi
+  4011ac:	e8 cf fe ff ff       	call   401080 <puts@plt>
+  4011b1:	bf 64 00 00 00       	mov    $0x64,%edi
+  4011b6:	e8 e5 fe ff ff       	call   4010a0 <malloc@plt>
+  4011bb:	48 89 45 f8          	mov    %rax,-0x8(%rbp)
+  4011bf:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  4011c3:	48 89 c6             	mov    %rax,%rsi
+  4011c6:	48 8d 05 45 0e 00 00 	lea    0xe45(%rip),%rax        # 402012 <_IO_stdin_used+0x12>
+  4011cd:	48 89 c7             	mov    %rax,%rdi
+  4011d0:	b8 00 00 00 00       	mov    $0x0,%eax
+  4011d5:	e8 b6 fe ff ff       	call   401090 <printf@plt>
+  4011da:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  4011de:	48 89 c7             	mov    %rax,%rdi
+  4011e1:	e8 8a fe ff ff       	call   401070 <free@plt>
+  4011e6:	48 8d 05 37 0e 00 00 	lea    0xe37(%rip),%rax        # 402024 <_IO_stdin_used+0x24>
+  4011ed:	48 89 c7             	mov    %rax,%rdi
+  4011f0:	e8 8b fe ff ff       	call   401080 <puts@plt>
+  4011f5:	b8 00 00 00 00       	mov    $0x0,%eax
+  4011fa:	c9                   	leave
+  4011fb:	c3                   	ret
+```
+
+We can see calls to 
+
+```
+call   401080 <puts@plt>
+call   401090 <printf@plt>
+call   401070 <free@plt>
+call   401080 <puts@plt>
+```
+
+We can see these addresses match to their corresponding stubs in `.plt.sec` section
+
+```
+$ objdump -d -j .plt.sec demo
+
+demo:     file format elf64-x86-64
+
+
+Disassembly of section .plt.sec:
+
+0000000000401070 <free@plt>:
+  401070:	f3 0f 1e fa          	endbr64
+  401074:	ff 25 86 2f 00 00    	jmp    *0x2f86(%rip)        # 404000 <free@GLIBC_2.2.5>
+  40107a:	66 0f 1f 44 00 00    	nopw   0x0(%rax,%rax,1)
+
+0000000000401080 <puts@plt>:
+  401080:	f3 0f 1e fa          	endbr64
+  401084:	ff 25 7e 2f 00 00    	jmp    *0x2f7e(%rip)        # 404008 <puts@GLIBC_2.2.5>
+  40108a:	66 0f 1f 44 00 00    	nopw   0x0(%rax,%rax,1)
+
+0000000000401090 <printf@plt>:
+  401090:	f3 0f 1e fa          	endbr64
+  401094:	ff 25 76 2f 00 00    	jmp    *0x2f76(%rip)        # 404010 <printf@GLIBC_2.2.5>
+  40109a:	66 0f 1f 44 00 00    	nopw   0x0(%rax,%rax,1)
+
+00000000004010a0 <malloc@plt>:
+  4010a0:	f3 0f 1e fa          	endbr64
+  4010a4:	ff 25 6e 2f 00 00    	jmp    *0x2f6e(%rip)        # 404018 <malloc@GLIBC_2.2.5>
+  4010aa:	66 0f 1f 44 00 00    	nopw   0x0(%rax,%rax,1)
+```
+
+PLT section
+
+```
+$ objdump -d -j .plt demo
+
+demo:     file format elf64-x86-64
+
+
+Disassembly of section .plt:
+
+0000000000401020 <.plt>:
+  401020:	ff 35 ca 2f 00 00    	push   0x2fca(%rip)        # 403ff0 <_GLOBAL_OFFSET_TABLE_+0x8>
+  401026:	ff 25 cc 2f 00 00    	jmp    *0x2fcc(%rip)        # 403ff8 <_GLOBAL_OFFSET_TABLE_+0x10>
+  40102c:	0f 1f 40 00          	nopl   0x0(%rax)
+  401030:	f3 0f 1e fa          	endbr64
+  401034:	68 00 00 00 00       	push   $0x0
+  401039:	e9 e2 ff ff ff       	jmp    401020 <_init+0x20>
+  40103e:	66 90                	xchg   %ax,%ax
+  401040:	f3 0f 1e fa          	endbr64
+  401044:	68 01 00 00 00       	push   $0x1
+  401049:	e9 d2 ff ff ff       	jmp    401020 <_init+0x20>
+  40104e:	66 90                	xchg   %ax,%ax
+  401050:	f3 0f 1e fa          	endbr64
+  401054:	68 02 00 00 00       	push   $0x2
+  401059:	e9 c2 ff ff ff       	jmp    401020 <_init+0x20>
+  40105e:	66 90                	xchg   %ax,%ax
+  401060:	f3 0f 1e fa          	endbr64
+  401064:	68 03 00 00 00       	push   $0x3
+  401069:	e9 b2 ff ff ff       	jmp    401020 <_init+0x20>
+  40106e:	66 90                	xchg   %ax,%ax
+```
+
+We can verify the initial addresses stored in `.got.plt` entries are references to corresponding entries in `.plt` (addresses are in little endian)
+
+```
+$ readelf -x .got.plt demo
+
+Hex dump of section '.got.plt':
+ NOTE: This section has relocations against it, but these have NOT been applied to this dump.
+  0x00403fe8 083e4000 00000000 00000000 00000000 .>@.............
+  0x00403ff8 00000000 00000000 30104000 00000000 ........0.@.....
+  0x00404008 40104000 00000000 50104000 00000000 @.@.....P.@.....
+  0x00404018 60104000 00000000                   `.@.....
+```
+
+Eg `404000` maps to `401030` (PLT[1]), `404008` maps to `401040` (PLT[2]), etc.
+
+Let's run the program and see the addresses in `.got.plt` getting updated to actual values. I have disabled ASLR and compiled the binary as no-pie executable for simplicity.
+
+```
+$ gdb ./demo
+
+(gdb) break main
+Breakpoint 1 at 0x40119e
+(gdb) run
+Starting program: /home/sanketh/assembly/plt/demo
+Downloading separate debug info for system-supplied DSO at 0x7ffff7fc3000
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+Breakpoint 1, 0x000000000040119e in main ()
+
+(initial got entries, its not showing puts and malloc as they don't span new rows)
+
+(gdb) x/4gx 0x404000
+0x404000 <free@got.plt>:	0x0000000000401030	0x0000000000401040
+0x404010 <printf@got.plt>:	0x0000000000401050	0x0000000000401060
+
+(gdb) next
+Single stepping until exit from function main,
+
+(gdb) x/4gx 0x404000
+0x404000 <free@got.plt>:	0x00007ffff7cadd30	0x00007ffff7c87be0
+0x404010 <printf@got.plt>:	0x00007ffff7c60100	0x00007ffff7cad650
+```
+
+We can see `.got.plt` section got updated with actual values.
