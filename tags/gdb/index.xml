@@ -8,7 +8,7 @@
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;$ checksec matryoshka
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;RELRO STACK CANARY NX PIE RPATH RUNPATH Symbols FORTIFY Fortified Fortifiable FILE
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Partial RELRO Canary found NX enabled PIE enabled No RPATH No RUNPATH No Symbols No &lt;span style="color:#ae81ff"&gt;0&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;1&lt;/span&gt; matryoshka
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The binary is a stripped 64-bit PIE executable with a stack canary. Looking at the strings gives a major clue about its functionality.&lt;/p&gt;</description></item><item><title>CTF Learnings: Matryoshka</title><link>https://sankethbk.github.io/blog/cheatsheets/2025-11-05-ctf-1-learnings/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/cheatsheets/2025-11-05-ctf-1-learnings/</guid><description>&lt;h1 id="learnings-from-ctf-challenge-matryoshka"&gt;Learnings from CTF Challenge: Matryoshka&lt;/h1&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The binary is a stripped 64-bit PIE executable with a stack canary. Looking at the strings gives a major clue about its functionality.&lt;/p&gt;</description></item><item><title>CTF Learnings: Matryoshka</title><link>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-05-ctf-1-learnings/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-05-ctf-1-learnings/</guid><description>&lt;h1 id="learnings-from-ctf-challenge-matryoshka"&gt;Learnings from CTF Challenge: Matryoshka&lt;/h1&gt;
 &lt;p&gt;This document summarizes the key tools, commands, and concepts from the Matryoshka crackme challenge.&lt;/p&gt;
 &lt;h2 id="1-static-analysis"&gt;1. Static Analysis&lt;/h2&gt;
 &lt;p&gt;Commands to gather information without executing the binary.&lt;/p&gt;
@@ -48,4 +48,6 @@
 &lt;/table&gt;
 &lt;h2 id="2-dynamic-analysis--debugging"&gt;2. Dynamic Analysis &amp;amp; Debugging&lt;/h2&gt;
 &lt;h3 id="strace"&gt;strace&lt;/h3&gt;
-&lt;p&gt;Traces system calls made by a process.&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;Traces system calls made by a process.&lt;/p&gt;</description></item><item><title>CTF Learnings: Matryoshka</title><link>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-07-gdb-1/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-07-gdb-1/</guid><description>&lt;h1 id="debugging-souce-code-with-assembly"&gt;Debugging Souce Code with Assembly&lt;/h1&gt;
+&lt;p&gt;If we compile C program with &lt;code&gt;-g&lt;/code&gt; flag, it tells GCC to include debugging symbols inside the resulting binary (a.out by default). These symbols live in a special section of the ELF file (like .debug_info, .debug_line, .debug_str, etc.) and contain metadata that maps machine instructions back to your original source code.&lt;/p&gt;
+&lt;p&gt;This allows us to see corresponding source along with assembly while debugging with GDB.&lt;/p&gt;</description></item></channel></rss>
