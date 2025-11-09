@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>R on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/categories/r/</link><description>Recent content in R on Sanketh's Blog</description><generator>Hugo -- 0.152.2</generator><language>en-us</language><lastBuildDate>Sun, 09 Nov 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/categories/r/index.xml" rel="self" type="application/rss+xml"/><item><title>CTF – 2 : Good Kitty</title><link>https://sankethbk.github.io/blog/posts/ctf/2025-11-08-ctf-2/</link><pubDate>Sun, 09 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/ctf/2025-11-08-ctf-2/</guid><description>&lt;h1 id="ctf-challenge-good-kitty---writeup"&gt;CTF Challenge: Good Kitty - Writeup&lt;/h1&gt;
+&lt;h2 id="challenge-overview"&gt;Challenge Overview&lt;/h2&gt;
+&lt;p&gt;This is a reverse engineering CTF challenge where we need to find the correct password by analyzing a binary that:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Calculates a value based on Project Euler problem #3&lt;/li&gt;
+&lt;li&gt;Encodes it using a custom algorithm&lt;/li&gt;
+&lt;li&gt;Compares user input against the encoded value&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="initial-analysis"&gt;Initial Analysis&lt;/h2&gt;
+&lt;h3 id="decompiled-code-structure"&gt;Decompiled Code Structure&lt;/h3&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-c" data-lang="c"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;undefined8 &lt;span style="color:#a6e22e"&gt;main&lt;/span&gt;(&lt;span style="color:#66d9ef"&gt;void&lt;/span&gt;)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;{
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; byte bVar1;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;ssize_t&lt;/span&gt; bytes_read;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;long&lt;/span&gt; input_len;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt; iVar2;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;long&lt;/span&gt; in_FS_OFFSET;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;double&lt;/span&gt; dVar3;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; undefined1 local_be;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; byte is_correct;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; uint index;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;long&lt;/span&gt; flag;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; undefined8 local_b0;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; undefined8 local_a8 [&lt;span style="color:#ae81ff"&gt;4&lt;/span&gt;];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; undefined8 local_88;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; undefined8 uStack_80;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; undefined8 local_78;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;char&lt;/span&gt; user_input [&lt;span style="color:#ae81ff"&gt;72&lt;/span&gt;];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;long&lt;/span&gt; local_20;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; local_20 &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;*&lt;/span&gt;(&lt;span style="color:#66d9ef"&gt;long&lt;/span&gt; &lt;span style="color:#f92672"&gt;*&lt;/span&gt;)(in_FS_OFFSET &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x28&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; flag &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;ppeuler_3&lt;/span&gt;();
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; dVar3 &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;cbrt&lt;/span&gt;((&lt;span style="color:#66d9ef"&gt;double&lt;/span&gt;)flag);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; flag &lt;span style="color:#f92672"&gt;=&lt;/span&gt; (&lt;span style="color:#66d9ef"&gt;long&lt;/span&gt;)dVar3;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; flag &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;factorial&lt;/span&gt;(flag);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; input_len &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;do&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; bVar1 &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;*&lt;/span&gt;(byte &lt;span style="color:#f92672"&gt;*&lt;/span&gt;)((&lt;span style="color:#66d9ef"&gt;long&lt;/span&gt;)&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;flag &lt;span style="color:#f92672"&gt;+&lt;/span&gt; input_len);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; ((&lt;span style="color:#ae81ff"&gt;0x19&lt;/span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt; (byte)((bVar1 &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0xdf&lt;/span&gt;) &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0xbf&lt;/span&gt;)) &lt;span style="color:#f92672"&gt;&amp;amp;&amp;amp;&lt;/span&gt; (&lt;span style="color:#ae81ff"&gt;9&lt;/span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt; (byte)(bVar1 &lt;span style="color:#f92672"&gt;-&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x30&lt;/span&gt;))) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; bVar1 &lt;span style="color:#f92672"&gt;=&lt;/span&gt; bVar1 &lt;span style="color:#f92672"&gt;%&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x3e&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; ((byte)(bVar1 &lt;span style="color:#f92672"&gt;-&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;10&lt;/span&gt;) &lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x1a&lt;/span&gt;) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;*&lt;/span&gt;(byte &lt;span style="color:#f92672"&gt;*&lt;/span&gt;)((&lt;span style="color:#66d9ef"&gt;long&lt;/span&gt;)&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;flag &lt;span style="color:#f92672"&gt;+&lt;/span&gt; input_len) &lt;span style="color:#f92672"&gt;=&lt;/span&gt; bVar1 &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x37&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;else&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; ((byte)(bVar1 &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x30&lt;/span&gt;) &lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x54&lt;/span&gt;) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;*&lt;/span&gt;(byte &lt;span style="color:#f92672"&gt;*&lt;/span&gt;)((&lt;span style="color:#66d9ef"&gt;long&lt;/span&gt;)&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;flag &lt;span style="color:#f92672"&gt;+&lt;/span&gt; input_len) &lt;span style="color:#f92672"&gt;=&lt;/span&gt; bVar1 &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x30&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;else&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;*&lt;/span&gt;(byte &lt;span style="color:#f92672"&gt;*&lt;/span&gt;)((&lt;span style="color:#66d9ef"&gt;long&lt;/span&gt;)&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;flag &lt;span style="color:#f92672"&gt;+&lt;/span&gt; input_len) &lt;span style="color:#f92672"&gt;=&lt;/span&gt; bVar1 &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x3d&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; input_len &lt;span style="color:#f92672"&gt;=&lt;/span&gt; input_len &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;1&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; } &lt;span style="color:#66d9ef"&gt;while&lt;/span&gt; (input_len &lt;span style="color:#f92672"&gt;!=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;8&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// ... rest of code validates input
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;&lt;/span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id="key-concepts-learned"&gt;Key Concepts Learned&lt;/h2&gt;
+&lt;h3 id="1-understanding-pointer-arithmetic-on-stack-variables"&gt;1. Understanding Pointer Arithmetic on Stack Variables&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Question&lt;/strong&gt;: &lt;code&gt;flag&lt;/code&gt; is declared as &lt;code&gt;long flag;&lt;/code&gt; (not an array), so what does &lt;code&gt;&amp;amp;flag + index&lt;/code&gt; mean?&lt;/p&gt;</description></item><item><title>CTF – 1 : Matryoshka</title><link>https://sankethbk.github.io/blog/posts/ctf/2025-11-01-ctf-1/</link><pubDate>Sat, 01 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/ctf/2025-11-01-ctf-1/</guid><description>&lt;h1 id="reverse-engineering-and-ctf-challenge-notes"&gt;Reverse Engineering and CTF Challenge Notes&lt;/h1&gt;
+&lt;p&gt;Reverse engineering is the process of understanding how software works &lt;strong&gt;without access to its original source code&lt;/strong&gt;.&lt;br&gt;
+In security challenges (CTFs), the goal is often to recover hidden data or logic by dissecting a binary.&lt;br&gt;
+This walkthrough documents my first attempt at such a challenge, focusing on &lt;em&gt;ELF-based reverse engineering&lt;/em&gt; and the reasoning process behind each step.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-static-analysis"&gt;1. Static Analysis&lt;/h2&gt;
+&lt;p&gt;Static analysis means inspecting the binary &lt;strong&gt;without running it&lt;/strong&gt;.&lt;/p&gt;</description></item></channel></rss>

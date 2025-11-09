@@ -1,56 +1,173 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/posts/</link><description>Recent content in Posts on Sanketh's Blog</description><generator>Hugo -- 0.152.2</generator><language>en-us</language><lastBuildDate>Wed, 05 Nov 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>CTF Walkthrough : Matryoshka Challenge</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/2025-11-01-ctf-1-walkthrough/</link><pubDate>Wed, 05 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/2025-11-01-ctf-1-walkthrough/</guid><description>&lt;h1 id="matryoshka-crackme-solution-detailed-walkthrough"&gt;Matryoshka Crackme Solution (Detailed Walkthrough)&lt;/h1&gt;
-&lt;p&gt;This is a detailed write-up for the &amp;ldquo;Matryoshka&amp;rdquo; crackme on crackmes.one.&lt;/p&gt;
-&lt;h2 id="1-initial-static-analysis"&gt;1. Initial Static Analysis&lt;/h2&gt;
-&lt;p&gt;First, we gather basic information about the binary.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;$ file matryoshka
-&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;matryoshka: ELF 64-bit LSB pie executable, x86-64, version &lt;span style="color:#ae81ff"&gt;1&lt;/span&gt; &lt;span style="color:#f92672"&gt;(&lt;/span&gt;SYSV&lt;span style="color:#f92672"&gt;)&lt;/span&gt;, dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, &lt;span style="color:#66d9ef"&gt;for&lt;/span&gt; GNU/Linux 4.4.0, stripped
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/posts/</link><description>Recent content in Posts on Sanketh's Blog</description><generator>Hugo -- 0.152.2</generator><language>en-us</language><lastBuildDate>Sun, 09 Nov 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>CTF – 2 : Good Kitty</title><link>https://sankethbk.github.io/blog/posts/ctf/2025-11-08-ctf-2/</link><pubDate>Sun, 09 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/ctf/2025-11-08-ctf-2/</guid><description>&lt;h1 id="ctf-challenge-good-kitty---writeup"&gt;CTF Challenge: Good Kitty - Writeup&lt;/h1&gt;
+&lt;h2 id="challenge-overview"&gt;Challenge Overview&lt;/h2&gt;
+&lt;p&gt;This is a reverse engineering CTF challenge where we need to find the correct password by analyzing a binary that:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Calculates a value based on Project Euler problem #3&lt;/li&gt;
+&lt;li&gt;Encodes it using a custom algorithm&lt;/li&gt;
+&lt;li&gt;Compares user input against the encoded value&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="initial-analysis"&gt;Initial Analysis&lt;/h2&gt;
+&lt;h3 id="decompiled-code-structure"&gt;Decompiled Code Structure&lt;/h3&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-c" data-lang="c"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;undefined8 &lt;span style="color:#a6e22e"&gt;main&lt;/span&gt;(&lt;span style="color:#66d9ef"&gt;void&lt;/span&gt;)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;{
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; byte bVar1;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;ssize_t&lt;/span&gt; bytes_read;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;long&lt;/span&gt; input_len;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt; iVar2;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;long&lt;/span&gt; in_FS_OFFSET;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;double&lt;/span&gt; dVar3;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; undefined1 local_be;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; byte is_correct;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; uint index;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;long&lt;/span&gt; flag;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; undefined8 local_b0;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; undefined8 local_a8 [&lt;span style="color:#ae81ff"&gt;4&lt;/span&gt;];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; undefined8 local_88;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; undefined8 uStack_80;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; undefined8 local_78;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;char&lt;/span&gt; user_input [&lt;span style="color:#ae81ff"&gt;72&lt;/span&gt;];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;long&lt;/span&gt; local_20;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;$ checksec matryoshka
-&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;RELRO STACK CANARY NX PIE RPATH RUNPATH Symbols FORTIFY Fortified Fortifiable FILE
-&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Partial RELRO Canary found NX enabled PIE enabled No RPATH No RUNPATH No Symbols No &lt;span style="color:#ae81ff"&gt;0&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;1&lt;/span&gt; matryoshka
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The binary is a stripped 64-bit PIE executable with a stack canary. Looking at the strings gives a major clue about its functionality.&lt;/p&gt;</description></item><item><title>CTF Learnings: Matryoshka</title><link>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-05-ctf-1-learnings/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-05-ctf-1-learnings/</guid><description>&lt;h1 id="learnings-from-ctf-challenge-matryoshka"&gt;Learnings from CTF Challenge: Matryoshka&lt;/h1&gt;
-&lt;p&gt;This document summarizes the key tools, commands, and concepts from the Matryoshka crackme challenge.&lt;/p&gt;
-&lt;h2 id="1-static-analysis"&gt;1. Static Analysis&lt;/h2&gt;
-&lt;p&gt;Commands to gather information without executing the binary.&lt;/p&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; local_20 &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;*&lt;/span&gt;(&lt;span style="color:#66d9ef"&gt;long&lt;/span&gt; &lt;span style="color:#f92672"&gt;*&lt;/span&gt;)(in_FS_OFFSET &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x28&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; flag &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;ppeuler_3&lt;/span&gt;();
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; dVar3 &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;cbrt&lt;/span&gt;((&lt;span style="color:#66d9ef"&gt;double&lt;/span&gt;)flag);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; flag &lt;span style="color:#f92672"&gt;=&lt;/span&gt; (&lt;span style="color:#66d9ef"&gt;long&lt;/span&gt;)dVar3;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; flag &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;factorial&lt;/span&gt;(flag);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; input_len &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;do&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; bVar1 &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;*&lt;/span&gt;(byte &lt;span style="color:#f92672"&gt;*&lt;/span&gt;)((&lt;span style="color:#66d9ef"&gt;long&lt;/span&gt;)&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;flag &lt;span style="color:#f92672"&gt;+&lt;/span&gt; input_len);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; ((&lt;span style="color:#ae81ff"&gt;0x19&lt;/span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt; (byte)((bVar1 &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0xdf&lt;/span&gt;) &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0xbf&lt;/span&gt;)) &lt;span style="color:#f92672"&gt;&amp;amp;&amp;amp;&lt;/span&gt; (&lt;span style="color:#ae81ff"&gt;9&lt;/span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt; (byte)(bVar1 &lt;span style="color:#f92672"&gt;-&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x30&lt;/span&gt;))) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; bVar1 &lt;span style="color:#f92672"&gt;=&lt;/span&gt; bVar1 &lt;span style="color:#f92672"&gt;%&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x3e&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; ((byte)(bVar1 &lt;span style="color:#f92672"&gt;-&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;10&lt;/span&gt;) &lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x1a&lt;/span&gt;) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;*&lt;/span&gt;(byte &lt;span style="color:#f92672"&gt;*&lt;/span&gt;)((&lt;span style="color:#66d9ef"&gt;long&lt;/span&gt;)&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;flag &lt;span style="color:#f92672"&gt;+&lt;/span&gt; input_len) &lt;span style="color:#f92672"&gt;=&lt;/span&gt; bVar1 &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x37&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;else&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; ((byte)(bVar1 &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x30&lt;/span&gt;) &lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x54&lt;/span&gt;) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;*&lt;/span&gt;(byte &lt;span style="color:#f92672"&gt;*&lt;/span&gt;)((&lt;span style="color:#66d9ef"&gt;long&lt;/span&gt;)&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;flag &lt;span style="color:#f92672"&gt;+&lt;/span&gt; input_len) &lt;span style="color:#f92672"&gt;=&lt;/span&gt; bVar1 &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x30&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;else&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;*&lt;/span&gt;(byte &lt;span style="color:#f92672"&gt;*&lt;/span&gt;)((&lt;span style="color:#66d9ef"&gt;long&lt;/span&gt;)&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;flag &lt;span style="color:#f92672"&gt;+&lt;/span&gt; input_len) &lt;span style="color:#f92672"&gt;=&lt;/span&gt; bVar1 &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0x3d&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; input_len &lt;span style="color:#f92672"&gt;=&lt;/span&gt; input_len &lt;span style="color:#f92672"&gt;+&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;1&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; } &lt;span style="color:#66d9ef"&gt;while&lt;/span&gt; (input_len &lt;span style="color:#f92672"&gt;!=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;8&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// ... rest of code validates input
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;&lt;/span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id="key-concepts-learned"&gt;Key Concepts Learned&lt;/h2&gt;
+&lt;h3 id="1-understanding-pointer-arithmetic-on-stack-variables"&gt;1. Understanding Pointer Arithmetic on Stack Variables&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Question&lt;/strong&gt;: &lt;code&gt;flag&lt;/code&gt; is declared as &lt;code&gt;long flag;&lt;/code&gt; (not an array), so what does &lt;code&gt;&amp;amp;flag + index&lt;/code&gt; mean?&lt;/p&gt;</description></item><item><title>GDB Notes – Basics &amp; Practical Usage</title><link>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-04-gdb-1/</link><pubDate>Sun, 09 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-04-gdb-1/</guid><description>&lt;h1 id="gdb-notes--basics-navigation--memory-inspection"&gt;GDB Notes — Basics, Navigation &amp;amp; Memory Inspection&lt;/h1&gt;
+&lt;p&gt;These are concise notes on how to use &lt;strong&gt;GDB (GNU Debugger)&lt;/strong&gt; effectively for analyzing ELF binaries and debugging at both &lt;strong&gt;C source&lt;/strong&gt; and &lt;strong&gt;assembly&lt;/strong&gt; levels.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-starting-gdb"&gt;1. Starting GDB&lt;/h2&gt;
+&lt;h3 id="basic-invocation"&gt;Basic invocation&lt;/h3&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;gdb ./a.out
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;gdb -q ./program &lt;span style="color:#75715e"&gt;# Quiet mode (no banner)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="with-arguments"&gt;With arguments&lt;/h3&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;gdb --args ./program arg1 arg2
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="from-inside-gdb"&gt;From inside GDB&lt;/h3&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;(&lt;/span&gt;gdb&lt;span style="color:#f92672"&gt;)&lt;/span&gt; run arg1 arg2
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id="2-compiling-for-debugging"&gt;2. Compiling for Debugging&lt;/h2&gt;
+&lt;p&gt;Compile with the &lt;code&gt;-g&lt;/code&gt; flag to include &lt;strong&gt;debug symbols&lt;/strong&gt;:&lt;/p&gt;</description></item><item><title>GDB Layouts</title><link>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-07-gdb-2/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-07-gdb-2/</guid><description>&lt;h1 id="debugging-souce-code-with-assembly"&gt;Debugging Souce Code with Assembly&lt;/h1&gt;
+&lt;p&gt;If we compile C program with &lt;code&gt;-g&lt;/code&gt; flag, it tells GCC to include debugging symbols inside the resulting binary (a.out by default). These symbols live in a special section of the ELF file (like .debug_info, .debug_line, .debug_str, etc.) and contain metadata that maps machine instructions back to your original source code.&lt;/p&gt;
+&lt;p&gt;This allows us to see corresponding source along with assembly while debugging with GDB.&lt;/p&gt;</description></item><item><title>GDB x Command</title><link>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-08-gdb-3/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-08-gdb-3/</guid><description>&lt;h1 id="gdb-x-command-examine-memory"&gt;GDB x Command (Examine Memory)&lt;/h1&gt;
+&lt;p&gt;Format: &lt;code&gt;x/[count][format][size] address&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;count = how many units to display&lt;/li&gt;
+&lt;li&gt;format = how to display (x=hex, d=decimal, s=string, i=instruction, etc.)&lt;/li&gt;
+&lt;li&gt;size = size of each unit (b=byte, h=halfword, w=word, g=giant/8bytes)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Command 1: x/8gx $rsi&lt;/strong&gt;&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;(gdb) x/8gx $rsi
+0x7fffffffdf80: 0x000055555555601c 0x00007fffffffe3fa
+0x7fffffffdf90: 0x00007fffffffe080 0x4e39f1740a528200
+0x7fffffffdfa0: 0x00007fffffffe040 0x00007ffff7c2a1ca
+0x7fffffffdfb0: 0x00007fffffffdff0 0x00007fffffffe0c8
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Breakdown:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;x/ = examine command&lt;/li&gt;
+&lt;li&gt;8 = show 8 units&lt;/li&gt;
+&lt;li&gt;g = each unit is giant (8 bytes = 64 bits)&lt;/li&gt;
+&lt;li&gt;x = display in hexadecimal&lt;/li&gt;
+&lt;li&gt;$rsi = starting address (0x7fffffffdf80)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This displays the argv array as 8 pointers (each 8 bytes on x86-64):&lt;/p&gt;</description></item><item><title>Radare2 Basic Commands</title><link>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-08-radare2-1/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-08-radare2-1/</guid><description>&lt;h1 id="reverse-engineering-with-radare2"&gt;Reverse Engineering with Radare2&lt;/h1&gt;
+&lt;p&gt;A powerful framework for reverse engineering.&lt;/p&gt;
+&lt;h3 id="core-analysis-commands"&gt;Core Analysis Commands&lt;/h3&gt;
 &lt;table&gt;
 &lt;thead&gt;
 &lt;tr&gt;
-&lt;th style="text-align: left"&gt;Command&lt;/th&gt;
+&lt;th style="text-align: left"&gt;r2 Command&lt;/th&gt;
 &lt;th style="text-align: left"&gt;Description&lt;/th&gt;
 &lt;/tr&gt;
 &lt;/thead&gt;
 &lt;tbody&gt;
 &lt;tr&gt;
-&lt;td style="text-align: left"&gt;&lt;code&gt;file ./binary&lt;/code&gt;&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Identifies file type, architecture, and if it&amp;rsquo;s stripped.&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;code&gt;r2 ./binary&lt;/code&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Open the binary for analysis.&lt;/td&gt;
 &lt;/tr&gt;
 &lt;tr&gt;
-&lt;td style="text-align: left"&gt;&lt;code&gt;strings ./binary&lt;/code&gt;&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Extracts human-readable strings. Use &lt;code&gt;-n &amp;lt;length&amp;gt;&lt;/code&gt; for longer strings.&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;code&gt;aaa&lt;/code&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;strong&gt;A&lt;/strong&gt;nalyze &lt;strong&gt;A&lt;/strong&gt;ll &lt;strong&gt;A&lt;/strong&gt;utomatically. Finds functions, symbols, etc.&lt;/td&gt;
 &lt;/tr&gt;
 &lt;tr&gt;
-&lt;td style="text-align: left"&gt;&lt;code&gt;checksec ./binary&lt;/code&gt;&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Checks for security mitigations like Canary, PIE, NX, and RELRO.&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;code&gt;afl&lt;/code&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;strong&gt;A&lt;/strong&gt;nalyze &lt;strong&gt;F&lt;/strong&gt;unction &lt;strong&gt;L&lt;/strong&gt;ist. Shows all identified functions.&lt;/td&gt;
 &lt;/tr&gt;
 &lt;tr&gt;
-&lt;td style="text-align: left"&gt;&lt;code&gt;readelf -h ./binary&lt;/code&gt;&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Displays the ELF header. Good for finding the entry point.&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;code&gt;s &amp;lt;address/name&amp;gt;&lt;/code&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;strong&gt;S&lt;/strong&gt;eek to a specific address or function name (e.g., &lt;code&gt;s main&lt;/code&gt;).&lt;/td&gt;
 &lt;/tr&gt;
 &lt;tr&gt;
-&lt;td style="text-align: left"&gt;&lt;code&gt;readelf -l ./binary&lt;/code&gt;&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Displays the program headers. Can find the &lt;code&gt;INTERP&lt;/code&gt; segment.&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;code&gt;pdf&lt;/code&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;strong&gt;P&lt;/strong&gt;rint &lt;strong&gt;D&lt;/strong&gt;isassembled &lt;strong&gt;F&lt;/strong&gt;unction. Shows assembly code.&lt;/td&gt;
 &lt;/tr&gt;
 &lt;tr&gt;
-&lt;td style="text-align: left"&gt;&lt;code&gt;readelf -r ./binary&lt;/code&gt;&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Shows relocation entries, revealing which library functions are used.&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;code&gt;pdg&lt;/code&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;strong&gt;P&lt;/strong&gt;rint &lt;strong&gt;D&lt;/strong&gt;ecompiled &lt;strong&gt;G&lt;/strong&gt;hidra. Shows decompiled C-like code.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;code&gt;afv&lt;/code&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;strong&gt;A&lt;/strong&gt;nalyze &lt;strong&gt;F&lt;/strong&gt;unction &lt;strong&gt;V&lt;/strong&gt;ariables. Shows local variables, arguments, and their stack offsets.&lt;/td&gt;
 &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
-&lt;h2 id="2-dynamic-analysis--debugging"&gt;2. Dynamic Analysis &amp;amp; Debugging&lt;/h2&gt;
-&lt;h3 id="strace"&gt;strace&lt;/h3&gt;
-&lt;p&gt;Traces system calls made by a process.&lt;/p&gt;</description></item><item><title>CTF Learnings: Matryoshka</title><link>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-07-gdb-1/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-07-gdb-1/</guid><description>&lt;h1 id="debugging-souce-code-with-assembly"&gt;Debugging Souce Code with Assembly&lt;/h1&gt;
-&lt;p&gt;If we compile C program with &lt;code&gt;-g&lt;/code&gt; flag, it tells GCC to include debugging symbols inside the resulting binary (a.out by default). These symbols live in a special section of the ELF file (like .debug_info, .debug_line, .debug_str, etc.) and contain metadata that maps machine instructions back to your original source code.&lt;/p&gt;
-&lt;p&gt;This allows us to see corresponding source along with assembly while debugging with GDB.&lt;/p&gt;</description></item><item><title>ELF Format: Part 3</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/2025-10-15-elf-format-part-3/</link><pubDate>Wed, 15 Oct 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/2025-10-15-elf-format-part-3/</guid><description>&lt;h1 id="elf-format-sections-and-section-header-table"&gt;ELF Format: Sections and Section Header Table&lt;/h1&gt;
+&lt;h3 id="additional-useful-commands"&gt;Additional Useful Commands&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style="text-align: left"&gt;r2 Command&lt;/th&gt;
+&lt;th style="text-align: left"&gt;Description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;code&gt;i&lt;/code&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Show general information about the binary (imports, exports, strings).&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;code&gt;ps&lt;/code&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Print a summary of the binary&amp;rsquo;s sections.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;code&gt;V&lt;/code&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Enter visual mode for interactive navigation.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;code&gt;VV&lt;/code&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Enter visual graph mode to see the control flow graph.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;code&gt;?&lt;/code&gt; / &lt;code&gt;??&lt;/code&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Get help on commands.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;</description></item><item><title>CTF – 1 : Matryoshka</title><link>https://sankethbk.github.io/blog/posts/ctf/2025-11-01-ctf-1/</link><pubDate>Sat, 01 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/ctf/2025-11-01-ctf-1/</guid><description>&lt;h1 id="reverse-engineering-and-ctf-challenge-notes"&gt;Reverse Engineering and CTF Challenge Notes&lt;/h1&gt;
+&lt;p&gt;Reverse engineering is the process of understanding how software works &lt;strong&gt;without access to its original source code&lt;/strong&gt;.&lt;br&gt;
+In security challenges (CTFs), the goal is often to recover hidden data or logic by dissecting a binary.&lt;br&gt;
+This walkthrough documents my first attempt at such a challenge, focusing on &lt;em&gt;ELF-based reverse engineering&lt;/em&gt; and the reasoning process behind each step.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-static-analysis"&gt;1. Static Analysis&lt;/h2&gt;
+&lt;p&gt;Static analysis means inspecting the binary &lt;strong&gt;without running it&lt;/strong&gt;.&lt;/p&gt;</description></item><item><title>ELF Format: Part 3</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/2025-10-15-elf-format-part-3/</link><pubDate>Wed, 15 Oct 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/2025-10-15-elf-format-part-3/</guid><description>&lt;h1 id="elf-format-sections-and-section-header-table"&gt;ELF Format: Sections and Section Header Table&lt;/h1&gt;
 &lt;p&gt;In the previous post, we explored Program Headers and Segments - the runtime view of an ELF file. Now we&amp;rsquo;ll look at Section Headers and Sections - the link-time and debugging view.&lt;/p&gt;
 &lt;h2 id="what-are-sections"&gt;What Are Sections?&lt;/h2&gt;
 &lt;p&gt;Sections are the link-time view of an ELF file. While segments tell the operating system how to load and execute a program, sections organize the file&amp;rsquo;s contents for:&lt;/p&gt;</description></item><item><title>ELF Format: Part 2</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/2025-10-13-elf-format-part-2/</link><pubDate>Mon, 13 Oct 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/2025-10-13-elf-format-part-2/</guid><description>&lt;h1 id="elf-format-segments-and-program-header-table"&gt;ELF Format: Segments and Program Header Table&lt;/h1&gt;

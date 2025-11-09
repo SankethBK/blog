@@ -1,0 +1,229 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>CTF – 2 : Good Kitty | Sanketh's Blog</title><meta name=keywords content="ctf,reverse-engineering"><meta name=description content="CTF Challenge: Good Kitty - Writeup
+Challenge Overview
+This is a reverse engineering CTF challenge where we need to find the correct password by analyzing a binary that:
+
+Calculates a value based on Project Euler problem #3
+Encodes it using a custom algorithm
+Compares user input against the encoded value
+
+Initial Analysis
+Decompiled Code Structure
+undefined8 main(void)
+{
+  byte bVar1;
+  ssize_t bytes_read;
+  long input_len;
+  int iVar2;
+  long in_FS_OFFSET;
+  double dVar3;
+  undefined1 local_be;
+  byte is_correct;
+  uint index;
+  long flag;
+  undefined8 local_b0;
+  undefined8 local_a8 [4];
+  undefined8 local_88;
+  undefined8 uStack_80;
+  undefined8 local_78;
+  char user_input [72];
+  long local_20;
+  
+  local_20 = *(long *)(in_FS_OFFSET + 0x28);
+  flag = ppeuler_3();
+  dVar3 = cbrt((double)flag);
+  flag = (long)dVar3;
+  flag = factorial(flag);
+  input_len = 0;
+  do {
+    bVar1 = *(byte *)((long)&amp;flag + input_len);
+    if ((0x19 < (byte)((bVar1 & 0xdf) + 0xbf)) && (9 < (byte)(bVar1 - 0x30))) {
+      bVar1 = bVar1 % 0x3e;
+      if ((byte)(bVar1 - 10) < 0x1a) {
+        *(byte *)((long)&amp;flag + input_len) = bVar1 + 0x37;
+      }
+      else if ((byte)(bVar1 + 0x30) < 0x54) {
+        *(byte *)((long)&amp;flag + input_len) = bVar1 + 0x30;
+      }
+      else {
+        *(byte *)((long)&amp;flag + input_len) = bVar1 + 0x3d;
+      }
+    }
+    input_len = input_len + 1;
+  } while (input_len != 8);
+  // ... rest of code validates input
+}
+Key Concepts Learned
+1. Understanding Pointer Arithmetic on Stack Variables
+Question: flag is declared as long flag; (not an array), so what does &amp;flag + index mean?"><meta name=author content="Sanketh"><link rel=canonical href=https://sankethbk.github.io/blog/posts/ctf/2025-11-08-ctf-2/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.deee627d8b8d9065acc54b2c9d901e601e142335047d242a93ba7bce86f41f19.css integrity="sha256-3u5ifYuNkGWsxUssnZAeYB4UIzUEfSQqk7p7zob0Hxk=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/ctf/2025-11-08-ctf-2/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/ctf/2025-11-08-ctf-2/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="CTF – 2 : Good Kitty"><meta property="og:description" content="CTF Challenge: Good Kitty - Writeup Challenge Overview This is a reverse engineering CTF challenge where we need to find the correct password by analyzing a binary that:
+Calculates a value based on Project Euler problem #3 Encodes it using a custom algorithm Compares user input against the encoded value Initial Analysis Decompiled Code Structure undefined8 main(void) { byte bVar1; ssize_t bytes_read; long input_len; int iVar2; long in_FS_OFFSET; double dVar3; undefined1 local_be; byte is_correct; uint index; long flag; undefined8 local_b0; undefined8 local_a8 [4]; undefined8 local_88; undefined8 uStack_80; undefined8 local_78; char user_input [72]; long local_20; local_20 = *(long *)(in_FS_OFFSET + 0x28); flag = ppeuler_3(); dVar3 = cbrt((double)flag); flag = (long)dVar3; flag = factorial(flag); input_len = 0; do { bVar1 = *(byte *)((long)&amp;flag + input_len); if ((0x19 < (byte)((bVar1 & 0xdf) + 0xbf)) && (9 < (byte)(bVar1 - 0x30))) { bVar1 = bVar1 % 0x3e; if ((byte)(bVar1 - 10) < 0x1a) { *(byte *)((long)&amp;flag + input_len) = bVar1 + 0x37; } else if ((byte)(bVar1 + 0x30) < 0x54) { *(byte *)((long)&amp;flag + input_len) = bVar1 + 0x30; } else { *(byte *)((long)&amp;flag + input_len) = bVar1 + 0x3d; } } input_len = input_len + 1; } while (input_len != 8); // ... rest of code validates input } Key Concepts Learned 1. Understanding Pointer Arithmetic on Stack Variables Question: flag is declared as long flag; (not an array), so what does &amp;flag + index mean?"><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-11-09T00:00:00+00:00"><meta property="article:modified_time" content="2025-11-09T00:00:00+00:00"><meta property="article:tag" content="Ctf"><meta property="article:tag" content="Reverse Engineering"><meta name=twitter:card content="summary"><meta name=twitter:title content="CTF – 2 : Good Kitty"><meta name=twitter:description content="CTF Challenge: Good Kitty - Writeup
+Challenge Overview
+This is a reverse engineering CTF challenge where we need to find the correct password by analyzing a binary that:
+
+Calculates a value based on Project Euler problem #3
+Encodes it using a custom algorithm
+Compares user input against the encoded value
+
+Initial Analysis
+Decompiled Code Structure
+undefined8 main(void)
+{
+  byte bVar1;
+  ssize_t bytes_read;
+  long input_len;
+  int iVar2;
+  long in_FS_OFFSET;
+  double dVar3;
+  undefined1 local_be;
+  byte is_correct;
+  uint index;
+  long flag;
+  undefined8 local_b0;
+  undefined8 local_a8 [4];
+  undefined8 local_88;
+  undefined8 uStack_80;
+  undefined8 local_78;
+  char user_input [72];
+  long local_20;
+  
+  local_20 = *(long *)(in_FS_OFFSET + 0x28);
+  flag = ppeuler_3();
+  dVar3 = cbrt((double)flag);
+  flag = (long)dVar3;
+  flag = factorial(flag);
+  input_len = 0;
+  do {
+    bVar1 = *(byte *)((long)&amp;flag + input_len);
+    if ((0x19 < (byte)((bVar1 & 0xdf) + 0xbf)) && (9 < (byte)(bVar1 - 0x30))) {
+      bVar1 = bVar1 % 0x3e;
+      if ((byte)(bVar1 - 10) < 0x1a) {
+        *(byte *)((long)&amp;flag + input_len) = bVar1 + 0x37;
+      }
+      else if ((byte)(bVar1 + 0x30) < 0x54) {
+        *(byte *)((long)&amp;flag + input_len) = bVar1 + 0x30;
+      }
+      else {
+        *(byte *)((long)&amp;flag + input_len) = bVar1 + 0x3d;
+      }
+    }
+    input_len = input_len + 1;
+  } while (input_len != 8);
+  // ... rest of code validates input
+}
+Key Concepts Learned
+1. Understanding Pointer Arithmetic on Stack Variables
+Question: flag is declared as long flag; (not an array), so what does &amp;flag + index mean?"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"CTF – 2 : Good Kitty","item":"https://sankethbk.github.io/blog/posts/ctf/2025-11-08-ctf-2/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"CTF – 2 : Good Kitty","name":"CTF – 2 : Good Kitty","description":"CTF Challenge: Good Kitty - Writeup Challenge Overview This is a reverse engineering CTF challenge where we need to find the correct password by analyzing a binary that:\nCalculates a value based on Project Euler problem #3 Encodes it using a custom algorithm Compares user input against the encoded value Initial Analysis Decompiled Code Structure undefined8 main(void) { byte bVar1; ssize_t bytes_read; long input_len; int iVar2; long in_FS_OFFSET; double dVar3; undefined1 local_be; byte is_correct; uint index; long flag; undefined8 local_b0; undefined8 local_a8 [4]; undefined8 local_88; undefined8 uStack_80; undefined8 local_78; char user_input [72]; long local_20; local_20 = *(long *)(in_FS_OFFSET + 0x28); flag = ppeuler_3(); dVar3 = cbrt((double)flag); flag = (long)dVar3; flag = factorial(flag); input_len = 0; do { bVar1 = *(byte *)((long)\u0026amp;flag + input_len); if ((0x19 \u0026lt; (byte)((bVar1 \u0026amp; 0xdf) + 0xbf)) \u0026amp;\u0026amp; (9 \u0026lt; (byte)(bVar1 - 0x30))) { bVar1 = bVar1 % 0x3e; if ((byte)(bVar1 - 10) \u0026lt; 0x1a) { *(byte *)((long)\u0026amp;flag + input_len) = bVar1 + 0x37; } else if ((byte)(bVar1 + 0x30) \u0026lt; 0x54) { *(byte *)((long)\u0026amp;flag + input_len) = bVar1 + 0x30; } else { *(byte *)((long)\u0026amp;flag + input_len) = bVar1 + 0x3d; } } input_len = input_len + 1; } while (input_len != 8); // ... rest of code validates input } Key Concepts Learned 1. Understanding Pointer Arithmetic on Stack Variables Question: flag is declared as long flag; (not an array), so what does \u0026amp;flag + index mean?\n","keywords":["ctf","reverse-engineering"],"articleBody":"CTF Challenge: Good Kitty - Writeup Challenge Overview This is a reverse engineering CTF challenge where we need to find the correct password by analyzing a binary that:\nCalculates a value based on Project Euler problem #3 Encodes it using a custom algorithm Compares user input against the encoded value Initial Analysis Decompiled Code Structure undefined8 main(void) { byte bVar1; ssize_t bytes_read; long input_len; int iVar2; long in_FS_OFFSET; double dVar3; undefined1 local_be; byte is_correct; uint index; long flag; undefined8 local_b0; undefined8 local_a8 [4]; undefined8 local_88; undefined8 uStack_80; undefined8 local_78; char user_input [72]; long local_20; local_20 = *(long *)(in_FS_OFFSET + 0x28); flag = ppeuler_3(); dVar3 = cbrt((double)flag); flag = (long)dVar3; flag = factorial(flag); input_len = 0; do { bVar1 = *(byte *)((long)\u0026flag + input_len); if ((0x19 \u003c (byte)((bVar1 \u0026 0xdf) + 0xbf)) \u0026\u0026 (9 \u003c (byte)(bVar1 - 0x30))) { bVar1 = bVar1 % 0x3e; if ((byte)(bVar1 - 10) \u003c 0x1a) { *(byte *)((long)\u0026flag + input_len) = bVar1 + 0x37; } else if ((byte)(bVar1 + 0x30) \u003c 0x54) { *(byte *)((long)\u0026flag + input_len) = bVar1 + 0x30; } else { *(byte *)((long)\u0026flag + input_len) = bVar1 + 0x3d; } } input_len = input_len + 1; } while (input_len != 8); // ... rest of code validates input } Key Concepts Learned 1. Understanding Pointer Arithmetic on Stack Variables Question: flag is declared as long flag; (not an array), so what does \u0026flag + index mean?\nAnswer:\nflag is a single 8-byte long variable on the stack The code treats these 8 bytes as an array by using pointer arithmetic \u0026flag + index accesses individual bytes within the 8-byte variable Memory Layout (Little-Endian): Address: \u0026flag \u0026flag+1 \u0026flag+2 ... \u0026flag+7 +--------+--------+--------+-----+--------+ flag: | byte 0 | byte 1 | byte 2 | ... | byte 7 | +--------+--------+--------+-----+--------+ (LSB) (MSB) 2. Type Casting and Pointer Arithmetic Question: In *(char *)((long)\u0026flag + (long)(int)index), why cast to long first?\nAnswer: The expression does integer arithmetic, not pointer arithmetic:\n// Step-by-step evaluation: 1. \u0026flag // Get address (type: long *) 2. (long)\u0026flag // Cast pointer to integer 3. (long)(int)index // Ensure index is long 4. (long)\u0026flag + index // INTEGER addition (not pointer arithmetic) 5. (char *)(...) // Cast result back to char pointer 6. *(...) // Dereference to get the byte Is it equivalent to (char *)\u0026flag + index?\nYes, for char * specifically, because sizeof(char) == 1:\n(char *)\u0026flag + index → pointer arithmetic, moves index bytes (char *)((long)\u0026flag + index) → integer arithmetic, adds index to address Both give the same result for char, but would differ for other types like int *.\n3. Finding Stack Offsets in Ghidra In Ghidra’s function variable list:\nundefined8 Stack[-0xb8]:8 flag This means:\nVariable is at rbp - 0xb8 Size is 8 bytes (:8) In GDB: x/gx $rbp-0xb8 or x/8bx $rbp-0xb8 GDB Debugging Techniques Setting Breakpoints Problem: Why did break 0x5555555564de fail but break *0x5555555564de work?\nAnswer: The * operator tells GDB to interpret the value as a memory address:\n# WITHOUT * - GDB looks for a SYMBOL named \"0x5555555564de\" break 0x5555555564de # ❌ Looks for function/symbol name # WITH * - GDB treats it as a MEMORY ADDRESS break *0x5555555564de # ✅ Breaks at instruction at this address Other breakpoint methods:\nbreak main # Break at function (no * needed) break main+194 # Break at offset from function break *0x1234 # Break at address break file.c:42 # Break at source line Handling PIE Executables For PIE executables, a constant offset will be added for each section, so we need to get a section’s address at runtime.\nSolution:\n# Method 1: Use relative addressing (gdb) start # Start and break at main (gdb) break *main+194 # Offset from function start (gdb) continue # Method 2: Set breakpoint after program loads (gdb) start (gdb) info proc mappings # Check actual base address (gdb) break *0x555555555000+0x136e (gdb) continue # Method 3: Use PIE-independent addresses (gdb) break *0x136e # GDB calculates base automatically Solution Process Step 1: Understanding the Algorithm Calculate base value: ppeuler_3() returns largest prime factor of 600851475143 = 6857 Cube root: cbrt(6857) ≈ 19.0 → 19 Factorial: 19! = 121645100408832000 (0x01B02B9306890000) Encode: Each byte is converted to base62-like characters (0-9, a-z, A-Z) Step 1: Setting Up GDB # Start the program gdb ./crack # Break after encoding loop completes (gdb) break *main+194 Breakpoint 1 at 0x136e # Run the program (gdb) run # Program hits breakpoint after encoding Step 2: Extracting the Flag # Examine the encoded flag (at rsp+0x10) (gdb) x/8bx $rsp+0x10 0x7fffffffdeb0: 0x30 0x30 0x73 0x47 0x6f 0x34 0x4d 0x30 (gdb) x/8c $rsp+0x10 0x7fffffffdeb0: 48 '0' 48 '0' 115 's' 71 'G' 111 'o' 52 '4' 77 'M' 48 '0' Final Answer Password: 00sGo4M0\nVerification # Test the password echo \"00sGo4M0\" | ./crack # Output: good kitty! Key Takeaways Stack variables can be treated as byte arrays using pointer arithmetic Type casting order matters: (char *)((long)ptr + offset) does integer arithmetic GDB’s * operator is crucial for breaking at memory addresses vs symbols ASLR requires setting breakpoints after program loads or using relative offsets Dynamic analysis (debugging) often reveals values that are hard to calculate manually Stack offsets in Ghidra directly translate to GDB commands like $rbp-0xb8 Commands Reference Card # Essential GDB workflow for CTFs gdb ./binary (gdb) start # Break at main (gdb) break *main+OFFSET # Set breakpoint at offset (gdb) continue # Run to breakpoint (gdb) x/8bx $rsp+0x10 # Examine memory (gdb) x/8c $rsp+0x10 # View as characters (gdb) info registers # Check register values (gdb) disassemble main # View assembly ","wordCount":"919","inLanguage":"en","datePublished":"2025-11-09T00:00:00Z","dateModified":"2025-11-09T00:00:00Z","author":{"@type":"Person","name":"Sanketh"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/ctf/2025-11-08-ctf-2/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload=renderMathInElement(document.body)></script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">CTF – 2 : Good Kitty</h1><div class=post-meta><span title='2025-11-09 00:00:00 +0000 UTC'>November 9, 2025</span>&nbsp;·&nbsp;5 min&nbsp;·&nbsp;Sanketh&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/ctf/2025-11-08-ctf-2.md rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#ctf-challenge-good-kitty---writeup aria-label="CTF Challenge: Good Kitty - Writeup">CTF Challenge: Good Kitty - Writeup</a><ul><li><a href=#challenge-overview aria-label="Challenge Overview">Challenge Overview</a></li><li><a href=#initial-analysis aria-label="Initial Analysis">Initial Analysis</a><ul><li><a href=#decompiled-code-structure aria-label="Decompiled Code Structure">Decompiled Code Structure</a></li></ul></li><li><a href=#key-concepts-learned aria-label="Key Concepts Learned">Key Concepts Learned</a><ul><li><a href=#1-understanding-pointer-arithmetic-on-stack-variables aria-label="1. Understanding Pointer Arithmetic on Stack Variables">1. Understanding Pointer Arithmetic on Stack Variables</a></li><li><a href=#2-type-casting-and-pointer-arithmetic aria-label="2. Type Casting and Pointer Arithmetic">2. Type Casting and Pointer Arithmetic</a></li><li><a href=#3-finding-stack-offsets-in-ghidra aria-label="3. Finding Stack Offsets in Ghidra">3. Finding Stack Offsets in Ghidra</a></li></ul></li><li><a href=#gdb-debugging-techniques aria-label="GDB Debugging Techniques">GDB Debugging Techniques</a><ul><li><a href=#setting-breakpoints aria-label="Setting Breakpoints">Setting Breakpoints</a></li><li><a href=#handling-pie-executables aria-label="Handling PIE Executables">Handling PIE Executables</a></li></ul></li><li><a href=#solution-process aria-label="Solution Process">Solution Process</a><ul><li><a href=#step-1-understanding-the-algorithm aria-label="Step 1: Understanding the Algorithm">Step 1: Understanding the Algorithm</a></li><li><a href=#step-1-setting-up-gdb aria-label="Step 1: Setting Up GDB">Step 1: Setting Up GDB</a></li><li><a href=#step-2-extracting-the-flag aria-label="Step 2: Extracting the Flag">Step 2: Extracting the Flag</a></li></ul></li><li><a href=#final-answer aria-label="Final Answer">Final Answer</a><ul><li><a href=#verification aria-label=Verification>Verification</a></li></ul></li><li><a href=#key-takeaways aria-label="Key Takeaways">Key Takeaways</a></li><li><a href=#commands-reference-card aria-label="Commands Reference Card">Commands Reference Card</a></li></ul></li></ul></div></details></div><div class=post-content><h1 id=ctf-challenge-good-kitty---writeup>CTF Challenge: Good Kitty - Writeup<a hidden class=anchor aria-hidden=true href=#ctf-challenge-good-kitty---writeup>#</a></h1><h2 id=challenge-overview>Challenge Overview<a hidden class=anchor aria-hidden=true href=#challenge-overview>#</a></h2><p>This is a reverse engineering CTF challenge where we need to find the correct password by analyzing a binary that:</p><ol><li>Calculates a value based on Project Euler problem #3</li><li>Encodes it using a custom algorithm</li><li>Compares user input against the encoded value</li></ol><h2 id=initial-analysis>Initial Analysis<a hidden class=anchor aria-hidden=true href=#initial-analysis>#</a></h2><h3 id=decompiled-code-structure>Decompiled Code Structure<a hidden class=anchor aria-hidden=true href=#decompiled-code-structure>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span>undefined8 <span style=color:#a6e22e>main</span>(<span style=color:#66d9ef>void</span>)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  byte bVar1;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>ssize_t</span> bytes_read;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>long</span> input_len;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>int</span> iVar2;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>long</span> in_FS_OFFSET;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>double</span> dVar3;
+</span></span><span style=display:flex><span>  undefined1 local_be;
+</span></span><span style=display:flex><span>  byte is_correct;
+</span></span><span style=display:flex><span>  uint index;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>long</span> flag;
+</span></span><span style=display:flex><span>  undefined8 local_b0;
+</span></span><span style=display:flex><span>  undefined8 local_a8 [<span style=color:#ae81ff>4</span>];
+</span></span><span style=display:flex><span>  undefined8 local_88;
+</span></span><span style=display:flex><span>  undefined8 uStack_80;
+</span></span><span style=display:flex><span>  undefined8 local_78;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>char</span> user_input [<span style=color:#ae81ff>72</span>];
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>long</span> local_20;
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>  local_20 <span style=color:#f92672>=</span> <span style=color:#f92672>*</span>(<span style=color:#66d9ef>long</span> <span style=color:#f92672>*</span>)(in_FS_OFFSET <span style=color:#f92672>+</span> <span style=color:#ae81ff>0x28</span>);
+</span></span><span style=display:flex><span>  flag <span style=color:#f92672>=</span> <span style=color:#a6e22e>ppeuler_3</span>();
+</span></span><span style=display:flex><span>  dVar3 <span style=color:#f92672>=</span> <span style=color:#a6e22e>cbrt</span>((<span style=color:#66d9ef>double</span>)flag);
+</span></span><span style=display:flex><span>  flag <span style=color:#f92672>=</span> (<span style=color:#66d9ef>long</span>)dVar3;
+</span></span><span style=display:flex><span>  flag <span style=color:#f92672>=</span> <span style=color:#a6e22e>factorial</span>(flag);
+</span></span><span style=display:flex><span>  input_len <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>do</span> {
+</span></span><span style=display:flex><span>    bVar1 <span style=color:#f92672>=</span> <span style=color:#f92672>*</span>(byte <span style=color:#f92672>*</span>)((<span style=color:#66d9ef>long</span>)<span style=color:#f92672>&amp;</span>flag <span style=color:#f92672>+</span> input_len);
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> ((<span style=color:#ae81ff>0x19</span> <span style=color:#f92672>&lt;</span> (byte)((bVar1 <span style=color:#f92672>&amp;</span> <span style=color:#ae81ff>0xdf</span>) <span style=color:#f92672>+</span> <span style=color:#ae81ff>0xbf</span>)) <span style=color:#f92672>&amp;&amp;</span> (<span style=color:#ae81ff>9</span> <span style=color:#f92672>&lt;</span> (byte)(bVar1 <span style=color:#f92672>-</span> <span style=color:#ae81ff>0x30</span>))) {
+</span></span><span style=display:flex><span>      bVar1 <span style=color:#f92672>=</span> bVar1 <span style=color:#f92672>%</span> <span style=color:#ae81ff>0x3e</span>;
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>if</span> ((byte)(bVar1 <span style=color:#f92672>-</span> <span style=color:#ae81ff>10</span>) <span style=color:#f92672>&lt;</span> <span style=color:#ae81ff>0x1a</span>) {
+</span></span><span style=display:flex><span>        <span style=color:#f92672>*</span>(byte <span style=color:#f92672>*</span>)((<span style=color:#66d9ef>long</span>)<span style=color:#f92672>&amp;</span>flag <span style=color:#f92672>+</span> input_len) <span style=color:#f92672>=</span> bVar1 <span style=color:#f92672>+</span> <span style=color:#ae81ff>0x37</span>;
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> ((byte)(bVar1 <span style=color:#f92672>+</span> <span style=color:#ae81ff>0x30</span>) <span style=color:#f92672>&lt;</span> <span style=color:#ae81ff>0x54</span>) {
+</span></span><span style=display:flex><span>        <span style=color:#f92672>*</span>(byte <span style=color:#f92672>*</span>)((<span style=color:#66d9ef>long</span>)<span style=color:#f92672>&amp;</span>flag <span style=color:#f92672>+</span> input_len) <span style=color:#f92672>=</span> bVar1 <span style=color:#f92672>+</span> <span style=color:#ae81ff>0x30</span>;
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>else</span> {
+</span></span><span style=display:flex><span>        <span style=color:#f92672>*</span>(byte <span style=color:#f92672>*</span>)((<span style=color:#66d9ef>long</span>)<span style=color:#f92672>&amp;</span>flag <span style=color:#f92672>+</span> input_len) <span style=color:#f92672>=</span> bVar1 <span style=color:#f92672>+</span> <span style=color:#ae81ff>0x3d</span>;
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    input_len <span style=color:#f92672>=</span> input_len <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>  } <span style=color:#66d9ef>while</span> (input_len <span style=color:#f92672>!=</span> <span style=color:#ae81ff>8</span>);
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// ... rest of code validates input
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>}
+</span></span></code></pre></div><h2 id=key-concepts-learned>Key Concepts Learned<a hidden class=anchor aria-hidden=true href=#key-concepts-learned>#</a></h2><h3 id=1-understanding-pointer-arithmetic-on-stack-variables>1. Understanding Pointer Arithmetic on Stack Variables<a hidden class=anchor aria-hidden=true href=#1-understanding-pointer-arithmetic-on-stack-variables>#</a></h3><p><strong>Question</strong>: <code>flag</code> is declared as <code>long flag;</code> (not an array), so what does <code>&amp;flag + index</code> mean?</p><p><strong>Answer</strong>:</p><ul><li><code>flag</code> is a single 8-byte <code>long</code> variable on the stack</li><li>The code treats these 8 bytes as an array by using pointer arithmetic</li><li><code>&amp;flag + index</code> accesses individual bytes within the 8-byte variable</li></ul><pre tabindex=0><code>Memory Layout (Little-Endian):
+Address:     &amp;flag    &amp;flag+1  &amp;flag+2  ... &amp;flag+7
+            +--------+--------+--------+-----+--------+
+flag:       | byte 0 | byte 1 | byte 2 | ... | byte 7 |
+            +--------+--------+--------+-----+--------+
+            (LSB)                              (MSB)
+</code></pre><h3 id=2-type-casting-and-pointer-arithmetic>2. Type Casting and Pointer Arithmetic<a hidden class=anchor aria-hidden=true href=#2-type-casting-and-pointer-arithmetic>#</a></h3><p><strong>Question</strong>: In <code>*(char *)((long)&amp;flag + (long)(int)index)</code>, why cast to <code>long</code> first?</p><p><strong>Answer</strong>: The expression does integer arithmetic, not pointer arithmetic:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span><span style=color:#75715e>// Step-by-step evaluation:
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#ae81ff>1.</span> <span style=color:#f92672>&amp;</span>flag                    <span style=color:#75715e>// Get address (type: long *)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#ae81ff>2.</span> (<span style=color:#66d9ef>long</span>)<span style=color:#f92672>&amp;</span>flag              <span style=color:#75715e>// Cast pointer to integer
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#ae81ff>3.</span> (<span style=color:#66d9ef>long</span>)(<span style=color:#66d9ef>int</span>)index         <span style=color:#75715e>// Ensure index is long
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#ae81ff>4.</span> (<span style=color:#66d9ef>long</span>)<span style=color:#f92672>&amp;</span>flag <span style=color:#f92672>+</span> index      <span style=color:#75715e>// INTEGER addition (not pointer arithmetic)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#ae81ff>5.</span> (<span style=color:#66d9ef>char</span> <span style=color:#f92672>*</span>)(...)            <span style=color:#75715e>// Cast result back to char pointer
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#ae81ff>6.</span> <span style=color:#f92672>*</span>(...)                   <span style=color:#75715e>// Dereference to get the byte
+</span></span></span></code></pre></div><p><strong>Is it equivalent to <code>(char *)&amp;flag + index</code>?</strong></p><p>Yes, for <code>char *</code> specifically, because <code>sizeof(char) == 1</code>:</p><ul><li><code>(char *)&amp;flag + index</code> → pointer arithmetic, moves <code>index</code> bytes</li><li><code>(char *)((long)&amp;flag + index)</code> → integer arithmetic, adds <code>index</code> to address</li></ul><p>Both give the same result for <code>char</code>, but would differ for other types like <code>int *</code>.</p><h3 id=3-finding-stack-offsets-in-ghidra>3. Finding Stack Offsets in Ghidra<a hidden class=anchor aria-hidden=true href=#3-finding-stack-offsets-in-ghidra>#</a></h3><p>In Ghidra&rsquo;s function variable list:</p><pre tabindex=0><code>undefined8        Stack[-0xb8]:8 flag
+</code></pre><p>This means:</p><ul><li>Variable is at <code>rbp - 0xb8</code></li><li>Size is 8 bytes (<code>:8</code>)</li><li>In GDB: <code>x/gx $rbp-0xb8</code> or <code>x/8bx $rbp-0xb8</code></li></ul><h2 id=gdb-debugging-techniques>GDB Debugging Techniques<a hidden class=anchor aria-hidden=true href=#gdb-debugging-techniques>#</a></h2><h3 id=setting-breakpoints>Setting Breakpoints<a hidden class=anchor aria-hidden=true href=#setting-breakpoints>#</a></h3><p><strong>Problem</strong>: Why did <code>break 0x5555555564de</code> fail but <code>break *0x5555555564de</code> work?</p><p><strong>Answer</strong>: The <code>*</code> operator tells GDB to interpret the value as a memory address:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># WITHOUT * - GDB looks for a SYMBOL named &#34;0x5555555564de&#34;</span>
+</span></span><span style=display:flex><span>break 0x5555555564de     <span style=color:#75715e># ❌ Looks for function/symbol name</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># WITH * - GDB treats it as a MEMORY ADDRESS</span>
+</span></span><span style=display:flex><span>break *0x5555555564de    <span style=color:#75715e># ✅ Breaks at instruction at this address</span>
+</span></span></code></pre></div><p>Other breakpoint methods:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>break main               <span style=color:#75715e># Break at function (no * needed)</span>
+</span></span><span style=display:flex><span>break main+194          <span style=color:#75715e># Break at offset from function</span>
+</span></span><span style=display:flex><span>break *0x1234           <span style=color:#75715e># Break at address</span>
+</span></span><span style=display:flex><span>break file.c:42         <span style=color:#75715e># Break at source line</span>
+</span></span></code></pre></div><h3 id=handling-pie-executables>Handling PIE Executables<a hidden class=anchor aria-hidden=true href=#handling-pie-executables>#</a></h3><p>For PIE executables, a constant offset will be added for each section, so we need to get a section&rsquo;s address at runtime.</p><p><strong>Solution</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># Method 1: Use relative addressing</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> start                    <span style=color:#75715e># Start and break at main</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> break *main+194         <span style=color:#75715e># Offset from function start</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> <span style=color:#66d9ef>continue</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Method 2: Set breakpoint after program loads</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> start
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> info proc mappings      <span style=color:#75715e># Check actual base address</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> break *0x555555555000+0x136e
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> <span style=color:#66d9ef>continue</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Method 3: Use PIE-independent addresses</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> break *0x136e           <span style=color:#75715e># GDB calculates base automatically</span>
+</span></span></code></pre></div><h2 id=solution-process>Solution Process<a hidden class=anchor aria-hidden=true href=#solution-process>#</a></h2><h3 id=step-1-understanding-the-algorithm>Step 1: Understanding the Algorithm<a hidden class=anchor aria-hidden=true href=#step-1-understanding-the-algorithm>#</a></h3><ol><li><strong>Calculate base value</strong>: <code>ppeuler_3()</code> returns largest prime factor of 600851475143 = <strong>6857</strong></li><li><strong>Cube root</strong>: <code>cbrt(6857) ≈ 19.0</code> → <strong>19</strong></li><li><strong>Factorial</strong>: <code>19! = 121645100408832000</code> (0x01B02B9306890000)</li><li><strong>Encode</strong>: Each byte is converted to base62-like characters (0-9, a-z, A-Z)</li></ol><h3 id=step-1-setting-up-gdb>Step 1: Setting Up GDB<a hidden class=anchor aria-hidden=true href=#step-1-setting-up-gdb>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># Start the program</span>
+</span></span><span style=display:flex><span>gdb ./crack
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Break after encoding loop completes</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> break *main+194
+</span></span><span style=display:flex><span>Breakpoint <span style=color:#ae81ff>1</span> at 0x136e
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Run the program</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> run
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Program hits breakpoint after encoding</span>
+</span></span></code></pre></div><h3 id=step-2-extracting-the-flag>Step 2: Extracting the Flag<a hidden class=anchor aria-hidden=true href=#step-2-extracting-the-flag>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># Examine the encoded flag (at rsp+0x10)</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> x/8bx $rsp+0x10
+</span></span><span style=display:flex><span>0x7fffffffdeb0: 0x30  0x30  0x73  0x47  0x6f  0x34  0x4d  0x30
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> x/8c $rsp+0x10
+</span></span><span style=display:flex><span>0x7fffffffdeb0: <span style=color:#ae81ff>48</span> <span style=color:#e6db74>&#39;0&#39;</span>  <span style=color:#ae81ff>48</span> <span style=color:#e6db74>&#39;0&#39;</span>  <span style=color:#ae81ff>115</span> <span style=color:#e6db74>&#39;s&#39;</span>  <span style=color:#ae81ff>71</span> <span style=color:#e6db74>&#39;G&#39;</span>  <span style=color:#ae81ff>111</span> <span style=color:#e6db74>&#39;o&#39;</span>  <span style=color:#ae81ff>52</span> <span style=color:#e6db74>&#39;4&#39;</span>  <span style=color:#ae81ff>77</span> <span style=color:#e6db74>&#39;M&#39;</span>  <span style=color:#ae81ff>48</span> <span style=color:#e6db74>&#39;0&#39;</span>
+</span></span></code></pre></div><h2 id=final-answer>Final Answer<a hidden class=anchor aria-hidden=true href=#final-answer>#</a></h2><p><strong>Password</strong>: <code>00sGo4M0</code></p><h3 id=verification>Verification<a hidden class=anchor aria-hidden=true href=#verification>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># Test the password</span>
+</span></span><span style=display:flex><span>echo <span style=color:#e6db74>&#34;00sGo4M0&#34;</span> | ./crack
+</span></span><span style=display:flex><span><span style=color:#75715e># Output: good kitty!</span>
+</span></span></code></pre></div><h2 id=key-takeaways>Key Takeaways<a hidden class=anchor aria-hidden=true href=#key-takeaways>#</a></h2><ol><li><strong>Stack variables</strong> can be treated as byte arrays using pointer arithmetic</li><li><strong>Type casting order</strong> matters: <code>(char *)((long)ptr + offset)</code> does integer arithmetic</li><li><strong>GDB&rsquo;s <code>*</code> operator</strong> is crucial for breaking at memory addresses vs symbols</li><li><strong>ASLR</strong> requires setting breakpoints after program loads or using relative offsets</li><li><strong>Dynamic analysis</strong> (debugging) often reveals values that are hard to calculate manually</li><li><strong>Stack offsets</strong> in Ghidra directly translate to GDB commands like <code>$rbp-0xb8</code></li></ol><h2 id=commands-reference-card>Commands Reference Card<a hidden class=anchor aria-hidden=true href=#commands-reference-card>#</a></h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># Essential GDB workflow for CTFs</span>
+</span></span><span style=display:flex><span>gdb ./binary
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> start                        <span style=color:#75715e># Break at main</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> break *main+OFFSET          <span style=color:#75715e># Set breakpoint at offset</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> <span style=color:#66d9ef>continue</span>                    <span style=color:#75715e># Run to breakpoint</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> x/8bx $rsp+0x10            <span style=color:#75715e># Examine memory</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> x/8c $rsp+0x10             <span style=color:#75715e># View as characters</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> info registers             <span style=color:#75715e># Check register values</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> disassemble main           <span style=color:#75715e># View assembly</span>
+</span></span></code></pre></div></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/ctf/>Ctf</a></li><li><a href=https://sankethbk.github.io/blog/tags/reverse-engineering/>Reverse Engineering</a></li></ul></footer></article><section id=references><h2>References</h2><ul><li><a href=https://crackmes.one/crackme/68ff42b82d267f28f69b78c8 target=_blank rel="noopener noreferrer">Matryoshka</a></li></ul></section></main><footer class=footer><span>&copy; 2025 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
