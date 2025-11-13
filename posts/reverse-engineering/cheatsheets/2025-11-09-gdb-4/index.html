@@ -1,0 +1,292 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>GDB print Command | Sanketh's Blog</title><meta name=keywords content="reverse-engineering,gdb"><meta name=description content="GDB Print Command Reference Guide
+Basic Print Command
+print variable_name
+p variable_name          # Short form
+
+Print with Format Specifiers
+Use /format after print to specify output format:
+Hexadecimal
+print/x variable         # Hex (lowercase)
+print/x value           # Example: 0x5
+p/x 255                 # Output: 0xff
+Decimal
+print/d variable         # Signed decimal
+print/u variable         # Unsigned decimal
+p/d 0xff                # Output: 255
+Octal
+print/o variable         # Octal format
+p/o 64                  # Output: 0100
+Binary
+print/t variable         # Binary (t = &#34;two&#34;)
+p/t 5                   # Output: 101
+Character
+print/c variable         # As ASCII character
+p/c 65                  # Output: 'A'
+Floating Point
+print/f variable         # Floating point
+p/f 3.14159
+Address/Pointer
+print/a variable         # As address
+p/a 0x555555555189      # Shows as address
+String
+print/s pointer          # Interpret as C string
+p/s argv[1]
+
+Working with Pointers
+print pointer            # Shows address
+print *pointer           # Dereference (shows value)
+print &amp;variable          # Shows address of variable
+
+# Example
+print argv               # Address of argv array
+print *argv              # First element (argv[0])
+print argv[1]            # Second element
+print *argv[1]           # First char of argv[1]
+
+Array and String Operations
+# Print entire array
+print buffer_one
+print buffer_two
+
+# Print specific elements
+print buffer_one[0]
+print buffer_one[3]
+
+# Print array slice (if supported)
+print buffer_one@8       # Print 8 elements starting at buffer_one
+
+# View string with length
+x/8c buffer_one          # First 8 chars
+x/s buffer_one           # Until null terminator
+
+Type Casting
+# Cast to different types
+print (int *)buffer_one          # Treat as int pointer
+print *(int *)buffer_one         # Dereference as int
+print (unsigned char)value       # Cast to unsigned char
+
+# Example: View buffer as integers
+print *(int *)&amp;buffer_one
+print *(long *)&amp;buffer_two
+
+Expressions and Calculations
+# Arithmetic
+print value + 10
+print sizeof(buffer_one)
+print strlen(buffer_one)
+
+# Address calculations
+print &amp;buffer_one - &amp;buffer_two
+print (long)&amp;value - (long)&amp;buffer_one
+
+# Pointer arithmetic
+print argv[0]
+print *(argv + 1)
+
+Display Commands (Auto-Print)
+Set up variables to display automatically after each step:"><meta name=author content="Sanketh"><link rel=canonical href=https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-09-gdb-4/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.deee627d8b8d9065acc54b2c9d901e601e142335047d242a93ba7bce86f41f19.css integrity="sha256-3u5ifYuNkGWsxUssnZAeYB4UIzUEfSQqk7p7zob0Hxk=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-09-gdb-4/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-09-gdb-4/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="GDB print Command"><meta property="og:description" content="GDB Print Command Reference Guide Basic Print Command print variable_name p variable_name # Short form Print with Format Specifiers Use /format after print to specify output format:
+Hexadecimal print/x variable # Hex (lowercase) print/x value # Example: 0x5 p/x 255 # Output: 0xff Decimal print/d variable # Signed decimal print/u variable # Unsigned decimal p/d 0xff # Output: 255 Octal print/o variable # Octal format p/o 64 # Output: 0100 Binary print/t variable # Binary (t = &#34;two&#34;) p/t 5 # Output: 101 Character print/c variable # As ASCII character p/c 65 # Output: 'A' Floating Point print/f variable # Floating point p/f 3.14159 Address/Pointer print/a variable # As address p/a 0x555555555189 # Shows as address String print/s pointer # Interpret as C string p/s argv[1] Working with Pointers print pointer # Shows address print *pointer # Dereference (shows value) print &amp;variable # Shows address of variable # Example print argv # Address of argv array print *argv # First element (argv[0]) print argv[1] # Second element print *argv[1] # First char of argv[1] Array and String Operations # Print entire array print buffer_one print buffer_two # Print specific elements print buffer_one[0] print buffer_one[3] # Print array slice (if supported) print buffer_one@8 # Print 8 elements starting at buffer_one # View string with length x/8c buffer_one # First 8 chars x/s buffer_one # Until null terminator Type Casting # Cast to different types print (int *)buffer_one # Treat as int pointer print *(int *)buffer_one # Dereference as int print (unsigned char)value # Cast to unsigned char # Example: View buffer as integers print *(int *)&amp;buffer_one print *(long *)&amp;buffer_two Expressions and Calculations # Arithmetic print value + 10 print sizeof(buffer_one) print strlen(buffer_one) # Address calculations print &amp;buffer_one - &amp;buffer_two print (long)&amp;value - (long)&amp;buffer_one # Pointer arithmetic print argv[0] print *(argv + 1) Display Commands (Auto-Print) Set up variables to display automatically after each step:"><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-11-09T00:00:00+00:00"><meta property="article:modified_time" content="2025-11-09T00:00:00+00:00"><meta property="article:tag" content="Reverse-Engineering"><meta property="article:tag" content="Gdb"><meta name=twitter:card content="summary"><meta name=twitter:title content="GDB print Command"><meta name=twitter:description content="GDB Print Command Reference Guide
+Basic Print Command
+print variable_name
+p variable_name          # Short form
+
+Print with Format Specifiers
+Use /format after print to specify output format:
+Hexadecimal
+print/x variable         # Hex (lowercase)
+print/x value           # Example: 0x5
+p/x 255                 # Output: 0xff
+Decimal
+print/d variable         # Signed decimal
+print/u variable         # Unsigned decimal
+p/d 0xff                # Output: 255
+Octal
+print/o variable         # Octal format
+p/o 64                  # Output: 0100
+Binary
+print/t variable         # Binary (t = &#34;two&#34;)
+p/t 5                   # Output: 101
+Character
+print/c variable         # As ASCII character
+p/c 65                  # Output: 'A'
+Floating Point
+print/f variable         # Floating point
+p/f 3.14159
+Address/Pointer
+print/a variable         # As address
+p/a 0x555555555189      # Shows as address
+String
+print/s pointer          # Interpret as C string
+p/s argv[1]
+
+Working with Pointers
+print pointer            # Shows address
+print *pointer           # Dereference (shows value)
+print &amp;variable          # Shows address of variable
+
+# Example
+print argv               # Address of argv array
+print *argv              # First element (argv[0])
+print argv[1]            # Second element
+print *argv[1]           # First char of argv[1]
+
+Array and String Operations
+# Print entire array
+print buffer_one
+print buffer_two
+
+# Print specific elements
+print buffer_one[0]
+print buffer_one[3]
+
+# Print array slice (if supported)
+print buffer_one@8       # Print 8 elements starting at buffer_one
+
+# View string with length
+x/8c buffer_one          # First 8 chars
+x/s buffer_one           # Until null terminator
+
+Type Casting
+# Cast to different types
+print (int *)buffer_one          # Treat as int pointer
+print *(int *)buffer_one         # Dereference as int
+print (unsigned char)value       # Cast to unsigned char
+
+# Example: View buffer as integers
+print *(int *)&amp;buffer_one
+print *(long *)&amp;buffer_two
+
+Expressions and Calculations
+# Arithmetic
+print value + 10
+print sizeof(buffer_one)
+print strlen(buffer_one)
+
+# Address calculations
+print &amp;buffer_one - &amp;buffer_two
+print (long)&amp;value - (long)&amp;buffer_one
+
+# Pointer arithmetic
+print argv[0]
+print *(argv + 1)
+
+Display Commands (Auto-Print)
+Set up variables to display automatically after each step:"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"GDB print Command","item":"https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-09-gdb-4/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"GDB print Command","name":"GDB print Command","description":"GDB Print Command Reference Guide Basic Print Command print variable_name p variable_name # Short form Print with Format Specifiers Use /format after print to specify output format:\nHexadecimal print/x variable # Hex (lowercase) print/x value # Example: 0x5 p/x 255 # Output: 0xff Decimal print/d variable # Signed decimal print/u variable # Unsigned decimal p/d 0xff # Output: 255 Octal print/o variable # Octal format p/o 64 # Output: 0100 Binary print/t variable # Binary (t = \u0026#34;two\u0026#34;) p/t 5 # Output: 101 Character print/c variable # As ASCII character p/c 65 # Output: \u0026#39;A\u0026#39; Floating Point print/f variable # Floating point p/f 3.14159 Address/Pointer print/a variable # As address p/a 0x555555555189 # Shows as address String print/s pointer # Interpret as C string p/s argv[1] Working with Pointers print pointer # Shows address print *pointer # Dereference (shows value) print \u0026amp;variable # Shows address of variable # Example print argv # Address of argv array print *argv # First element (argv[0]) print argv[1] # Second element print *argv[1] # First char of argv[1] Array and String Operations # Print entire array print buffer_one print buffer_two # Print specific elements print buffer_one[0] print buffer_one[3] # Print array slice (if supported) print buffer_one@8 # Print 8 elements starting at buffer_one # View string with length x/8c buffer_one # First 8 chars x/s buffer_one # Until null terminator Type Casting # Cast to different types print (int *)buffer_one # Treat as int pointer print *(int *)buffer_one # Dereference as int print (unsigned char)value # Cast to unsigned char # Example: View buffer as integers print *(int *)\u0026amp;buffer_one print *(long *)\u0026amp;buffer_two Expressions and Calculations # Arithmetic print value + 10 print sizeof(buffer_one) print strlen(buffer_one) # Address calculations print \u0026amp;buffer_one - \u0026amp;buffer_two print (long)\u0026amp;value - (long)\u0026amp;buffer_one # Pointer arithmetic print argv[0] print *(argv + 1) Display Commands (Auto-Print) Set up variables to display automatically after each step:\n","keywords":["reverse-engineering","gdb"],"articleBody":"GDB Print Command Reference Guide Basic Print Command print variable_name p variable_name # Short form Print with Format Specifiers Use /format after print to specify output format:\nHexadecimal print/x variable # Hex (lowercase) print/x value # Example: 0x5 p/x 255 # Output: 0xff Decimal print/d variable # Signed decimal print/u variable # Unsigned decimal p/d 0xff # Output: 255 Octal print/o variable # Octal format p/o 64 # Output: 0100 Binary print/t variable # Binary (t = \"two\") p/t 5 # Output: 101 Character print/c variable # As ASCII character p/c 65 # Output: 'A' Floating Point print/f variable # Floating point p/f 3.14159 Address/Pointer print/a variable # As address p/a 0x555555555189 # Shows as address String print/s pointer # Interpret as C string p/s argv[1] Working with Pointers print pointer # Shows address print *pointer # Dereference (shows value) print \u0026variable # Shows address of variable # Example print argv # Address of argv array print *argv # First element (argv[0]) print argv[1] # Second element print *argv[1] # First char of argv[1] Array and String Operations # Print entire array print buffer_one print buffer_two # Print specific elements print buffer_one[0] print buffer_one[3] # Print array slice (if supported) print buffer_one@8 # Print 8 elements starting at buffer_one # View string with length x/8c buffer_one # First 8 chars x/s buffer_one # Until null terminator Type Casting # Cast to different types print (int *)buffer_one # Treat as int pointer print *(int *)buffer_one # Dereference as int print (unsigned char)value # Cast to unsigned char # Example: View buffer as integers print *(int *)\u0026buffer_one print *(long *)\u0026buffer_two Expressions and Calculations # Arithmetic print value + 10 print sizeof(buffer_one) print strlen(buffer_one) # Address calculations print \u0026buffer_one - \u0026buffer_two print (long)\u0026value - (long)\u0026buffer_one # Pointer arithmetic print argv[0] print *(argv + 1) Display Commands (Auto-Print) Set up variables to display automatically after each step:\ndisplay variable # Auto-print after each command display/x value # Auto-print in hex display/8xb buffer_one # Auto-print 8 bytes in hex # Manage displays info display # List all displays delete display 1 # Remove display #1 disable display 2 # Temporarily disable enable display 2 # Re-enable Useful Combinations Stack Analysis # View stack pointer and nearby memory print $rsp x/32xw $rsp # 32 words from stack pointer x/64xb $rsp # 64 bytes from stack pointer Registers print $rax # Print register value print/x $rip # Instruction pointer in hex info registers # All registers info registers rax rbx # Specific registers Function Arguments print argc print argv print argv[0] print argv[1] x/s argv[0] # Program name as string x/s argv[1] # First argument as string Side-by-Side Memory View # Define a custom command define show_buffers echo \\n=== BUFFER_TWO ===\\n x/8xb \u0026buffer_two echo \\n=== BUFFER_ONE ===\\n x/8xb \u0026buffer_one echo \\n=== VALUE ===\\n print/x value echo \\n end # Use it show_buffers Advanced: Pretty Printing Structures # Enable pretty printing set print pretty on set print array on set print array-indexes on # Print structure print my_struct # Print specific field print my_struct.field_name Quick Reference Table Command Purpose Example p var Print variable p value p/x var Print in hex p/x value p/d var Print in decimal p/d 0xff p/t var Print in binary p/t 5 p/c var Print as char p/c 65 p \u0026var Print address p \u0026value p *ptr Dereference pointer p *argv x/8xb addr 8 bytes in hex x/8xb \u0026buffer x/4xw addr 4 words in hex x/4xw $rsp x/s addr String at address x/s buffer_one x/10i addr 10 instructions x/10i main display var Auto-display display/x value Pro Tips Use tab completion: Type p buf then press TAB to complete variable names Repeat last command: Press ENTER to repeat the last command Command history: Use UP/DOWN arrows to navigate command history Save typing: Use p instead of print, x instead of examine Combine with info: info locals, info args, info registers Set convenience variables: set $myvar = value then print $myvar Troubleshooting Print Issues Variable not accessible Error: No symbol \"var\" in current context Solution: Make sure you’re at the right scope/breakpoint and compiled with -g\nOptimized out value = Solution: Compile with -O0 flag (no optimization)\nAddress not mapped Cannot access memory at address 0x0 Solution: Check if pointer is NULL or invalid\n","wordCount":"711","inLanguage":"en","datePublished":"2025-11-09T00:00:00Z","dateModified":"2025-11-09T00:00:00Z","author":{"@type":"Person","name":"Sanketh"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-09-gdb-4/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload=renderMathInElement(document.body)></script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">GDB print Command</h1><div class=post-meta><span title='2025-11-09 00:00:00 +0000 UTC'>November 9, 2025</span>&nbsp;·&nbsp;4 min&nbsp;·&nbsp;Sanketh&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/reverse-engineering/cheatsheets/2025-11-09-gdb-4.md rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#gdb-print-command-reference-guide aria-label="GDB Print Command Reference Guide">GDB Print Command Reference Guide</a><ul><li><a href=#basic-print-command aria-label="Basic Print Command">Basic Print Command</a></li><li><a href=#print-with-format-specifiers aria-label="Print with Format Specifiers">Print with Format Specifiers</a><ul><li><a href=#hexadecimal aria-label=Hexadecimal>Hexadecimal</a></li><li><a href=#decimal aria-label=Decimal>Decimal</a></li><li><a href=#octal aria-label=Octal>Octal</a></li><li><a href=#binary aria-label=Binary>Binary</a></li><li><a href=#character aria-label=Character>Character</a></li><li><a href=#floating-point aria-label="Floating Point">Floating Point</a></li><li><a href=#addresspointer aria-label=Address/Pointer>Address/Pointer</a></li><li><a href=#string aria-label=String>String</a></li></ul></li><li><a href=#working-with-pointers aria-label="Working with Pointers">Working with Pointers</a></li><li><a href=#array-and-string-operations aria-label="Array and String Operations">Array and String Operations</a></li><li><a href=#type-casting aria-label="Type Casting">Type Casting</a></li><li><a href=#expressions-and-calculations aria-label="Expressions and Calculations">Expressions and Calculations</a></li><li><a href=#display-commands-auto-print aria-label="Display Commands (Auto-Print)">Display Commands (Auto-Print)</a></li><li><a href=#useful-combinations aria-label="Useful Combinations">Useful Combinations</a><ul><li><a href=#stack-analysis aria-label="Stack Analysis">Stack Analysis</a></li><li><a href=#registers aria-label=Registers>Registers</a></li><li><a href=#function-arguments aria-label="Function Arguments">Function Arguments</a></li><li><a href=#side-by-side-memory-view aria-label="Side-by-Side Memory View">Side-by-Side Memory View</a></li></ul></li><li><a href=#advanced-pretty-printing-structures aria-label="Advanced: Pretty Printing Structures">Advanced: Pretty Printing Structures</a></li><li><a href=#quick-reference-table aria-label="Quick Reference Table">Quick Reference Table</a></li><li><a href=#pro-tips aria-label="Pro Tips">Pro Tips</a></li><li><a href=#troubleshooting-print-issues aria-label="Troubleshooting Print Issues">Troubleshooting Print Issues</a><ul><li><a href=#variable-not-accessible aria-label="Variable not accessible">Variable not accessible</a></li><li><a href=#optimized-out aria-label="Optimized out">Optimized out</a></li><li><a href=#address-not-mapped aria-label="Address not mapped">Address not mapped</a></li></ul></li></ul></li></ul></div></details></div><div class=post-content><h1 id=gdb-print-command-reference-guide>GDB Print Command Reference Guide<a hidden class=anchor aria-hidden=true href=#gdb-print-command-reference-guide>#</a></h1><h2 id=basic-print-command>Basic Print Command<a hidden class=anchor aria-hidden=true href=#basic-print-command>#</a></h2><pre tabindex=0><code class=language-gdb data-lang=gdb>print variable_name
+p variable_name          # Short form
+</code></pre><hr><h2 id=print-with-format-specifiers>Print with Format Specifiers<a hidden class=anchor aria-hidden=true href=#print-with-format-specifiers>#</a></h2><p>Use <code>/format</code> after print to specify output format:</p><h3 id=hexadecimal>Hexadecimal<a hidden class=anchor aria-hidden=true href=#hexadecimal>#</a></h3><pre tabindex=0><code class=language-gdb data-lang=gdb>print/x variable         # Hex (lowercase)
+print/x value           # Example: 0x5
+p/x 255                 # Output: 0xff
+</code></pre><h3 id=decimal>Decimal<a hidden class=anchor aria-hidden=true href=#decimal>#</a></h3><pre tabindex=0><code class=language-gdb data-lang=gdb>print/d variable         # Signed decimal
+print/u variable         # Unsigned decimal
+p/d 0xff                # Output: 255
+</code></pre><h3 id=octal>Octal<a hidden class=anchor aria-hidden=true href=#octal>#</a></h3><pre tabindex=0><code class=language-gdb data-lang=gdb>print/o variable         # Octal format
+p/o 64                  # Output: 0100
+</code></pre><h3 id=binary>Binary<a hidden class=anchor aria-hidden=true href=#binary>#</a></h3><pre tabindex=0><code class=language-gdb data-lang=gdb>print/t variable         # Binary (t = &#34;two&#34;)
+p/t 5                   # Output: 101
+</code></pre><h3 id=character>Character<a hidden class=anchor aria-hidden=true href=#character>#</a></h3><pre tabindex=0><code class=language-gdb data-lang=gdb>print/c variable         # As ASCII character
+p/c 65                  # Output: &#39;A&#39;
+</code></pre><h3 id=floating-point>Floating Point<a hidden class=anchor aria-hidden=true href=#floating-point>#</a></h3><pre tabindex=0><code class=language-gdb data-lang=gdb>print/f variable         # Floating point
+p/f 3.14159
+</code></pre><h3 id=addresspointer>Address/Pointer<a hidden class=anchor aria-hidden=true href=#addresspointer>#</a></h3><pre tabindex=0><code class=language-gdb data-lang=gdb>print/a variable         # As address
+p/a 0x555555555189      # Shows as address
+</code></pre><h3 id=string>String<a hidden class=anchor aria-hidden=true href=#string>#</a></h3><pre tabindex=0><code class=language-gdb data-lang=gdb>print/s pointer          # Interpret as C string
+p/s argv[1]
+</code></pre><hr><h2 id=working-with-pointers>Working with Pointers<a hidden class=anchor aria-hidden=true href=#working-with-pointers>#</a></h2><pre tabindex=0><code class=language-gdb data-lang=gdb>print pointer            # Shows address
+print *pointer           # Dereference (shows value)
+print &amp;variable          # Shows address of variable
+
+# Example
+print argv               # Address of argv array
+print *argv              # First element (argv[0])
+print argv[1]            # Second element
+print *argv[1]           # First char of argv[1]
+</code></pre><hr><h2 id=array-and-string-operations>Array and String Operations<a hidden class=anchor aria-hidden=true href=#array-and-string-operations>#</a></h2><pre tabindex=0><code class=language-gdb data-lang=gdb># Print entire array
+print buffer_one
+print buffer_two
+
+# Print specific elements
+print buffer_one[0]
+print buffer_one[3]
+
+# Print array slice (if supported)
+print buffer_one@8       # Print 8 elements starting at buffer_one
+
+# View string with length
+x/8c buffer_one          # First 8 chars
+x/s buffer_one           # Until null terminator
+</code></pre><hr><h2 id=type-casting>Type Casting<a hidden class=anchor aria-hidden=true href=#type-casting>#</a></h2><pre tabindex=0><code class=language-gdb data-lang=gdb># Cast to different types
+print (int *)buffer_one          # Treat as int pointer
+print *(int *)buffer_one         # Dereference as int
+print (unsigned char)value       # Cast to unsigned char
+
+# Example: View buffer as integers
+print *(int *)&amp;buffer_one
+print *(long *)&amp;buffer_two
+</code></pre><hr><h2 id=expressions-and-calculations>Expressions and Calculations<a hidden class=anchor aria-hidden=true href=#expressions-and-calculations>#</a></h2><pre tabindex=0><code class=language-gdb data-lang=gdb># Arithmetic
+print value + 10
+print sizeof(buffer_one)
+print strlen(buffer_one)
+
+# Address calculations
+print &amp;buffer_one - &amp;buffer_two
+print (long)&amp;value - (long)&amp;buffer_one
+
+# Pointer arithmetic
+print argv[0]
+print *(argv + 1)
+</code></pre><hr><h2 id=display-commands-auto-print>Display Commands (Auto-Print)<a hidden class=anchor aria-hidden=true href=#display-commands-auto-print>#</a></h2><p>Set up variables to display automatically after each step:</p><pre tabindex=0><code class=language-gdb data-lang=gdb>display variable         # Auto-print after each command
+display/x value          # Auto-print in hex
+display/8xb buffer_one   # Auto-print 8 bytes in hex
+
+# Manage displays
+info display             # List all displays
+delete display 1         # Remove display #1
+disable display 2        # Temporarily disable
+enable display 2         # Re-enable
+</code></pre><hr><h2 id=useful-combinations>Useful Combinations<a hidden class=anchor aria-hidden=true href=#useful-combinations>#</a></h2><h3 id=stack-analysis>Stack Analysis<a hidden class=anchor aria-hidden=true href=#stack-analysis>#</a></h3><pre tabindex=0><code class=language-gdb data-lang=gdb># View stack pointer and nearby memory
+print $rsp
+x/32xw $rsp              # 32 words from stack pointer
+x/64xb $rsp              # 64 bytes from stack pointer
+</code></pre><h3 id=registers>Registers<a hidden class=anchor aria-hidden=true href=#registers>#</a></h3><pre tabindex=0><code class=language-gdb data-lang=gdb>print $rax               # Print register value
+print/x $rip             # Instruction pointer in hex
+info registers           # All registers
+info registers rax rbx   # Specific registers
+</code></pre><h3 id=function-arguments>Function Arguments<a hidden class=anchor aria-hidden=true href=#function-arguments>#</a></h3><pre tabindex=0><code class=language-gdb data-lang=gdb>print argc
+print argv
+print argv[0]
+print argv[1]
+x/s argv[0]              # Program name as string
+x/s argv[1]              # First argument as string
+</code></pre><hr><h3 id=side-by-side-memory-view>Side-by-Side Memory View<a hidden class=anchor aria-hidden=true href=#side-by-side-memory-view>#</a></h3><pre tabindex=0><code class=language-gdb data-lang=gdb># Define a custom command
+define show_buffers
+    echo \n=== BUFFER_TWO ===\n
+    x/8xb &amp;buffer_two
+    echo \n=== BUFFER_ONE ===\n
+    x/8xb &amp;buffer_one
+    echo \n=== VALUE ===\n
+    print/x value
+    echo \n
+end
+
+# Use it
+show_buffers
+</code></pre><hr><h2 id=advanced-pretty-printing-structures>Advanced: Pretty Printing Structures<a hidden class=anchor aria-hidden=true href=#advanced-pretty-printing-structures>#</a></h2><pre tabindex=0><code class=language-gdb data-lang=gdb># Enable pretty printing
+set print pretty on
+set print array on
+set print array-indexes on
+
+# Print structure
+print my_struct
+
+# Print specific field
+print my_struct.field_name
+</code></pre><hr><h2 id=quick-reference-table>Quick Reference Table<a hidden class=anchor aria-hidden=true href=#quick-reference-table>#</a></h2><table><thead><tr><th>Command</th><th>Purpose</th><th>Example</th></tr></thead><tbody><tr><td><code>p var</code></td><td>Print variable</td><td><code>p value</code></td></tr><tr><td><code>p/x var</code></td><td>Print in hex</td><td><code>p/x value</code></td></tr><tr><td><code>p/d var</code></td><td>Print in decimal</td><td><code>p/d 0xff</code></td></tr><tr><td><code>p/t var</code></td><td>Print in binary</td><td><code>p/t 5</code></td></tr><tr><td><code>p/c var</code></td><td>Print as char</td><td><code>p/c 65</code></td></tr><tr><td><code>p &amp;var</code></td><td>Print address</td><td><code>p &amp;value</code></td></tr><tr><td><code>p *ptr</code></td><td>Dereference pointer</td><td><code>p *argv</code></td></tr><tr><td><code>x/8xb addr</code></td><td>8 bytes in hex</td><td><code>x/8xb &amp;buffer</code></td></tr><tr><td><code>x/4xw addr</code></td><td>4 words in hex</td><td><code>x/4xw $rsp</code></td></tr><tr><td><code>x/s addr</code></td><td>String at address</td><td><code>x/s buffer_one</code></td></tr><tr><td><code>x/10i addr</code></td><td>10 instructions</td><td><code>x/10i main</code></td></tr><tr><td><code>display var</code></td><td>Auto-display</td><td><code>display/x value</code></td></tr></tbody></table><hr><h2 id=pro-tips>Pro Tips<a hidden class=anchor aria-hidden=true href=#pro-tips>#</a></h2><ol><li><strong>Use tab completion</strong>: Type <code>p buf</code> then press TAB to complete variable names</li><li><strong>Repeat last command</strong>: Press ENTER to repeat the last command</li><li><strong>Command history</strong>: Use UP/DOWN arrows to navigate command history</li><li><strong>Save typing</strong>: Use <code>p</code> instead of <code>print</code>, <code>x</code> instead of <code>examine</code></li><li><strong>Combine with info</strong>: <code>info locals</code>, <code>info args</code>, <code>info registers</code></li><li><strong>Set convenience variables</strong>: <code>set $myvar = value</code> then <code>print $myvar</code></li></ol><hr><h2 id=troubleshooting-print-issues>Troubleshooting Print Issues<a hidden class=anchor aria-hidden=true href=#troubleshooting-print-issues>#</a></h2><h3 id=variable-not-accessible>Variable not accessible<a hidden class=anchor aria-hidden=true href=#variable-not-accessible>#</a></h3><pre tabindex=0><code>Error: No symbol &#34;var&#34; in current context
+</code></pre><p><strong>Solution</strong>: Make sure you&rsquo;re at the right scope/breakpoint and compiled with <code>-g</code></p><h3 id=optimized-out>Optimized out<a hidden class=anchor aria-hidden=true href=#optimized-out>#</a></h3><pre tabindex=0><code>value = &lt;optimized out&gt;
+</code></pre><p><strong>Solution</strong>: Compile with <code>-O0</code> flag (no optimization)</p><h3 id=address-not-mapped>Address not mapped<a hidden class=anchor aria-hidden=true href=#address-not-mapped>#</a></h3><pre tabindex=0><code>Cannot access memory at address 0x0
+</code></pre><p><strong>Solution</strong>: Check if pointer is NULL or invalid</p></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/reverse-engineering/>Reverse-Engineering</a></li><li><a href=https://sankethbk.github.io/blog/tags/gdb/>Gdb</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2025 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>

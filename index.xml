@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Sanketh's Blog</title><link>https://sankethbk.github.io/blog/</link><description>Recent content on Sanketh's Blog</description><generator>Hugo -- 0.152.2</generator><language>en-us</language><lastBuildDate>Sun, 09 Nov 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>CTF – 2 : Good Kitty</title><link>https://sankethbk.github.io/blog/posts/ctf/2025-11-08-ctf-2/</link><pubDate>Sun, 09 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/ctf/2025-11-08-ctf-2/</guid><description>&lt;h1 id="ctf-challenge-good-kitty---writeup"&gt;CTF Challenge: Good Kitty - Writeup&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Sanketh's Blog</title><link>https://sankethbk.github.io/blog/</link><description>Recent content on Sanketh's Blog</description><generator>Hugo -- 0.152.2</generator><language>en-us</language><lastBuildDate>Sun, 09 Nov 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>CTF – 2 : Good Kitty</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/ctf/2025-11-08-ctf-2/</link><pubDate>Sun, 09 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/ctf/2025-11-08-ctf-2/</guid><description>&lt;h1 id="ctf-challenge-good-kitty---writeup"&gt;CTF Challenge: Good Kitty - Writeup&lt;/h1&gt;
 &lt;h2 id="challenge-overview"&gt;Challenge Overview&lt;/h2&gt;
 &lt;p&gt;This is a reverse engineering CTF challenge where we need to find the correct password by analyzing a binary that:&lt;/p&gt;
 &lt;ol&gt;
@@ -54,7 +54,7 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;&lt;/span&gt;}
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id="key-concepts-learned"&gt;Key Concepts Learned&lt;/h2&gt;
 &lt;h3 id="1-understanding-pointer-arithmetic-on-stack-variables"&gt;1. Understanding Pointer Arithmetic on Stack Variables&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;Question&lt;/strong&gt;: &lt;code&gt;flag&lt;/code&gt; is declared as &lt;code&gt;long flag;&lt;/code&gt; (not an array), so what does &lt;code&gt;&amp;amp;flag + index&lt;/code&gt; mean?&lt;/p&gt;</description></item><item><title>GDB Notes – Basics &amp; Practical Usage</title><link>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-04-gdb-1/</link><pubDate>Sun, 09 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-04-gdb-1/</guid><description>&lt;h1 id="gdb-notes--basics-navigation--memory-inspection"&gt;GDB Notes — Basics, Navigation &amp;amp; Memory Inspection&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;Question&lt;/strong&gt;: &lt;code&gt;flag&lt;/code&gt; is declared as &lt;code&gt;long flag;&lt;/code&gt; (not an array), so what does &lt;code&gt;&amp;amp;flag + index&lt;/code&gt; mean?&lt;/p&gt;</description></item><item><title>GDB Notes – Basics &amp; Practical Usage</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-04-gdb-1/</link><pubDate>Sun, 09 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-04-gdb-1/</guid><description>&lt;h1 id="gdb-notes--basics-navigation--memory-inspection"&gt;GDB Notes — Basics, Navigation &amp;amp; Memory Inspection&lt;/h1&gt;
 &lt;p&gt;These are concise notes on how to use &lt;strong&gt;GDB (GNU Debugger)&lt;/strong&gt; effectively for analyzing ELF binaries and debugging at both &lt;strong&gt;C source&lt;/strong&gt; and &lt;strong&gt;assembly&lt;/strong&gt; levels.&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2 id="1-starting-gdb"&gt;1. Starting GDB&lt;/h2&gt;
@@ -67,30 +67,109 @@
 &lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;(&lt;/span&gt;gdb&lt;span style="color:#f92672"&gt;)&lt;/span&gt; run arg1 arg2
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
 &lt;h2 id="2-compiling-for-debugging"&gt;2. Compiling for Debugging&lt;/h2&gt;
-&lt;p&gt;Compile with the &lt;code&gt;-g&lt;/code&gt; flag to include &lt;strong&gt;debug symbols&lt;/strong&gt;:&lt;/p&gt;</description></item><item><title>GDB Layouts</title><link>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-07-gdb-2/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-07-gdb-2/</guid><description>&lt;h1 id="debugging-souce-code-with-assembly"&gt;Debugging Souce Code with Assembly&lt;/h1&gt;
+&lt;p&gt;Compile with the &lt;code&gt;-g&lt;/code&gt; flag to include &lt;strong&gt;debug symbols&lt;/strong&gt;:&lt;/p&gt;</description></item><item><title>GDB print Command</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-09-gdb-4/</link><pubDate>Sun, 09 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-09-gdb-4/</guid><description>&lt;h1 id="gdb-print-command-reference-guide"&gt;GDB Print Command Reference Guide&lt;/h1&gt;
+&lt;h2 id="basic-print-command"&gt;Basic Print Command&lt;/h2&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;print variable_name
+p variable_name # Short form
+&lt;/code&gt;&lt;/pre&gt;&lt;hr&gt;
+&lt;h2 id="print-with-format-specifiers"&gt;Print with Format Specifiers&lt;/h2&gt;
+&lt;p&gt;Use &lt;code&gt;/format&lt;/code&gt; after print to specify output format:&lt;/p&gt;
+&lt;h3 id="hexadecimal"&gt;Hexadecimal&lt;/h3&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;print/x variable # Hex (lowercase)
+print/x value # Example: 0x5
+p/x 255 # Output: 0xff
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id="decimal"&gt;Decimal&lt;/h3&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;print/d variable # Signed decimal
+print/u variable # Unsigned decimal
+p/d 0xff # Output: 255
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id="octal"&gt;Octal&lt;/h3&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;print/o variable # Octal format
+p/o 64 # Output: 0100
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id="binary"&gt;Binary&lt;/h3&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;print/t variable # Binary (t = &amp;#34;two&amp;#34;)
+p/t 5 # Output: 101
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id="character"&gt;Character&lt;/h3&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;print/c variable # As ASCII character
+p/c 65 # Output: &amp;#39;A&amp;#39;
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id="floating-point"&gt;Floating Point&lt;/h3&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;print/f variable # Floating point
+p/f 3.14159
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id="addresspointer"&gt;Address/Pointer&lt;/h3&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;print/a variable # As address
+p/a 0x555555555189 # Shows as address
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id="string"&gt;String&lt;/h3&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;print/s pointer # Interpret as C string
+p/s argv[1]
+&lt;/code&gt;&lt;/pre&gt;&lt;hr&gt;
+&lt;h2 id="working-with-pointers"&gt;Working with Pointers&lt;/h2&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;print pointer # Shows address
+print *pointer # Dereference (shows value)
+print &amp;amp;variable # Shows address of variable
+# Example
+print argv # Address of argv array
+print *argv # First element (argv[0])
+print argv[1] # Second element
+print *argv[1] # First char of argv[1]
+&lt;/code&gt;&lt;/pre&gt;&lt;hr&gt;
+&lt;h2 id="array-and-string-operations"&gt;Array and String Operations&lt;/h2&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;# Print entire array
+print buffer_one
+print buffer_two
+# Print specific elements
+print buffer_one[0]
+print buffer_one[3]
+# Print array slice (if supported)
+print buffer_one@8 # Print 8 elements starting at buffer_one
+# View string with length
+x/8c buffer_one # First 8 chars
+x/s buffer_one # Until null terminator
+&lt;/code&gt;&lt;/pre&gt;&lt;hr&gt;
+&lt;h2 id="type-casting"&gt;Type Casting&lt;/h2&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;# Cast to different types
+print (int *)buffer_one # Treat as int pointer
+print *(int *)buffer_one # Dereference as int
+print (unsigned char)value # Cast to unsigned char
+# Example: View buffer as integers
+print *(int *)&amp;amp;buffer_one
+print *(long *)&amp;amp;buffer_two
+&lt;/code&gt;&lt;/pre&gt;&lt;hr&gt;
+&lt;h2 id="expressions-and-calculations"&gt;Expressions and Calculations&lt;/h2&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;# Arithmetic
+print value + 10
+print sizeof(buffer_one)
+print strlen(buffer_one)
+# Address calculations
+print &amp;amp;buffer_one - &amp;amp;buffer_two
+print (long)&amp;amp;value - (long)&amp;amp;buffer_one
+# Pointer arithmetic
+print argv[0]
+print *(argv + 1)
+&lt;/code&gt;&lt;/pre&gt;&lt;hr&gt;
+&lt;h2 id="display-commands-auto-print"&gt;Display Commands (Auto-Print)&lt;/h2&gt;
+&lt;p&gt;Set up variables to display automatically after each step:&lt;/p&gt;</description></item><item><title>GDB Layouts</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-07-gdb-2/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-07-gdb-2/</guid><description>&lt;h1 id="debugging-souce-code-with-assembly"&gt;Debugging Souce Code with Assembly&lt;/h1&gt;
 &lt;p&gt;If we compile C program with &lt;code&gt;-g&lt;/code&gt; flag, it tells GCC to include debugging symbols inside the resulting binary (a.out by default). These symbols live in a special section of the ELF file (like .debug_info, .debug_line, .debug_str, etc.) and contain metadata that maps machine instructions back to your original source code.&lt;/p&gt;
-&lt;p&gt;This allows us to see corresponding source along with assembly while debugging with GDB.&lt;/p&gt;</description></item><item><title>GDB x Command</title><link>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-08-gdb-3/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-08-gdb-3/</guid><description>&lt;h1 id="gdb-x-command-examine-memory"&gt;GDB x Command (Examine Memory)&lt;/h1&gt;
-&lt;p&gt;Format: &lt;code&gt;x/[count][format][size] address&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;This allows us to see corresponding source along with assembly while debugging with GDB.&lt;/p&gt;</description></item><item><title>GDB x Command</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-08-gdb-3/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-08-gdb-3/</guid><description>&lt;h2 id="examining-memory-with-x-command"&gt;Examining Memory with &lt;code&gt;x&lt;/code&gt; Command&lt;/h2&gt;
+&lt;p&gt;The &lt;code&gt;x&lt;/code&gt; (examine) command is more powerful for raw memory:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code class="language-gdb" data-lang="gdb"&gt;x/[count][format][size] address
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id="size-modifiers"&gt;Size Modifiers&lt;/h3&gt;
 &lt;ul&gt;
-&lt;li&gt;count = how many units to display&lt;/li&gt;
-&lt;li&gt;format = how to display (x=hex, d=decimal, s=string, i=instruction, etc.)&lt;/li&gt;
-&lt;li&gt;size = size of each unit (b=byte, h=halfword, w=word, g=giant/8bytes)&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;b&lt;/code&gt; = byte (1 byte)&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;h&lt;/code&gt; = halfword (2 bytes)&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;w&lt;/code&gt; = word (4 bytes)&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;g&lt;/code&gt; = giant word (8 bytes)&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Command 1: x/8gx $rsi&lt;/strong&gt;&lt;/p&gt;
-&lt;pre tabindex="0"&gt;&lt;code&gt;(gdb) x/8gx $rsi
-0x7fffffffdf80: 0x000055555555601c 0x00007fffffffe3fa
-0x7fffffffdf90: 0x00007fffffffe080 0x4e39f1740a528200
-0x7fffffffdfa0: 0x00007fffffffe040 0x00007ffff7c2a1ca
-0x7fffffffdfb0: 0x00007fffffffdff0 0x00007fffffffe0c8
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Breakdown:&lt;/p&gt;
+&lt;h3 id="format-modifiers"&gt;Format Modifiers&lt;/h3&gt;
 &lt;ul&gt;
-&lt;li&gt;x/ = examine command&lt;/li&gt;
-&lt;li&gt;8 = show 8 units&lt;/li&gt;
-&lt;li&gt;g = each unit is giant (8 bytes = 64 bits)&lt;/li&gt;
-&lt;li&gt;x = display in hexadecimal&lt;/li&gt;
-&lt;li&gt;$rsi = starting address (0x7fffffffdf80)&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;x&lt;/code&gt; = hexadecimal&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;d&lt;/code&gt; = decimal&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;u&lt;/code&gt; = unsigned decimal&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;o&lt;/code&gt; = octal&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;t&lt;/code&gt; = binary&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;c&lt;/code&gt; = character&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;s&lt;/code&gt; = string&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;i&lt;/code&gt; = instruction (disassembly)&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;This displays the argv array as 8 pointers (each 8 bytes on x86-64):&lt;/p&gt;</description></item><item><title>Radare2 Basic Commands</title><link>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-08-radare2-1/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/cheatsheets/2025-11-08-radare2-1/</guid><description>&lt;h1 id="reverse-engineering-with-radare2"&gt;Reverse Engineering with Radare2&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;count&lt;/strong&gt;: how many units to display&lt;/p&gt;</description></item><item><title>Radare2 Basic Commands</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-08-radare2-1/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/cheatsheets/2025-11-08-radare2-1/</guid><description>&lt;h1 id="reverse-engineering-with-radare2"&gt;Reverse Engineering with Radare2&lt;/h1&gt;
 &lt;p&gt;A powerful framework for reverse engineering.&lt;/p&gt;
 &lt;h3 id="core-analysis-commands"&gt;Core Analysis Commands&lt;/h3&gt;
 &lt;table&gt;
@@ -161,7 +240,7 @@
 &lt;td style="text-align: left"&gt;Get help on commands.&lt;/td&gt;
 &lt;/tr&gt;
 &lt;/tbody&gt;
-&lt;/table&gt;</description></item><item><title>CTF – 1 : Matryoshka</title><link>https://sankethbk.github.io/blog/posts/ctf/2025-11-01-ctf-1/</link><pubDate>Sat, 01 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/ctf/2025-11-01-ctf-1/</guid><description>&lt;h1 id="reverse-engineering-and-ctf-challenge-notes"&gt;Reverse Engineering and CTF Challenge Notes&lt;/h1&gt;
+&lt;/table&gt;</description></item><item><title>CTF – 1 : Matryoshka</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/ctf/2025-11-01-ctf-1/</link><pubDate>Sat, 01 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/ctf/2025-11-01-ctf-1/</guid><description>&lt;h1 id="reverse-engineering-and-ctf-challenge-notes"&gt;Reverse Engineering and CTF Challenge Notes&lt;/h1&gt;
 &lt;p&gt;Reverse engineering is the process of understanding how software works &lt;strong&gt;without access to its original source code&lt;/strong&gt;.&lt;br&gt;
 In security challenges (CTFs), the goal is often to recover hidden data or logic by dissecting a binary.&lt;br&gt;
 This walkthrough documents my first attempt at such a challenge, focusing on &lt;em&gt;ELF-based reverse engineering&lt;/em&gt; and the reasoning process behind each step.&lt;/p&gt;
