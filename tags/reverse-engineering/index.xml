@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Reverse Engineering on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/reverse-engineering/</link><description>Recent content in Reverse Engineering on Sanketh's Blog</description><generator>Hugo -- 0.152.2</generator><language>en-us</language><lastBuildDate>Mon, 01 Dec 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/reverse-engineering/index.xml" rel="self" type="application/rss+xml"/><item><title>Executing Shellcode on Stack</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/vulnerabilities/2025-11-30-executing-shellcode-on-stack/</link><pubDate>Mon, 01 Dec 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/vulnerabilities/2025-11-30-executing-shellcode-on-stack/</guid><description>&lt;p&gt;Previously we saw how to overwrite the return address of stack by passing extra bytes to an unbounded buffer. But not everytime we will have a convinient function address to overwrite. The next attempt is to place the code we want to execute directly on the stack itself.&lt;/p&gt;
 &lt;h1 id="embedding-shellcode-in-a-buffer-overflow"&gt;Embedding Shellcode in a Buffer Overflow&lt;/h1&gt;
-&lt;h2 id="what-is-shellcode"&gt;What is Shellcode?&lt;/h2&gt;
+&lt;h2 id="1-what-is-shellcode"&gt;1. What is Shellcode?&lt;/h2&gt;
 &lt;ul&gt;
 &lt;li&gt;Shellcode is machine instructions (usually written in assembly) that perform some action — often spawning a shell (/bin/sh), but can be anything.&lt;/li&gt;
 &lt;li&gt;It is called “shellcode” not because it must open a shell, but because historically it did.&lt;/li&gt;
@@ -29,7 +29,7 @@
 &lt;li&gt;When injecting shellcode via string functions like gets, scanf(&amp;quot;%s&amp;quot;), strcpy, a null byte will terminate input.&lt;/li&gt;
 &lt;li&gt;Shellcode must avoid 0x00, 0x0A, etc.&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h2 id="building-the-payload"&gt;Building the Payload&lt;/h2&gt;
+&lt;h2 id="4-stack-based-shellcode-execution-a-simple-case-without-aslr"&gt;4. Stack-Based Shellcode Execution: A Simple Case Without ASLR&lt;/h2&gt;
 &lt;p&gt;To build the payload of overflowed string we need to consider various factors, let&amp;rsquo;s understand it with a simple program:&lt;/p&gt;</description></item><item><title>CTF – 3 : 45exiles Shuffle</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/ctf/2025-11-14-ctf-3/</link><pubDate>Fri, 14 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/ctf/2025-11-14-ctf-3/</guid><description>&lt;h1 id="ctf-writeup-45exiles-shuffle-challenge"&gt;CTF Writeup: 45exiles Shuffle Challenge&lt;/h1&gt;
 &lt;h2 id="problem-overview"&gt;Problem Overview&lt;/h2&gt;
 &lt;p&gt;&lt;strong&gt;Challenge Name&lt;/strong&gt;: 45exiles Shuffle&lt;/p&gt;
