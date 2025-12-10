@@ -568,3 +568,27 @@ exploit_nop.py	payload.bin  payload2.py  payload4.py  payload_32.bin  shellcode 
 whoami
 sanketh
 ```
+
+Another way to icnrease the chances is not just to add return address at the end, but to keep repeating it for few times. This way even if we miss to voerwrite the exact address, if the alignment is correct it will work. 
+
+### Repeating the Return Address
+
+Another technique to increase exploitation success is to repeat the return address multiple times at the end of the payload, rather than writing it just once.
+
+**Why this works:**
+
+When overwriting the stack, you might not hit the exact location of the saved return address due to:
+
+- Uncertainty about the precise buffer size
+- Compiler padding/alignment
+- Stack frame layout variations
+
+By repeating the return address many times, you create a larger "target zone":
+
+```
+Buffer layout:
+[NOP sled][Shellcode][Padding][ret][ret][ret][ret][ret][ret][ret]...
+                                 └─────────────┬────────────────┘
+                                    Any of these will work!
+```
+
