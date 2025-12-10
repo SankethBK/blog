@@ -5,7 +5,11 @@ categories: ["reverse engineering"]
 tags: ["vulnerabilities", "buffer overflow","reverse engineering"]
 author: Sanketh
 references:
-  
+  - title: Smashing the Stack For Fun and Profit
+    url: https://inst.eecs.berkeley.edu/~cs161/fa08/papers/stack_smashing.pdf
+
+  - title: ShellCodes
+    url: https://shell-storm.org/shellcode/index.html
 ---
 
 # Stack Based Buffer Overflow Attacks
@@ -1304,3 +1308,4 @@ Enter password: Authentication Failed
 Access Granted
 ```
 
+For Overflowing small buffers, some of hacks involve placing the shellcdoe into an environment variable, which will be placed at the top of the stack (as `envp`, `argc`, `argv` are parameters to main function), the buffer then tries to overwrite the return address pointing to the environment variable's location on stack. But these are unrealistic in today's date considering ASLR in 64-bit systems is super solid.
