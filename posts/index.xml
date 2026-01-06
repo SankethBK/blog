@@ -1,4 +1,55 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/posts/</link><description>Recent content in Posts on Sanketh's Blog</description><generator>Hugo -- 0.154.2</generator><language>en-us</language><lastBuildDate>Fri, 02 Jan 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>History of Chess Engines</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-02-claude-shannons-paper/</link><pubDate>Fri, 02 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-02-claude-shannons-paper/</guid><description>&lt;h1 id="history-of-chess-engines"&gt;History of Chess Engines&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/posts/</link><description>Recent content in Posts on Sanketh's Blog</description><generator>Hugo -- 0.154.2</generator><language>en-us</language><lastBuildDate>Mon, 05 Jan 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>C++ Used in Stockfish</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-05-c++-used-in-stockfish/</link><pubDate>Mon, 05 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-05-c++-used-in-stockfish/</guid><description>&lt;h1 id="c-used-in-stockfish"&gt;C++ Used in Stockfish&lt;/h1&gt;
+&lt;p&gt;Stockfish is written in a style of C++ that prioritizes performance, predictability, and compile-time resolution over traditional object-oriented design. Rather than heavy use of classes, inheritance, or virtual functions, the engine relies on enums, inline functions, templates, bitwise operations, and plain data structures. This makes the code extremely fast, cache-friendly, and suitable for deep search loops executed billions of times.&lt;/p&gt;
+&lt;h2 id="enums-as-core-types"&gt;Enums as Core Types&lt;/h2&gt;
+&lt;p&gt;Enums form the backbone of Stockfish’s type system. Instead of using classes for concepts like pieces, squares, colors, or moves, Stockfish represents them as enums with carefully chosen integer values.&lt;/p&gt;</description></item><item><title>Bitboard representation of Chess Board</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-04-bitboard-representation/</link><pubDate>Sun, 04 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-04-bitboard-representation/</guid><description>&lt;h2 id="bitboard-based-game-representation-in-stockfish"&gt;Bitboard-Based Game Representation in Stockfish&lt;/h2&gt;
+&lt;p&gt;Stockfish represents the chessboard using &lt;strong&gt;bitboards&lt;/strong&gt;: 64-bit unsigned integers where each bit corresponds to a square on the board.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;typedef&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;uint64_t&lt;/span&gt; Bitboard;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Bit 0 (LSB) → &lt;strong&gt;A1&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;Bit 63 (MSB) → &lt;strong&gt;H8&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This representation allows the engine to manipulate entire sets of squares using fast bitwise operations, which is critical for performance.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="piece-encoding"&gt;Piece Encoding&lt;/h2&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;enum&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;Piece&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; NO_PIECE,
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; W_PAWN &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;1&lt;/span&gt;, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; B_PAWN &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;9&lt;/span&gt;, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING,
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; PIECE_NB &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;16&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;};
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="numeric-structure"&gt;Numeric Structure&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Piece&lt;/th&gt;
+&lt;th&gt;Value&lt;/th&gt;
+&lt;th&gt;Binary&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;W_PAWN&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;0001&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;W_KING&lt;/td&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;0110&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;B_PAWN&lt;/td&gt;
+&lt;td&gt;9&lt;/td&gt;
+&lt;td&gt;1001&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;B_KING&lt;/td&gt;
+&lt;td&gt;14&lt;/td&gt;
+&lt;td&gt;1110&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Key observations:&lt;/p&gt;</description></item><item><title>History of Chess Engines</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-02-claude-shannons-paper/</link><pubDate>Fri, 02 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-02-claude-shannons-paper/</guid><description>&lt;h1 id="history-of-chess-engines"&gt;History of Chess Engines&lt;/h1&gt;
 &lt;p&gt;&lt;a href="https://vision.unipv.it/IA1/ProgrammingaComputerforPlayingChess.pdf"&gt;Programming a Computer for Playing Chess (1950) by Claude Shannon&lt;/a&gt; is the foundational paper of computer chess and one of the earliest works in artificial intelligence. Written at a time when programmable computers were still experimental, the paper does not attempt to build a chess program, but instead asks a deeper question: what would it even mean for a machine to play chess intelligently under severe computational limits? Shannon shows that perfect play is theoretically possible but practically impossible, and develops a principled framework based on approximate evaluation, game-tree search, selectivity, and bounded rationality. Nearly every major idea used in modern chess engines—minimax, heuristic evaluation, quiescence, selective search, opening books, randomness, and even learning—appears here in conceptual form. The paper remains important not as a historical curiosity, but because it correctly identifies the permanent constraints and core ideas that still govern strong chess-playing programs today.&lt;/p&gt;</description></item><item><title>Format String Vulnerability</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/vulnerabilities/2025-12-10-format-string/</link><pubDate>Wed, 10 Dec 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/vulnerabilities/2025-12-10-format-string/</guid><description>&lt;h1 id="format-string-vulnerabilities"&gt;Format String Vulnerabilities&lt;/h1&gt;
 &lt;h2 id="why-information-leaks-matter-in-modern-exploitation"&gt;Why Information Leaks Matter in Modern Exploitation&lt;/h2&gt;
 &lt;h3 id="the-aslr-problem"&gt;The ASLR Problem&lt;/h3&gt;
