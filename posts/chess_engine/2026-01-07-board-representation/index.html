@@ -1,0 +1,492 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Representation of The Game State | Sanketh's Blog</title><meta name=keywords content="board representation,stockfish"><meta name=description content="Representation of The Game State
+The Position Class
+The Position class is the core data structure in Stockfish that represents the complete state of a chess game at any given moment. It stores the board, pieces, game state, and provides methods to query and manipulate the position.
+class Position {
+public:
+  static void init();
+
+  Position() = default;
+  Position(const Position&) = delete;
+  Position& operator=(const Position&) = delete;
+
+  // FEN string input/output
+  Position& set(const std::string& fenStr, bool isChess960, StateInfo* si, Thread* th);
+  const std::string fen() const;
+
+  // Position representation
+  Bitboard pieces() const;
+  Bitboard pieces(PieceType pt) const;
+  Bitboard pieces(PieceType pt1, PieceType pt2) const;
+  Bitboard pieces(Color c) const;
+  Bitboard pieces(Color c, PieceType pt) const;
+  Bitboard pieces(Color c, PieceType pt1, PieceType pt2) const;
+  Piece piece_on(Square s) const;
+  Square ep_square() const;
+  bool empty(Square s) const;
+  template<PieceType Pt> int count(Color c) const;
+  template<PieceType Pt> const Square* squares(Color c) const;
+  template<PieceType Pt> Square square(Color c) const;
+
+  // Castling
+  int can_castle(Color c) const;
+  int can_castle(CastlingRight cr) const;
+  bool castling_impeded(CastlingRight cr) const;
+  Square castling_rook_square(CastlingRight cr) const;
+
+  // Checking
+  Bitboard checkers() const;
+  Bitboard discovered_check_candidates() const;
+  Bitboard pinned_pieces(Color c) const;
+  Bitboard check_squares(PieceType pt) const;
+
+  // Attacks to/from a given square
+  Bitboard attackers_to(Square s) const;
+  Bitboard attackers_to(Square s, Bitboard occupied) const;
+  Bitboard attacks_from(Piece pc, Square s) const;
+  template<PieceType> Bitboard attacks_from(Square s) const;
+  template<PieceType> Bitboard attacks_from(Square s, Color c) const;
+  Bitboard slider_blockers(Bitboard sliders, Square s, Bitboard& pinners) const;
+
+  // Properties of moves
+  bool legal(Move m) const;
+  bool pseudo_legal(const Move m) const;
+  bool capture(Move m) const;
+  bool capture_or_promotion(Move m) const;
+  bool gives_check(Move m) const;
+  bool advanced_pawn_push(Move m) const;
+  Piece moved_piece(Move m) const;
+  Piece captured_piece() const;
+
+  // Piece specific
+  bool pawn_passed(Color c, Square s) const;
+  bool opposite_bishops() const;
+
+  // Doing and undoing moves
+  void do_move(Move m, StateInfo& st, bool givesCheck);
+  void undo_move(Move m);
+  void do_null_move(StateInfo& st);
+  void undo_null_move();
+
+  // Static Exchange Evaluation
+  bool see_ge(Move m, Value value) const;
+
+  // Accessing hash keys
+  Key key() const;
+  Key key_after(Move m) const;
+  Key material_key() const;
+  Key pawn_key() const;
+
+  // Other properties of the position
+  Color side_to_move() const;
+  Phase game_phase() const;
+  int game_ply() const;
+  bool is_chess960() const;
+  Thread* this_thread() const;
+  uint64_t nodes_searched() const;
+  bool is_draw() const;
+  int rule50_count() const;
+  Score psq_score() const;
+  Value non_pawn_material(Color c) const;
+
+  // Position consistency check, for debugging
+  bool pos_is_ok(int* failedStep = nullptr) const;
+  void flip();
+
+private:
+  // Initialization helpers (used while setting up a position)
+  void set_castling_right(Color c, Square rfrom);
+  void set_state(StateInfo* si) const;
+  void set_check_info(StateInfo* si) const;
+
+  // Other helpers
+  void put_piece(Piece pc, Square s);
+  void remove_piece(Piece pc, Square s);
+  void move_piece(Piece pc, Square from, Square to);
+  template<bool Do>
+  void do_castling(Color us, Square from, Square& to, Square& rfrom, Square& rto);
+
+  // Data members
+  Piece board[SQUARE_NB];
+  Bitboard byTypeBB[PIECE_TYPE_NB];
+  Bitboard byColorBB[COLOR_NB];
+  int pieceCount[PIECE_NB];
+  Square pieceList[PIECE_NB][16];
+  int index[SQUARE_NB];
+  int castlingRightsMask[SQUARE_NB];
+  Square castlingRookSquare[CASTLING_RIGHT_NB];
+  Bitboard castlingPath[CASTLING_RIGHT_NB];
+  uint64_t nodes;
+  int gamePly;
+  Color sideToMove;
+  Thread* thisThread;
+  StateInfo* st;
+  bool chess960;
+};
+Class Design Decisions
+1. Non-Copyable
+Position(const Position&) = delete;
+Position& operator=(const Position&) = delete;
+
+Cannot be copied (copy constructor and assignment deleted)
+Why? Positions are heavy objects with complex state
+Must be moved or passed by reference/pointer
+Prevents accidental expensive copies
+
+2. Default Constructor
+Position() = default;
+
+Creates uninitialized position
+Must call set() to initialize with FEN string
+
+Core Data Members
+1. Board Representation - MailBox
+Piece board[SQUARE_NB];  // SQUARE_NB = 64
+
+Mailbox representation: Direct lookup &ldquo;what piece is on square X?&rdquo;
+board[e4] → returns W_KNIGHT or NO_PIECE
+Fast for: &ldquo;piece_on(Square s)&rdquo;
+
+2. Bitboard Representation
+Technically we need 12 bitboards to represent the all the pieces on chessboard."><meta name=author content="Sanketh"><link rel=canonical href=https://sankethbk.github.io/blog/posts/chess_engine/2026-01-07-board-representation/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.deee627d8b8d9065acc54b2c9d901e601e142335047d242a93ba7bce86f41f19.css integrity="sha256-3u5ifYuNkGWsxUssnZAeYB4UIzUEfSQqk7p7zob0Hxk=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/chess_engine/2026-01-07-board-representation/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/chess_engine/2026-01-07-board-representation/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="Representation of The Game State"><meta property="og:description" content="Representation of The Game State The Position Class The Position class is the core data structure in Stockfish that represents the complete state of a chess game at any given moment. It stores the board, pieces, game state, and provides methods to query and manipulate the position.
+class Position { public: static void init(); Position() = default; Position(const Position&) = delete; Position& operator=(const Position&) = delete; // FEN string input/output Position& set(const std::string& fenStr, bool isChess960, StateInfo* si, Thread* th); const std::string fen() const; // Position representation Bitboard pieces() const; Bitboard pieces(PieceType pt) const; Bitboard pieces(PieceType pt1, PieceType pt2) const; Bitboard pieces(Color c) const; Bitboard pieces(Color c, PieceType pt) const; Bitboard pieces(Color c, PieceType pt1, PieceType pt2) const; Piece piece_on(Square s) const; Square ep_square() const; bool empty(Square s) const; template<PieceType Pt> int count(Color c) const; template<PieceType Pt> const Square* squares(Color c) const; template<PieceType Pt> Square square(Color c) const; // Castling int can_castle(Color c) const; int can_castle(CastlingRight cr) const; bool castling_impeded(CastlingRight cr) const; Square castling_rook_square(CastlingRight cr) const; // Checking Bitboard checkers() const; Bitboard discovered_check_candidates() const; Bitboard pinned_pieces(Color c) const; Bitboard check_squares(PieceType pt) const; // Attacks to/from a given square Bitboard attackers_to(Square s) const; Bitboard attackers_to(Square s, Bitboard occupied) const; Bitboard attacks_from(Piece pc, Square s) const; template<PieceType> Bitboard attacks_from(Square s) const; template<PieceType> Bitboard attacks_from(Square s, Color c) const; Bitboard slider_blockers(Bitboard sliders, Square s, Bitboard& pinners) const; // Properties of moves bool legal(Move m) const; bool pseudo_legal(const Move m) const; bool capture(Move m) const; bool capture_or_promotion(Move m) const; bool gives_check(Move m) const; bool advanced_pawn_push(Move m) const; Piece moved_piece(Move m) const; Piece captured_piece() const; // Piece specific bool pawn_passed(Color c, Square s) const; bool opposite_bishops() const; // Doing and undoing moves void do_move(Move m, StateInfo& st, bool givesCheck); void undo_move(Move m); void do_null_move(StateInfo& st); void undo_null_move(); // Static Exchange Evaluation bool see_ge(Move m, Value value) const; // Accessing hash keys Key key() const; Key key_after(Move m) const; Key material_key() const; Key pawn_key() const; // Other properties of the position Color side_to_move() const; Phase game_phase() const; int game_ply() const; bool is_chess960() const; Thread* this_thread() const; uint64_t nodes_searched() const; bool is_draw() const; int rule50_count() const; Score psq_score() const; Value non_pawn_material(Color c) const; // Position consistency check, for debugging bool pos_is_ok(int* failedStep = nullptr) const; void flip(); private: // Initialization helpers (used while setting up a position) void set_castling_right(Color c, Square rfrom); void set_state(StateInfo* si) const; void set_check_info(StateInfo* si) const; // Other helpers void put_piece(Piece pc, Square s); void remove_piece(Piece pc, Square s); void move_piece(Piece pc, Square from, Square to); template<bool Do> void do_castling(Color us, Square from, Square& to, Square& rfrom, Square& rto); // Data members Piece board[SQUARE_NB]; Bitboard byTypeBB[PIECE_TYPE_NB]; Bitboard byColorBB[COLOR_NB]; int pieceCount[PIECE_NB]; Square pieceList[PIECE_NB][16]; int index[SQUARE_NB]; int castlingRightsMask[SQUARE_NB]; Square castlingRookSquare[CASTLING_RIGHT_NB]; Bitboard castlingPath[CASTLING_RIGHT_NB]; uint64_t nodes; int gamePly; Color sideToMove; Thread* thisThread; StateInfo* st; bool chess960; }; Class Design Decisions 1. Non-Copyable Position(const Position&) = delete; Position& operator=(const Position&) = delete; Cannot be copied (copy constructor and assignment deleted) Why? Positions are heavy objects with complex state Must be moved or passed by reference/pointer Prevents accidental expensive copies 2. Default Constructor Position() = default; Creates uninitialized position Must call set() to initialize with FEN string Core Data Members 1. Board Representation - MailBox Piece board[SQUARE_NB]; // SQUARE_NB = 64 Mailbox representation: Direct lookup “what piece is on square X?” board[e4] → returns W_KNIGHT or NO_PIECE Fast for: “piece_on(Square s)” 2. Bitboard Representation Technically we need 12 bitboards to represent the all the pieces on chessboard."><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2026-01-07T00:00:00+00:00"><meta property="article:modified_time" content="2026-01-07T00:00:00+00:00"><meta property="article:tag" content="Board Representation"><meta property="article:tag" content="Stockfish"><meta name=twitter:card content="summary"><meta name=twitter:title content="Representation of The Game State"><meta name=twitter:description content="Representation of The Game State
+The Position Class
+The Position class is the core data structure in Stockfish that represents the complete state of a chess game at any given moment. It stores the board, pieces, game state, and provides methods to query and manipulate the position.
+class Position {
+public:
+  static void init();
+
+  Position() = default;
+  Position(const Position&) = delete;
+  Position& operator=(const Position&) = delete;
+
+  // FEN string input/output
+  Position& set(const std::string& fenStr, bool isChess960, StateInfo* si, Thread* th);
+  const std::string fen() const;
+
+  // Position representation
+  Bitboard pieces() const;
+  Bitboard pieces(PieceType pt) const;
+  Bitboard pieces(PieceType pt1, PieceType pt2) const;
+  Bitboard pieces(Color c) const;
+  Bitboard pieces(Color c, PieceType pt) const;
+  Bitboard pieces(Color c, PieceType pt1, PieceType pt2) const;
+  Piece piece_on(Square s) const;
+  Square ep_square() const;
+  bool empty(Square s) const;
+  template<PieceType Pt> int count(Color c) const;
+  template<PieceType Pt> const Square* squares(Color c) const;
+  template<PieceType Pt> Square square(Color c) const;
+
+  // Castling
+  int can_castle(Color c) const;
+  int can_castle(CastlingRight cr) const;
+  bool castling_impeded(CastlingRight cr) const;
+  Square castling_rook_square(CastlingRight cr) const;
+
+  // Checking
+  Bitboard checkers() const;
+  Bitboard discovered_check_candidates() const;
+  Bitboard pinned_pieces(Color c) const;
+  Bitboard check_squares(PieceType pt) const;
+
+  // Attacks to/from a given square
+  Bitboard attackers_to(Square s) const;
+  Bitboard attackers_to(Square s, Bitboard occupied) const;
+  Bitboard attacks_from(Piece pc, Square s) const;
+  template<PieceType> Bitboard attacks_from(Square s) const;
+  template<PieceType> Bitboard attacks_from(Square s, Color c) const;
+  Bitboard slider_blockers(Bitboard sliders, Square s, Bitboard& pinners) const;
+
+  // Properties of moves
+  bool legal(Move m) const;
+  bool pseudo_legal(const Move m) const;
+  bool capture(Move m) const;
+  bool capture_or_promotion(Move m) const;
+  bool gives_check(Move m) const;
+  bool advanced_pawn_push(Move m) const;
+  Piece moved_piece(Move m) const;
+  Piece captured_piece() const;
+
+  // Piece specific
+  bool pawn_passed(Color c, Square s) const;
+  bool opposite_bishops() const;
+
+  // Doing and undoing moves
+  void do_move(Move m, StateInfo& st, bool givesCheck);
+  void undo_move(Move m);
+  void do_null_move(StateInfo& st);
+  void undo_null_move();
+
+  // Static Exchange Evaluation
+  bool see_ge(Move m, Value value) const;
+
+  // Accessing hash keys
+  Key key() const;
+  Key key_after(Move m) const;
+  Key material_key() const;
+  Key pawn_key() const;
+
+  // Other properties of the position
+  Color side_to_move() const;
+  Phase game_phase() const;
+  int game_ply() const;
+  bool is_chess960() const;
+  Thread* this_thread() const;
+  uint64_t nodes_searched() const;
+  bool is_draw() const;
+  int rule50_count() const;
+  Score psq_score() const;
+  Value non_pawn_material(Color c) const;
+
+  // Position consistency check, for debugging
+  bool pos_is_ok(int* failedStep = nullptr) const;
+  void flip();
+
+private:
+  // Initialization helpers (used while setting up a position)
+  void set_castling_right(Color c, Square rfrom);
+  void set_state(StateInfo* si) const;
+  void set_check_info(StateInfo* si) const;
+
+  // Other helpers
+  void put_piece(Piece pc, Square s);
+  void remove_piece(Piece pc, Square s);
+  void move_piece(Piece pc, Square from, Square to);
+  template<bool Do>
+  void do_castling(Color us, Square from, Square& to, Square& rfrom, Square& rto);
+
+  // Data members
+  Piece board[SQUARE_NB];
+  Bitboard byTypeBB[PIECE_TYPE_NB];
+  Bitboard byColorBB[COLOR_NB];
+  int pieceCount[PIECE_NB];
+  Square pieceList[PIECE_NB][16];
+  int index[SQUARE_NB];
+  int castlingRightsMask[SQUARE_NB];
+  Square castlingRookSquare[CASTLING_RIGHT_NB];
+  Bitboard castlingPath[CASTLING_RIGHT_NB];
+  uint64_t nodes;
+  int gamePly;
+  Color sideToMove;
+  Thread* thisThread;
+  StateInfo* st;
+  bool chess960;
+};
+Class Design Decisions
+1. Non-Copyable
+Position(const Position&) = delete;
+Position& operator=(const Position&) = delete;
+
+Cannot be copied (copy constructor and assignment deleted)
+Why? Positions are heavy objects with complex state
+Must be moved or passed by reference/pointer
+Prevents accidental expensive copies
+
+2. Default Constructor
+Position() = default;
+
+Creates uninitialized position
+Must call set() to initialize with FEN string
+
+Core Data Members
+1. Board Representation - MailBox
+Piece board[SQUARE_NB];  // SQUARE_NB = 64
+
+Mailbox representation: Direct lookup &ldquo;what piece is on square X?&rdquo;
+board[e4] → returns W_KNIGHT or NO_PIECE
+Fast for: &ldquo;piece_on(Square s)&rdquo;
+
+2. Bitboard Representation
+Technically we need 12 bitboards to represent the all the pieces on chessboard."><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"Representation of The Game State","item":"https://sankethbk.github.io/blog/posts/chess_engine/2026-01-07-board-representation/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Representation of The Game State","name":"Representation of The Game State","description":"Representation of The Game State The Position Class The Position class is the core data structure in Stockfish that represents the complete state of a chess game at any given moment. It stores the board, pieces, game state, and provides methods to query and manipulate the position.\nclass Position { public: static void init(); Position() = default; Position(const Position\u0026amp;) = delete; Position\u0026amp; operator=(const Position\u0026amp;) = delete; // FEN string input/output Position\u0026amp; set(const std::string\u0026amp; fenStr, bool isChess960, StateInfo* si, Thread* th); const std::string fen() const; // Position representation Bitboard pieces() const; Bitboard pieces(PieceType pt) const; Bitboard pieces(PieceType pt1, PieceType pt2) const; Bitboard pieces(Color c) const; Bitboard pieces(Color c, PieceType pt) const; Bitboard pieces(Color c, PieceType pt1, PieceType pt2) const; Piece piece_on(Square s) const; Square ep_square() const; bool empty(Square s) const; template\u0026lt;PieceType Pt\u0026gt; int count(Color c) const; template\u0026lt;PieceType Pt\u0026gt; const Square* squares(Color c) const; template\u0026lt;PieceType Pt\u0026gt; Square square(Color c) const; // Castling int can_castle(Color c) const; int can_castle(CastlingRight cr) const; bool castling_impeded(CastlingRight cr) const; Square castling_rook_square(CastlingRight cr) const; // Checking Bitboard checkers() const; Bitboard discovered_check_candidates() const; Bitboard pinned_pieces(Color c) const; Bitboard check_squares(PieceType pt) const; // Attacks to/from a given square Bitboard attackers_to(Square s) const; Bitboard attackers_to(Square s, Bitboard occupied) const; Bitboard attacks_from(Piece pc, Square s) const; template\u0026lt;PieceType\u0026gt; Bitboard attacks_from(Square s) const; template\u0026lt;PieceType\u0026gt; Bitboard attacks_from(Square s, Color c) const; Bitboard slider_blockers(Bitboard sliders, Square s, Bitboard\u0026amp; pinners) const; // Properties of moves bool legal(Move m) const; bool pseudo_legal(const Move m) const; bool capture(Move m) const; bool capture_or_promotion(Move m) const; bool gives_check(Move m) const; bool advanced_pawn_push(Move m) const; Piece moved_piece(Move m) const; Piece captured_piece() const; // Piece specific bool pawn_passed(Color c, Square s) const; bool opposite_bishops() const; // Doing and undoing moves void do_move(Move m, StateInfo\u0026amp; st, bool givesCheck); void undo_move(Move m); void do_null_move(StateInfo\u0026amp; st); void undo_null_move(); // Static Exchange Evaluation bool see_ge(Move m, Value value) const; // Accessing hash keys Key key() const; Key key_after(Move m) const; Key material_key() const; Key pawn_key() const; // Other properties of the position Color side_to_move() const; Phase game_phase() const; int game_ply() const; bool is_chess960() const; Thread* this_thread() const; uint64_t nodes_searched() const; bool is_draw() const; int rule50_count() const; Score psq_score() const; Value non_pawn_material(Color c) const; // Position consistency check, for debugging bool pos_is_ok(int* failedStep = nullptr) const; void flip(); private: // Initialization helpers (used while setting up a position) void set_castling_right(Color c, Square rfrom); void set_state(StateInfo* si) const; void set_check_info(StateInfo* si) const; // Other helpers void put_piece(Piece pc, Square s); void remove_piece(Piece pc, Square s); void move_piece(Piece pc, Square from, Square to); template\u0026lt;bool Do\u0026gt; void do_castling(Color us, Square from, Square\u0026amp; to, Square\u0026amp; rfrom, Square\u0026amp; rto); // Data members Piece board[SQUARE_NB]; Bitboard byTypeBB[PIECE_TYPE_NB]; Bitboard byColorBB[COLOR_NB]; int pieceCount[PIECE_NB]; Square pieceList[PIECE_NB][16]; int index[SQUARE_NB]; int castlingRightsMask[SQUARE_NB]; Square castlingRookSquare[CASTLING_RIGHT_NB]; Bitboard castlingPath[CASTLING_RIGHT_NB]; uint64_t nodes; int gamePly; Color sideToMove; Thread* thisThread; StateInfo* st; bool chess960; }; Class Design Decisions 1. Non-Copyable Position(const Position\u0026amp;) = delete; Position\u0026amp; operator=(const Position\u0026amp;) = delete; Cannot be copied (copy constructor and assignment deleted) Why? Positions are heavy objects with complex state Must be moved or passed by reference/pointer Prevents accidental expensive copies 2. Default Constructor Position() = default; Creates uninitialized position Must call set() to initialize with FEN string Core Data Members 1. Board Representation - MailBox Piece board[SQUARE_NB]; // SQUARE_NB = 64 Mailbox representation: Direct lookup \u0026ldquo;what piece is on square X?\u0026rdquo; board[e4] → returns W_KNIGHT or NO_PIECE Fast for: \u0026ldquo;piece_on(Square s)\u0026rdquo; 2. Bitboard Representation Technically we need 12 bitboards to represent the all the pieces on chessboard.\n","keywords":["board representation","stockfish"],"articleBody":"Representation of The Game State The Position Class The Position class is the core data structure in Stockfish that represents the complete state of a chess game at any given moment. It stores the board, pieces, game state, and provides methods to query and manipulate the position.\nclass Position { public: static void init(); Position() = default; Position(const Position\u0026) = delete; Position\u0026 operator=(const Position\u0026) = delete; // FEN string input/output Position\u0026 set(const std::string\u0026 fenStr, bool isChess960, StateInfo* si, Thread* th); const std::string fen() const; // Position representation Bitboard pieces() const; Bitboard pieces(PieceType pt) const; Bitboard pieces(PieceType pt1, PieceType pt2) const; Bitboard pieces(Color c) const; Bitboard pieces(Color c, PieceType pt) const; Bitboard pieces(Color c, PieceType pt1, PieceType pt2) const; Piece piece_on(Square s) const; Square ep_square() const; bool empty(Square s) const; template\u003cPieceType Pt\u003e int count(Color c) const; template\u003cPieceType Pt\u003e const Square* squares(Color c) const; template\u003cPieceType Pt\u003e Square square(Color c) const; // Castling int can_castle(Color c) const; int can_castle(CastlingRight cr) const; bool castling_impeded(CastlingRight cr) const; Square castling_rook_square(CastlingRight cr) const; // Checking Bitboard checkers() const; Bitboard discovered_check_candidates() const; Bitboard pinned_pieces(Color c) const; Bitboard check_squares(PieceType pt) const; // Attacks to/from a given square Bitboard attackers_to(Square s) const; Bitboard attackers_to(Square s, Bitboard occupied) const; Bitboard attacks_from(Piece pc, Square s) const; template\u003cPieceType\u003e Bitboard attacks_from(Square s) const; template\u003cPieceType\u003e Bitboard attacks_from(Square s, Color c) const; Bitboard slider_blockers(Bitboard sliders, Square s, Bitboard\u0026 pinners) const; // Properties of moves bool legal(Move m) const; bool pseudo_legal(const Move m) const; bool capture(Move m) const; bool capture_or_promotion(Move m) const; bool gives_check(Move m) const; bool advanced_pawn_push(Move m) const; Piece moved_piece(Move m) const; Piece captured_piece() const; // Piece specific bool pawn_passed(Color c, Square s) const; bool opposite_bishops() const; // Doing and undoing moves void do_move(Move m, StateInfo\u0026 st, bool givesCheck); void undo_move(Move m); void do_null_move(StateInfo\u0026 st); void undo_null_move(); // Static Exchange Evaluation bool see_ge(Move m, Value value) const; // Accessing hash keys Key key() const; Key key_after(Move m) const; Key material_key() const; Key pawn_key() const; // Other properties of the position Color side_to_move() const; Phase game_phase() const; int game_ply() const; bool is_chess960() const; Thread* this_thread() const; uint64_t nodes_searched() const; bool is_draw() const; int rule50_count() const; Score psq_score() const; Value non_pawn_material(Color c) const; // Position consistency check, for debugging bool pos_is_ok(int* failedStep = nullptr) const; void flip(); private: // Initialization helpers (used while setting up a position) void set_castling_right(Color c, Square rfrom); void set_state(StateInfo* si) const; void set_check_info(StateInfo* si) const; // Other helpers void put_piece(Piece pc, Square s); void remove_piece(Piece pc, Square s); void move_piece(Piece pc, Square from, Square to); template\u003cbool Do\u003e void do_castling(Color us, Square from, Square\u0026 to, Square\u0026 rfrom, Square\u0026 rto); // Data members Piece board[SQUARE_NB]; Bitboard byTypeBB[PIECE_TYPE_NB]; Bitboard byColorBB[COLOR_NB]; int pieceCount[PIECE_NB]; Square pieceList[PIECE_NB][16]; int index[SQUARE_NB]; int castlingRightsMask[SQUARE_NB]; Square castlingRookSquare[CASTLING_RIGHT_NB]; Bitboard castlingPath[CASTLING_RIGHT_NB]; uint64_t nodes; int gamePly; Color sideToMove; Thread* thisThread; StateInfo* st; bool chess960; }; Class Design Decisions 1. Non-Copyable Position(const Position\u0026) = delete; Position\u0026 operator=(const Position\u0026) = delete; Cannot be copied (copy constructor and assignment deleted) Why? Positions are heavy objects with complex state Must be moved or passed by reference/pointer Prevents accidental expensive copies 2. Default Constructor Position() = default; Creates uninitialized position Must call set() to initialize with FEN string Core Data Members 1. Board Representation - MailBox Piece board[SQUARE_NB]; // SQUARE_NB = 64 Mailbox representation: Direct lookup “what piece is on square X?” board[e4] → returns W_KNIGHT or NO_PIECE Fast for: “piece_on(Square s)” 2. Bitboard Representation Technically we need 12 bitboards to represent the all the pieces on chessboard.\nwhite pawns white knights white bishops white rooks white queens white king black pawns black knights black bishops black rooks black queens black king Stockfish’s representation (factorized)\n1. byTypeBB Bitboard byTypeBB[PIECE_TYPE_NB]; // PIECE_TYPE_NB = 8 byTypeBB is an array of 8 bitboards. This stores piece-type bitboards regardless of color:\nenum PieceType { NO_PIECE_TYPE, // = 0 PAWN, // = 1 KNIGHT, // = 2 BISHOP, // = 3 ROOK, // = 4 QUEEN, // = 5 KING, // = 6 ALL_PIECES = 0, // = 0 (EXPLICIT assignment, alias for NO_PIECE_TYPE) PIECE_TYPE_NB = 8 // = 8 (total count for array sizing) }; Index mapping\nbyTypeBB[0] = byTypeBB[NO_PIECE_TYPE] = byTypeBB[ALL_PIECES] = all pieces (both colors) byTypeBB[1] = byTypeBB[PAWN] = all pawns byTypeBB[2] = byTypeBB[KNIGHT] = all knights byTypeBB[3] = byTypeBB[BISHOP] = all bishops byTypeBB[4] = byTypeBB[ROOK] = all rooks byTypeBB[5] = byTypeBB[QUEEN] = all queens byTypeBB[6] = byTypeBB[KING] = all kings byTypeBB[7] = ??? // (UNUSED, for padding) 2. byColorBB Bitboard byColorBB[COLOR_NB]; // COLOR_NB = 2 Bitboards by color: All pieces of a color byColorBB[WHITE] → all white pieces byColorBB[BLACK] → all black pieces Fast for: “where are all black pieces?” 3. castlingPath Bitboard castlingPath[CASTLING_RIGHT_NB]; // CASTLING_RIGHT_NB = 16 THis seems like the biggest bitboard array with eleemnts 16 × 8 bytes = 128 bytes.\nLet’s understand why its like this\nenum CastlingRight { NO_CASTLING, WHITE_OO, WHITE_OOO = WHITE_OO \u003c\u003c 1, BLACK_OO = WHITE_OO \u003c\u003c 2, BLACK_OOO = WHITE_OO \u003c\u003c 3, ANY_CASTLING = WHITE_OO | WHITE_OOO | BLACK_OO | BLACK_OOO, CASTLING_RIGHT_NB = 16 }; So the values range from:\n0000 (0) → no castling 0001 (1) → white O-O 0010 (2) → white O-O-O ... 1111 (15) → all castling rights 16 possible states, hence CASTLING_RIGHT_NB = 16\nWhat castlingPath Actually Stores?\ncastlingPath stores the squares that must be empty for each individual castling move, not for each combination of rights. It has 16 bitboards but only 4 of them are used.\ncastlingPath[NO_CASTLING] // Index 0 - unused castlingPath[WHITE_OO] // Index 1 - squares between white king and h1 rook castlingPath[WHITE_OOO] // Index 2 - squares between white king and a1 rook castlingPath[BLACK_OO] // Index 4 - squares between black king and h8 rook castlingPath[BLACK_OOO] // Index 8 - squares between black king and a8 rook Why? Because they’re bit flags designed to be combined with bitwise OR:\nint rights = WHITE_OO | BLACK_OOO; // = 1 | 8 = 9 (0b1001) We can see most of the squares of bitboards will be empty. This is a deliberate design choice, so that we can quickly compute operations like this:\nbool Position::castling_impeded(CastlingRight cr) const { return byTypeBB[ALL_PIECES] \u0026 castlingPath[cr]; } If any overlap exists, the AND is non-zero → castling blocked.\nThis is:\n1 CPU instruction (AND) 1 branchless boolean check 3. PieceCount int pieceCount[PIECE_NB]; // PIECE_NB = 16 Count of each piece type per color pieceCount[W_KNIGHT] → number of white knights (0-10) Fast for: “how many white rooks exist?” Square pieceList[PIECE_NB][16]; List of squares for each piece type pieceList[W_KNIGHT] = {SQ_B1, SQ_G1, SQ_NONE, ...} Max 16 of any piece (all pawns could promote) Fast for: iterating over pieces (no need to scan entire board) Terminated by SQ_NONE 4. Index int index[SQUARE_NB]; Reverse lookup: Which index in pieceList? index[b1] → 0 (first white knight in pieceList) Used when moving/removing pieces to update pieceList efficiently Why Multiple Representations? Redundancy for speed! Different operations need different views:\nOperation Best Representation “What piece is on e4?” board[e4] (O(1)) “Where are all white pieces?” byColorBB[WHITE] (O(1)) “Are there any black rooks on the 7th rank?” byTypeBB[ROOK] \u0026 byColorBB[BLACK] \u0026 Rank7BB “Loop through all white knights” pieceList[W_KNIGHT] (no empty squares) ","wordCount":"1172","inLanguage":"en","datePublished":"2026-01-07T00:00:00Z","dateModified":"2026-01-07T00:00:00Z","author":{"@type":"Person","name":"Sanketh"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/chess_engine/2026-01-07-board-representation/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload=renderMathInElement(document.body)></script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">Representation of The Game State</h1><div class=post-meta><span title='2026-01-07 00:00:00 +0000 UTC'>January 7, 2026</span>&nbsp;·&nbsp;6 min&nbsp;·&nbsp;Sanketh&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/chess_engine/2026-01-07-board-representation.md rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#representation-of-the-game-state aria-label="Representation of The Game State">Representation of The Game State</a><ul><li><a href=#the-position-class aria-label="The Position Class">The Position Class</a><ul><li><a href=#class-design-decisions aria-label="Class Design Decisions">Class Design Decisions</a><ul><li><a href=#1-non-copyable aria-label="1. Non-Copyable">1. Non-Copyable</a></li><li><a href=#2-default-constructor aria-label="2. Default Constructor">2. Default Constructor</a></li></ul></li><li><a href=#core-data-members aria-label="Core Data Members">Core Data Members</a><ul><li><a href=#1-board-representation---mailbox aria-label="1. Board Representation - MailBox">1. Board Representation - MailBox</a></li><li><a href=#2-bitboard-representation aria-label="2. Bitboard Representation">2. Bitboard Representation</a><ul><li><a href=#1-bytypebb aria-label="1. byTypeBB">1. byTypeBB</a></li><li><a href=#2-bycolorbb aria-label="2. byColorBB">2. byColorBB</a></li><li><a href=#3-castlingpath aria-label="3. castlingPath">3. castlingPath</a></li></ul></li><li><a href=#3-piececount aria-label="3. PieceCount">3. PieceCount</a></li><li><a href=#4-index aria-label="4. Index">4. Index</a></li><li><a href=#why-multiple-representations aria-label="Why Multiple Representations?">Why Multiple Representations?</a></li></ul></li></ul></li></ul></li></ul></div></details></div><div class=post-content><h1 id=representation-of-the-game-state>Representation of The Game State<a hidden class=anchor aria-hidden=true href=#representation-of-the-game-state>#</a></h1><h2 id=the-position-class>The Position Class<a hidden class=anchor aria-hidden=true href=#the-position-class>#</a></h2><p>The <code>Position</code> class is the core data structure in Stockfish that represents the complete state of a chess game at any given moment. It stores the board, pieces, game state, and provides methods to query and manipulate the position.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>Position</span> {
+</span></span><span style=display:flex><span><span style=color:#66d9ef>public</span><span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>static</span> <span style=color:#66d9ef>void</span> init();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  Position() <span style=color:#f92672>=</span> <span style=color:#66d9ef>default</span>;
+</span></span><span style=display:flex><span>  Position(<span style=color:#66d9ef>const</span> Position<span style=color:#f92672>&amp;</span>) <span style=color:#f92672>=</span> <span style=color:#66d9ef>delete</span>;
+</span></span><span style=display:flex><span>  Position<span style=color:#f92672>&amp;</span> <span style=color:#66d9ef>operator</span><span style=color:#f92672>=</span>(<span style=color:#66d9ef>const</span> Position<span style=color:#f92672>&amp;</span>) <span style=color:#f92672>=</span> <span style=color:#66d9ef>delete</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// FEN string input/output
+</span></span></span><span style=display:flex><span>  Position<span style=color:#f92672>&amp;</span> set(<span style=color:#66d9ef>const</span> std<span style=color:#f92672>::</span>string<span style=color:#f92672>&amp;</span> fenStr, <span style=color:#66d9ef>bool</span> isChess960, StateInfo<span style=color:#f92672>*</span> si, Thread<span style=color:#f92672>*</span> th);
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>const</span> std<span style=color:#f92672>::</span>string fen() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Position representation
+</span></span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>pieces</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>pieces</span>(PieceType pt) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>pieces</span>(PieceType pt1, PieceType pt2) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>pieces</span>(Color c) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>pieces</span>(Color c, PieceType pt) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>pieces</span>(Color c, PieceType pt1, PieceType pt2) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Piece <span style=color:#a6e22e>piece_on</span>(Square s) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Square <span style=color:#a6e22e>ep_square</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>empty</span>(Square s) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>template</span><span style=color:#f92672>&lt;</span>PieceType Pt<span style=color:#f92672>&gt;</span> <span style=color:#66d9ef>int</span> count(Color c) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>template</span><span style=color:#f92672>&lt;</span>PieceType Pt<span style=color:#f92672>&gt;</span> <span style=color:#66d9ef>const</span> Square<span style=color:#f92672>*</span> squares(Color c) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>template</span><span style=color:#f92672>&lt;</span>PieceType Pt<span style=color:#f92672>&gt;</span> Square square(Color c) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Castling
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>int</span> <span style=color:#a6e22e>can_castle</span>(Color c) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>int</span> <span style=color:#a6e22e>can_castle</span>(CastlingRight cr) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>castling_impeded</span>(CastlingRight cr) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Square <span style=color:#a6e22e>castling_rook_square</span>(CastlingRight cr) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Checking
+</span></span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>checkers</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>discovered_check_candidates</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>pinned_pieces</span>(Color c) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>check_squares</span>(PieceType pt) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Attacks to/from a given square
+</span></span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>attackers_to</span>(Square s) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>attackers_to</span>(Square s, Bitboard occupied) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>attacks_from</span>(Piece pc, Square s) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>template</span><span style=color:#f92672>&lt;</span>PieceType<span style=color:#f92672>&gt;</span> Bitboard attacks_from(Square s) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>template</span><span style=color:#f92672>&lt;</span>PieceType<span style=color:#f92672>&gt;</span> Bitboard attacks_from(Square s, Color c) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Bitboard <span style=color:#a6e22e>slider_blockers</span>(Bitboard sliders, Square s, Bitboard<span style=color:#f92672>&amp;</span> pinners) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Properties of moves
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>legal</span>(Move m) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>pseudo_legal</span>(<span style=color:#66d9ef>const</span> Move m) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>capture</span>(Move m) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>capture_or_promotion</span>(Move m) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>gives_check</span>(Move m) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>advanced_pawn_push</span>(Move m) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Piece <span style=color:#a6e22e>moved_piece</span>(Move m) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Piece <span style=color:#a6e22e>captured_piece</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Piece specific
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>pawn_passed</span>(Color c, Square s) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>opposite_bishops</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Doing and undoing moves
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>do_move</span>(Move m, StateInfo<span style=color:#f92672>&amp;</span> st, <span style=color:#66d9ef>bool</span> givesCheck);
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>undo_move</span>(Move m);
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>do_null_move</span>(StateInfo<span style=color:#f92672>&amp;</span> st);
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>undo_null_move</span>();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Static Exchange Evaluation
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>see_ge</span>(Move m, Value value) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Accessing hash keys
+</span></span></span><span style=display:flex><span>  Key <span style=color:#a6e22e>key</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Key <span style=color:#a6e22e>key_after</span>(Move m) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Key <span style=color:#a6e22e>material_key</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Key <span style=color:#a6e22e>pawn_key</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Other properties of the position
+</span></span></span><span style=display:flex><span>  Color <span style=color:#a6e22e>side_to_move</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Phase <span style=color:#a6e22e>game_phase</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>int</span> <span style=color:#a6e22e>game_ply</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>is_chess960</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Thread<span style=color:#f92672>*</span> <span style=color:#a6e22e>this_thread</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>uint64_t</span> <span style=color:#a6e22e>nodes_searched</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>is_draw</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>int</span> <span style=color:#a6e22e>rule50_count</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Score <span style=color:#a6e22e>psq_score</span>() <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  Value <span style=color:#a6e22e>non_pawn_material</span>(Color c) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Position consistency check, for debugging
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>pos_is_ok</span>(<span style=color:#66d9ef>int</span><span style=color:#f92672>*</span> failedStep <span style=color:#f92672>=</span> <span style=color:#66d9ef>nullptr</span>) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>flip</span>();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>private</span><span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Initialization helpers (used while setting up a position)
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>void</span> set_castling_right(Color c, Square rfrom);
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>set_state</span>(StateInfo<span style=color:#f92672>*</span> si) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>set_check_info</span>(StateInfo<span style=color:#f92672>*</span> si) <span style=color:#66d9ef>const</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Other helpers
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>put_piece</span>(Piece pc, Square s);
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>remove_piece</span>(Piece pc, Square s);
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>move_piece</span>(Piece pc, Square from, Square to);
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>template</span><span style=color:#f92672>&lt;</span><span style=color:#66d9ef>bool</span> Do<span style=color:#f92672>&gt;</span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>void</span> do_castling(Color us, Square from, Square<span style=color:#f92672>&amp;</span> to, Square<span style=color:#f92672>&amp;</span> rfrom, Square<span style=color:#f92672>&amp;</span> rto);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Data members
+</span></span></span><span style=display:flex><span>  Piece board[SQUARE_NB];
+</span></span><span style=display:flex><span>  Bitboard byTypeBB[PIECE_TYPE_NB];
+</span></span><span style=display:flex><span>  Bitboard byColorBB[COLOR_NB];
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>int</span> pieceCount[PIECE_NB];
+</span></span><span style=display:flex><span>  Square pieceList[PIECE_NB][<span style=color:#ae81ff>16</span>];
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>int</span> index[SQUARE_NB];
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>int</span> castlingRightsMask[SQUARE_NB];
+</span></span><span style=display:flex><span>  Square castlingRookSquare[CASTLING_RIGHT_NB];
+</span></span><span style=display:flex><span>  Bitboard castlingPath[CASTLING_RIGHT_NB];
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>uint64_t</span> nodes;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>int</span> gamePly;
+</span></span><span style=display:flex><span>  Color sideToMove;
+</span></span><span style=display:flex><span>  Thread<span style=color:#f92672>*</span> thisThread;
+</span></span><span style=display:flex><span>  StateInfo<span style=color:#f92672>*</span> st;
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> chess960;
+</span></span><span style=display:flex><span>};
+</span></span></code></pre></div><h3 id=class-design-decisions>Class Design Decisions<a hidden class=anchor aria-hidden=true href=#class-design-decisions>#</a></h3><h4 id=1-non-copyable>1. Non-Copyable<a hidden class=anchor aria-hidden=true href=#1-non-copyable>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>Position(<span style=color:#66d9ef>const</span> Position<span style=color:#f92672>&amp;</span>) <span style=color:#f92672>=</span> <span style=color:#66d9ef>delete</span>;
+</span></span><span style=display:flex><span>Position<span style=color:#f92672>&amp;</span> <span style=color:#66d9ef>operator</span><span style=color:#f92672>=</span>(<span style=color:#66d9ef>const</span> Position<span style=color:#f92672>&amp;</span>) <span style=color:#f92672>=</span> <span style=color:#66d9ef>delete</span>;
+</span></span></code></pre></div><ul><li>Cannot be copied (copy constructor and assignment deleted)</li><li>Why? Positions are heavy objects with complex state</li><li>Must be moved or passed by reference/pointer</li><li>Prevents accidental expensive copies</li></ul><h4 id=2-default-constructor>2. Default Constructor<a hidden class=anchor aria-hidden=true href=#2-default-constructor>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>Position() <span style=color:#f92672>=</span> <span style=color:#66d9ef>default</span>;
+</span></span></code></pre></div><ul><li>Creates uninitialized position</li><li>Must call <code>set()</code> to initialize with FEN string</li></ul><h3 id=core-data-members>Core Data Members<a hidden class=anchor aria-hidden=true href=#core-data-members>#</a></h3><h4 id=1-board-representation---mailbox>1. Board Representation - MailBox<a hidden class=anchor aria-hidden=true href=#1-board-representation---mailbox>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>Piece board[SQUARE_NB];  <span style=color:#75715e>// SQUARE_NB = 64
+</span></span></span></code></pre></div><ul><li>Mailbox representation: Direct lookup &ldquo;what piece is on square X?&rdquo;</li><li><code>board[e4]</code> → returns <code>W_KNIGHT</code> or <code>NO_PIECE</code></li><li>Fast for: &ldquo;piece_on(Square s)&rdquo;</li></ul><h4 id=2-bitboard-representation>2. Bitboard Representation<a hidden class=anchor aria-hidden=true href=#2-bitboard-representation>#</a></h4><p>Technically we need 12 bitboards to represent the all the pieces on chessboard.</p><pre tabindex=0><code>white pawns
+white knights
+white bishops
+white rooks
+white queens
+white king
+
+black pawns
+black knights
+black bishops
+black rooks
+black queens
+black king
+</code></pre><p><strong>Stockfish’s representation (factorized)</strong></p><h5 id=1-bytypebb>1. byTypeBB<a hidden class=anchor aria-hidden=true href=#1-bytypebb>#</a></h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>Bitboard byTypeBB[PIECE_TYPE_NB];  <span style=color:#75715e>// PIECE_TYPE_NB = 8
+</span></span></span></code></pre></div><p><code>byTypeBB</code> is an array of 8 bitboards. This stores piece-type bitboards regardless of color:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>enum</span> <span style=color:#a6e22e>PieceType</span> {
+</span></span><span style=display:flex><span>  NO_PIECE_TYPE,  <span style=color:#75715e>// = 0
+</span></span></span><span style=display:flex><span>  PAWN,           <span style=color:#75715e>// = 1
+</span></span></span><span style=display:flex><span>  KNIGHT,         <span style=color:#75715e>// = 2
+</span></span></span><span style=display:flex><span>  BISHOP,         <span style=color:#75715e>// = 3
+</span></span></span><span style=display:flex><span>  ROOK,           <span style=color:#75715e>// = 4
+</span></span></span><span style=display:flex><span>  QUEEN,          <span style=color:#75715e>// = 5
+</span></span></span><span style=display:flex><span>  KING,           <span style=color:#75715e>// = 6
+</span></span></span><span style=display:flex><span>  ALL_PIECES <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>, <span style=color:#75715e>// = 0 (EXPLICIT assignment, alias for NO_PIECE_TYPE)
+</span></span></span><span style=display:flex><span>  PIECE_TYPE_NB <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span>  <span style=color:#75715e>// = 8 (total count for array sizing)
+</span></span></span><span style=display:flex><span>};
+</span></span></code></pre></div><p><strong>Index mapping</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>byTypeBB[<span style=color:#ae81ff>0</span>] <span style=color:#f92672>=</span> byTypeBB[NO_PIECE_TYPE] <span style=color:#f92672>=</span> byTypeBB[ALL_PIECES] <span style=color:#f92672>=</span> all pieces (both colors)
+</span></span><span style=display:flex><span>byTypeBB[<span style=color:#ae81ff>1</span>] <span style=color:#f92672>=</span> byTypeBB[PAWN]          <span style=color:#f92672>=</span> all pawns
+</span></span><span style=display:flex><span>byTypeBB[<span style=color:#ae81ff>2</span>] <span style=color:#f92672>=</span> byTypeBB[KNIGHT]        <span style=color:#f92672>=</span> all knights
+</span></span><span style=display:flex><span>byTypeBB[<span style=color:#ae81ff>3</span>] <span style=color:#f92672>=</span> byTypeBB[BISHOP]        <span style=color:#f92672>=</span> all bishops
+</span></span><span style=display:flex><span>byTypeBB[<span style=color:#ae81ff>4</span>] <span style=color:#f92672>=</span> byTypeBB[ROOK]          <span style=color:#f92672>=</span> all rooks
+</span></span><span style=display:flex><span>byTypeBB[<span style=color:#ae81ff>5</span>] <span style=color:#f92672>=</span> byTypeBB[QUEEN]         <span style=color:#f92672>=</span> all queens
+</span></span><span style=display:flex><span>byTypeBB[<span style=color:#ae81ff>6</span>] <span style=color:#f92672>=</span> byTypeBB[KING]          <span style=color:#f92672>=</span> all kings
+</span></span><span style=display:flex><span>byTypeBB[<span style=color:#ae81ff>7</span>] <span style=color:#f92672>=</span> <span style=color:#f92672>???</span> <span style=color:#75715e>// (UNUSED, for padding)
+</span></span></span></code></pre></div><h5 id=2-bycolorbb>2. byColorBB<a hidden class=anchor aria-hidden=true href=#2-bycolorbb>#</a></h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>Bitboard byColorBB[COLOR_NB];  <span style=color:#75715e>// COLOR_NB = 2
+</span></span></span></code></pre></div><ul><li>Bitboards by color: All pieces of a color</li><li>byColorBB[WHITE] → all white pieces</li><li>byColorBB[BLACK] → all black pieces</li><li>Fast for: &ldquo;where are all black pieces?&rdquo;</li></ul><h5 id=3-castlingpath>3. castlingPath<a hidden class=anchor aria-hidden=true href=#3-castlingpath>#</a></h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>Bitboard castlingPath[CASTLING_RIGHT_NB]; <span style=color:#75715e>// CASTLING_RIGHT_NB = 16
+</span></span></span></code></pre></div><p>THis seems like the biggest bitboard array with eleemnts <code>16 × 8 bytes = 128 bytes</code>.</p><p>Let&rsquo;s understand why its like this</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>enum</span> <span style=color:#a6e22e>CastlingRight</span> {
+</span></span><span style=display:flex><span>  NO_CASTLING,
+</span></span><span style=display:flex><span>  WHITE_OO,
+</span></span><span style=display:flex><span>  WHITE_OOO <span style=color:#f92672>=</span> WHITE_OO <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>1</span>,
+</span></span><span style=display:flex><span>  BLACK_OO  <span style=color:#f92672>=</span> WHITE_OO <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>2</span>,
+</span></span><span style=display:flex><span>  BLACK_OOO <span style=color:#f92672>=</span> WHITE_OO <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>3</span>,
+</span></span><span style=display:flex><span>  ANY_CASTLING <span style=color:#f92672>=</span> WHITE_OO <span style=color:#f92672>|</span> WHITE_OOO <span style=color:#f92672>|</span> BLACK_OO <span style=color:#f92672>|</span> BLACK_OOO,
+</span></span><span style=display:flex><span>  CASTLING_RIGHT_NB <span style=color:#f92672>=</span> <span style=color:#ae81ff>16</span>
+</span></span><span style=display:flex><span>};
+</span></span></code></pre></div><p>So the values range from:</p><pre tabindex=0><code>0000 (0)  → no castling
+0001 (1)  → white O-O
+0010 (2)  → white O-O-O
+...
+1111 (15) → all castling rights
+</code></pre><p>16 possible states, hence <code>CASTLING_RIGHT_NB</code> = 16</p><p><strong>What castlingPath Actually Stores?</strong></p><p><code>castlingPath</code> stores the squares that must be empty for each individual castling move, not for each combination of rights. It has 16 bitboards but only 4 of them are used.</p><pre tabindex=0><code>castlingPath[NO_CASTLING]  // Index 0 - unused
+castlingPath[WHITE_OO]     // Index 1 - squares between white king and h1 rook
+castlingPath[WHITE_OOO]    // Index 2 - squares between white king and a1 rook  
+castlingPath[BLACK_OO]     // Index 4 - squares between black king and h8 rook
+castlingPath[BLACK_OOO]    // Index 8 - squares between black king and a8 rook
+</code></pre><p>Why? Because they&rsquo;re bit flags designed to be combined with bitwise OR:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>int</span> rights <span style=color:#f92672>=</span> WHITE_OO <span style=color:#f92672>|</span> BLACK_OOO;  <span style=color:#75715e>// = 1 | 8 = 9 (0b1001)
+</span></span></span></code></pre></div><p>We can see most of the squares of bitboards will be empty. This is a deliberate design choice, so that we can quickly compute operations like this:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>bool</span> Position<span style=color:#f92672>::</span>castling_impeded(CastlingRight cr) <span style=color:#66d9ef>const</span> {
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>return</span> byTypeBB[ALL_PIECES] <span style=color:#f92672>&amp;</span> castlingPath[cr];
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>If any overlap exists, the AND is non-zero → castling blocked.</p><p>This is:</p><ul><li>1 CPU instruction (AND)</li><li>1 branchless boolean check</li></ul><h4 id=3-piececount>3. PieceCount<a hidden class=anchor aria-hidden=true href=#3-piececount>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>int</span> pieceCount[PIECE_NB];  <span style=color:#75715e>// PIECE_NB = 16
+</span></span></span></code></pre></div><ul><li>Count of each piece type per color</li><li><code>pieceCount[W_KNIGHT]</code> → number of white knights (0-10)</li><li>Fast for: &ldquo;how many white rooks exist?&rdquo;</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>Square pieceList[PIECE_NB][<span style=color:#ae81ff>16</span>];
+</span></span></code></pre></div><ul><li>List of squares for each piece type</li><li><code>pieceList[W_KNIGHT] = {SQ_B1, SQ_G1, SQ_NONE, ...}</code></li><li>Max 16 of any piece (all pawns could promote)</li><li>Fast for: iterating over pieces (no need to scan entire board)</li><li>Terminated by <code>SQ_NONE</code></li></ul><h4 id=4-index>4. Index<a hidden class=anchor aria-hidden=true href=#4-index>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>int</span> index[SQUARE_NB];
+</span></span></code></pre></div><ul><li>Reverse lookup: Which index in pieceList?</li><li><code>index[b1]</code> → 0 (first white knight in pieceList)</li><li>Used when moving/removing pieces to update pieceList efficiently</li></ul><h4 id=why-multiple-representations>Why Multiple Representations?<a hidden class=anchor aria-hidden=true href=#why-multiple-representations>#</a></h4><p>Redundancy for speed! Different operations need different views:</p><table><thead><tr><th>Operation</th><th>Best Representation</th></tr></thead><tbody><tr><td>&ldquo;What piece is on e4?&rdquo;</td><td><code>board[e4]</code> (O(1))</td></tr><tr><td>&ldquo;Where are all white pieces?&rdquo;</td><td><code>byColorBB[WHITE]</code> (O(1))</td></tr><tr><td>&ldquo;Are there any black rooks on the 7th rank?&rdquo;</td><td><code>byTypeBB[ROOK] & byColorBB[BLACK] & Rank7BB</code></td></tr><tr><td>&ldquo;Loop through all white knights&rdquo;</td><td><code>pieceList[W_KNIGHT]</code> (no empty squares)</td></tr></tbody></table></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/board-representation/>Board Representation</a></li><li><a href=https://sankethbk.github.io/blog/tags/stockfish/>Stockfish</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>

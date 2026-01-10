@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Board Representation on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/board-representation/</link><description>Recent content in Board Representation on Sanketh's Blog</description><generator>Hugo -- 0.154.4</generator><language>en-us</language><lastBuildDate>Wed, 07 Jan 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/board-representation/index.xml" rel="self" type="application/rss+xml"/><item><title>Representation of The Game State</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-07-board-representation/</link><pubDate>Wed, 07 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-07-board-representation/</guid><description>&lt;h1 id="representation-of-the-game-state"&gt;Representation of The Game State&lt;/h1&gt;
+&lt;h2 id="the-position-class"&gt;The Position Class&lt;/h2&gt;
+&lt;p&gt;The &lt;code&gt;Position&lt;/code&gt; class is the core data structure in Stockfish that represents the complete state of a chess game at any given moment. It stores the board, pieces, game state, and provides methods to query and manipulate the position.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;class&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;Position&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;public&lt;/span&gt;&lt;span style="color:#f92672"&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;static&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; init();
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Position() &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;default&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Position(&lt;span style="color:#66d9ef"&gt;const&lt;/span&gt; Position&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;) &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;delete&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Position&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;operator&lt;/span&gt;&lt;span style="color:#f92672"&gt;=&lt;/span&gt;(&lt;span style="color:#66d9ef"&gt;const&lt;/span&gt; Position&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;) &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;delete&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// FEN string input/output
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Position&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; set(&lt;span style="color:#66d9ef"&gt;const&lt;/span&gt; std&lt;span style="color:#f92672"&gt;::&lt;/span&gt;string&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; fenStr, &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; isChess960, StateInfo&lt;span style="color:#f92672"&gt;*&lt;/span&gt; si, Thread&lt;span style="color:#f92672"&gt;*&lt;/span&gt; th);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt; std&lt;span style="color:#f92672"&gt;::&lt;/span&gt;string fen() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Position representation
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;pieces&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;pieces&lt;/span&gt;(PieceType pt) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;pieces&lt;/span&gt;(PieceType pt1, PieceType pt2) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;pieces&lt;/span&gt;(Color c) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;pieces&lt;/span&gt;(Color c, PieceType pt) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;pieces&lt;/span&gt;(Color c, PieceType pt1, PieceType pt2) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Piece &lt;span style="color:#a6e22e"&gt;piece_on&lt;/span&gt;(Square s) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Square &lt;span style="color:#a6e22e"&gt;ep_square&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;empty&lt;/span&gt;(Square s) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;template&lt;/span&gt;&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;PieceType Pt&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt; count(Color c) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;template&lt;/span&gt;&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;PieceType Pt&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt; Square&lt;span style="color:#f92672"&gt;*&lt;/span&gt; squares(Color c) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;template&lt;/span&gt;&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;PieceType Pt&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt; Square square(Color c) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Castling
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;can_castle&lt;/span&gt;(Color c) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;can_castle&lt;/span&gt;(CastlingRight cr) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;castling_impeded&lt;/span&gt;(CastlingRight cr) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Square &lt;span style="color:#a6e22e"&gt;castling_rook_square&lt;/span&gt;(CastlingRight cr) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Checking
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;checkers&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;discovered_check_candidates&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;pinned_pieces&lt;/span&gt;(Color c) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;check_squares&lt;/span&gt;(PieceType pt) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Attacks to/from a given square
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;attackers_to&lt;/span&gt;(Square s) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;attackers_to&lt;/span&gt;(Square s, Bitboard occupied) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;attacks_from&lt;/span&gt;(Piece pc, Square s) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;template&lt;/span&gt;&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;PieceType&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt; Bitboard attacks_from(Square s) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;template&lt;/span&gt;&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;PieceType&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt; Bitboard attacks_from(Square s, Color c) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard &lt;span style="color:#a6e22e"&gt;slider_blockers&lt;/span&gt;(Bitboard sliders, Square s, Bitboard&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; pinners) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Properties of moves
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;legal&lt;/span&gt;(Move m) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;pseudo_legal&lt;/span&gt;(&lt;span style="color:#66d9ef"&gt;const&lt;/span&gt; Move m) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;capture&lt;/span&gt;(Move m) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;capture_or_promotion&lt;/span&gt;(Move m) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;gives_check&lt;/span&gt;(Move m) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;advanced_pawn_push&lt;/span&gt;(Move m) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Piece &lt;span style="color:#a6e22e"&gt;moved_piece&lt;/span&gt;(Move m) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Piece &lt;span style="color:#a6e22e"&gt;captured_piece&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Piece specific
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;pawn_passed&lt;/span&gt;(Color c, Square s) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;opposite_bishops&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Doing and undoing moves
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;do_move&lt;/span&gt;(Move m, StateInfo&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; st, &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; givesCheck);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;undo_move&lt;/span&gt;(Move m);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;do_null_move&lt;/span&gt;(StateInfo&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; st);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;undo_null_move&lt;/span&gt;();
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Static Exchange Evaluation
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;see_ge&lt;/span&gt;(Move m, Value value) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Accessing hash keys
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Key &lt;span style="color:#a6e22e"&gt;key&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Key &lt;span style="color:#a6e22e"&gt;key_after&lt;/span&gt;(Move m) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Key &lt;span style="color:#a6e22e"&gt;material_key&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Key &lt;span style="color:#a6e22e"&gt;pawn_key&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Other properties of the position
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Color &lt;span style="color:#a6e22e"&gt;side_to_move&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Phase &lt;span style="color:#a6e22e"&gt;game_phase&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;game_ply&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;is_chess960&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Thread&lt;span style="color:#f92672"&gt;*&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;this_thread&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;uint64_t&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;nodes_searched&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;is_draw&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;rule50_count&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Score &lt;span style="color:#a6e22e"&gt;psq_score&lt;/span&gt;() &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Value &lt;span style="color:#a6e22e"&gt;non_pawn_material&lt;/span&gt;(Color c) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Position consistency check, for debugging
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;pos_is_ok&lt;/span&gt;(&lt;span style="color:#66d9ef"&gt;int&lt;/span&gt;&lt;span style="color:#f92672"&gt;*&lt;/span&gt; failedStep &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;nullptr&lt;/span&gt;) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;flip&lt;/span&gt;();
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;private&lt;/span&gt;&lt;span style="color:#f92672"&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Initialization helpers (used while setting up a position)
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; set_castling_right(Color c, Square rfrom);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;set_state&lt;/span&gt;(StateInfo&lt;span style="color:#f92672"&gt;*&lt;/span&gt; si) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;set_check_info&lt;/span&gt;(StateInfo&lt;span style="color:#f92672"&gt;*&lt;/span&gt; si) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Other helpers
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;put_piece&lt;/span&gt;(Piece pc, Square s);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;remove_piece&lt;/span&gt;(Piece pc, Square s);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;move_piece&lt;/span&gt;(Piece pc, Square from, Square to);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;template&lt;/span&gt;&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;&lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; Do&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; do_castling(Color us, Square from, Square&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; to, Square&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; rfrom, Square&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; rto);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Data members
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Piece board[SQUARE_NB];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard byTypeBB[PIECE_TYPE_NB];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard byColorBB[COLOR_NB];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt; pieceCount[PIECE_NB];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Square pieceList[PIECE_NB][&lt;span style="color:#ae81ff"&gt;16&lt;/span&gt;];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt; index[SQUARE_NB];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt; castlingRightsMask[SQUARE_NB];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Square castlingRookSquare[CASTLING_RIGHT_NB];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard castlingPath[CASTLING_RIGHT_NB];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;uint64_t&lt;/span&gt; nodes;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt; gamePly;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Color sideToMove;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Thread&lt;span style="color:#f92672"&gt;*&lt;/span&gt; thisThread;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; StateInfo&lt;span style="color:#f92672"&gt;*&lt;/span&gt; st;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; chess960;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;};
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="class-design-decisions"&gt;Class Design Decisions&lt;/h3&gt;
+&lt;h4 id="1-non-copyable"&gt;1. Non-Copyable&lt;/h4&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Position(&lt;span style="color:#66d9ef"&gt;const&lt;/span&gt; Position&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;) &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;delete&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Position&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;operator&lt;/span&gt;&lt;span style="color:#f92672"&gt;=&lt;/span&gt;(&lt;span style="color:#66d9ef"&gt;const&lt;/span&gt; Position&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;) &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;delete&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Cannot be copied (copy constructor and assignment deleted)&lt;/li&gt;
+&lt;li&gt;Why? Positions are heavy objects with complex state&lt;/li&gt;
+&lt;li&gt;Must be moved or passed by reference/pointer&lt;/li&gt;
+&lt;li&gt;Prevents accidental expensive copies&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id="2-default-constructor"&gt;2. Default Constructor&lt;/h4&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Position() &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;default&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Creates uninitialized position&lt;/li&gt;
+&lt;li&gt;Must call &lt;code&gt;set()&lt;/code&gt; to initialize with FEN string&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="core-data-members"&gt;Core Data Members&lt;/h3&gt;
+&lt;h4 id="1-board-representation---mailbox"&gt;1. Board Representation - MailBox&lt;/h4&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Piece board[SQUARE_NB]; &lt;span style="color:#75715e"&gt;// SQUARE_NB = 64
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Mailbox representation: Direct lookup &amp;ldquo;what piece is on square X?&amp;rdquo;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;board[e4]&lt;/code&gt; → returns &lt;code&gt;W_KNIGHT&lt;/code&gt; or &lt;code&gt;NO_PIECE&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Fast for: &amp;ldquo;piece_on(Square s)&amp;rdquo;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id="2-bitboard-representation"&gt;2. Bitboard Representation&lt;/h4&gt;
+&lt;p&gt;Technically we need 12 bitboards to represent the all the pieces on chessboard.&lt;/p&gt;</description></item></channel></rss>
