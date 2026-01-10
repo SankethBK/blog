@@ -331,7 +331,7 @@ Used for:
 
 -> Pawn structure changes rarely → huge speed win
 
-### 3 Material hash
+### 3. Material hash
 
 ```cpp
 st->materialKey
