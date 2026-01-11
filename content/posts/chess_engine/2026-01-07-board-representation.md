@@ -3,7 +3,7 @@ title:  "Representation of The Game State"
 date:   2026-01-07
 draft: false
 categories: ["chess engines"]
-tags: ["board representation", "stockfish"]
+tags: ["board representation", "Position", "StateInfo"]
 author: Sanketh
 ---
 
@@ -349,4 +349,288 @@ Redundancy for speed! Different operations need different views:
 | "Are there any black rooks on the 7th rank?" | `byTypeBB[ROOK] & byColorBB[BLACK] & Rank7BB` |
 | "Loop through all white knights" | `pieceList[W_KNIGHT]` (no empty squares) |
 
+### Game State Members
 
+#### 1. sideToMove
+
+```cpp
+Color sideToMove;
+```
+
+- Whose turn: `WHITE` or `BLACK`
+
+#### 2. gamePly
+
+```cpp
+int gamePly;
+```
+
+- Full move counter (increments every move, not just every full turn)
+- Move 1 White = ply 0, Move 1 Black = ply 1, Move 2 White = ply 2...
+
+#### 3. StateInfo
+
+```cpp
+StateInfo* st;
+```
+
+- Pointer to current state (zobrist key, castling rights, en passant, etc.)
+- Points to external `StateInfo` object
+- Why pointer? State is stored in a stack during search (for undo)
+
+Position stores the current board. StateInfo stores the history-dependent metadata needed to undo moves efficiently.
+
+Every time Stockfish makes a move during search, it:
+1. Mutates the Position
+2. Pushes a new StateInfo onto a stack
+3. On undo, it restores the previous StateInfo pointer
+
+This gives O(1) undo with no recomputation.
+
+**Why StateInfo* st is a pointer**
+
+```cpp
+StateInfo* st;
+```
+
+Because StateInfo objects live in a stack, not inside Position.
+
+```cpp
+StateInfo states[MAX_PLY];
+Position.st ──► states[current_ply]
+```
+
+On do_move():
+- new `StateInfo` is written into `states[ply+1]`
+- `Position.st` is updated to point to it
+
+On undo_move():
+- `Position.st` simply points back to the previous one
+
+#### 4. thisThread
+
+```cpp
+Thread* thisThread;
+```
+
+Identifies which search thread owns and is allowed to modify this Position.
+
+Stockfish uses shared-memory parallel search (Lazy SMP).
+
+That means:
+ - Multiple threads run searches in parallel
+ - Threads share global structures (TT, history, eval cache)
+ - But each thread must have its own Position and state stack
+
+Conceptually:
+
+```cpp
+Thread
+ ├─ Position pos
+ ├─ StateInfo states[MAX_PLY]
+ ├─ SearchStack ss[MAX_PLY]
+ └─ counters / limits
+```
+
+Each thread searches independently, occasionally syncing via shared tables.
+
+## The StateInfo 
+
+`StateInfo` stores all non-deducible state of a chess position - information that cannot be reconstructed just by looking at the board. It's designed for efficient move make/unmake during search.
+
+Key insight: During search, positions are pushed/popped millions of times. Instead of copying the entire `Position`, Stockfish uses a linked list of `StateInfo` objects:
+
+```cpp
+// Search pseudocode:
+void search(Position& pos, int depth) {
+    StateInfo st;  // Create on stack
+    
+    for (Move m : generate_moves(pos)) {
+        pos.do_move(m, st);     // st.previous = old state
+        search(pos, depth - 1); // Recurse
+        pos.undo_move(m);       // Restore from st.previous
+    }
+}
+```
+
+Memory layout during search:
+
+```
+Stack frame 1:  StateInfo st1   ←─┐
+                                  │
+Stack frame 2:  StateInfo st2   ←─┼─ st2.previous
+                                  │
+Stack frame 3:  StateInfo st3   ←─┼─ st3.previous
+                ↑                 │
+                └─────────────────┘
+```
+
+Each `StateInfo` points to the previous state, forming a chain that can be unwound during `undo_move()`.
+
+### Two Categories of Data
+
+```cpp
+struct StateInfo {
+
+  // Copied when making a move
+  Key    pawnKey;
+  Key    materialKey;
+  Value  nonPawnMaterial[COLOR_NB];
+  int    castlingRights;
+  int    rule50;
+  int    pliesFromNull;
+  Score  psq;
+  Square epSquare;
+
+  // Not copied when making a move (will be recomputed anyhow)
+  Key        key;
+  Bitboard   checkersBB;
+  Piece      capturedPiece;
+  StateInfo* previous;
+  Bitboard   blockersForKing[COLOR_NB];
+  Bitboard   pinnersForKing[COLOR_NB];
+  Bitboard   checkSquares[PIECE_TYPE_NB];
+};
+```
+
+#### Category 1: Copied When Making a Move
+
+These values are incrementally updated (not recomputed from scratch)
+
+```cpp
+  Key    pawnKey;
+  Key    materialKey;
+  Value  nonPawnMaterial[COLOR_NB];
+  int    castlingRights;
+  int    rule50;
+  int    pliesFromNull;
+  Score  psq;
+  Square epSquare;
+```
+
+Why copied? These can be updated incrementally faster than recomputing:
+
+- Hash keys: XOR in changes
+- Scores: add/subtract deltas
+- Counters: increment/decrement
+
+#### Category 2: Recomputed Every Move
+
+These are always calculated fresh (not worth copying)
+
+```cpp
+// Not copied when making a move (will be recomputed anyhow)
+Key        key;
+Bitboard   checkersBB;
+Piece      capturedPiece;
+StateInfo* previous;
+Bitboard   blockersForKing[COLOR_NB];
+Bitboard   pinnersForKing[COLOR_NB];
+Bitboard   checkSquares[PIECE_TYPE_NB];
+```
+
+Why not copied? Cheaper to recalculate than to copy and update.
+
+### nonPawnMaterial
+
+```cpp
+Value nonPawnMaterial[COLOR_NB]
+```
+
+- Total material value excluding pawns for each color
+- `nonPawnMaterial[WHITE]` = value of white knights, bishops, rooks, queens
+- `nonPawnMaterial[BLACK]` = same for black
+
+**Why exclude pawns?**
+
+- Used for endgame detection
+- "Low material" = fewer pieces (pawns don't count toward complexity)
+
+```cpp
+// After capturing black knight:
+nonPawnMaterial[BLACK] -= KnightValue;  // Incremental update
+
+// Usage:
+if (nonPawnMaterial[WHITE] + nonPawnMaterial[BLACK] < EndgameThreshold) {
+    // Enter endgame evaluation mode
+}
+```
+
+### castlingRights
+
+```cpp
+int castlingRights
+```
+
+- Bitfield of available castling rights
+- Combination of: `WHITE_OO | WHITE_OOO | BLACK_OO | BLACK_OOO`
+
+`castlingRights` is also part of Zobrist hash `key`. But it can't be read from the hash.
+
+### rule50
+
+```cpp
+int rule50
+```
+
+- Halfmove clock for the 50-move rule
+- Incremented every move, reset on pawn move or capture
+
+### pliesFromNull
+
+```cpp
+int pliesFromNull
+```
+
+- How many plies since last null move in search
+- Used to prevent consecutive null moves
+
+A null move is a fake move where: The side to move skips its turn, and the opponent moves again.
+
+No piece is moved.
+The position stays the same except:
+- side to move flips
+- some counters update (ply, hash, etc.)
+- en passant is cleared
+
+In chess notation: it’s like saying
+
+“What if I do nothing?”
+
+Obviously illegal in real chess, but very useful in search.
+
+
+**Why would an engine do this?**
+
+Idea behind Null Move Pruning:
+
+If you can skip your move and still not get into trouble,then any real move is at least as good.
+
+So:
+
+If even after giving the opponent an extra move, the position is still ≥ β
+→ prune this branch (fail-high).
+
+This is called Null Move Pruning (NMP).
+
+`pliesFromNull` counts how many plies have passed since the last null move. Because two null moves in a row is dangerous
+
+
+If you allow:
+- Null move
+- Then another null move
+
+You can get:
+- zugzwang bugs
+- illegal pruning
+- missed mates
+- evaluation nonsense
+
+### pinnersForKing
+
+```cpp
+Bitboard pinnersForKing[COLOR_NB]
+```
+
+- Enemy sliding pieces pinning our pieces
+- The "other side" of blockersForKing
