@@ -633,4 +633,4 @@ Bitboard pinnersForKing[COLOR_NB]
 ```
 
 - Enemy sliding pieces pinning our pieces
-- The "other side" of blockersForKing
+- The "other side" of `blockersForKing`
