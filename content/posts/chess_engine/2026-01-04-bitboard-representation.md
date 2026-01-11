@@ -427,3 +427,145 @@ Score = ⟨middlegame, endgame⟩
 ```
 
 Evaluation is vector addition, and the final numeric score is a weighted projection based on how far the game has progressed.
+
+## Move Representation
+
+```cpp
+/// A move needs 16 bits to be stored
+///
+/// bit  0- 5: destination square (from 0 to 63)
+/// bit  6-11: origin square (from 0 to 63)
+/// bit 12-13: promotion piece type - 2 (from KNIGHT-2 to QUEEN-2)
+/// bit 14-15: special move flag: promotion (1), en passant (2), castling (3)
+/// NOTE: EN-PASSANT bit is set only when a pawn can be captured
+///
+/// Special cases are MOVE_NONE and MOVE_NULL. We can sneak these in because in
+/// any normal move destination square is always different from origin square
+/// while MOVE_NONE and MOVE_NULL have the same origin and destination square.
+
+enum Move : int {
+  MOVE_NONE,
+  MOVE_NULL = 65
+};
+```
+
+Stockfish represents every chess move in just 16 bits for speed and cache efficiency.
+
+### Bit Layout (16 bits)
+
+```
+15 14 | 13 12 | 11 ...... 6 | 5 ...... 0
+----------------------------------------
+flags | promo |   from      |   to
+```
+
+```
+| Bits    | Meaning                       |
+| ------- | ----------------------------- |
+| `0–5`   | **Destination square** (0–63) |
+| `6–11`  | **Origin square** (0–63)      |
+| `12–13` | **Promotion piece − 2**       |
+| `14–15` | **Special move flag**         |
+```
+
+### Squares (6 bits each)
+
+Squares are encoded as integers:
+
+```
+A1 = 0, B1 = 1, ..., H8 = 63
+```
+
+So:
+- `from_sq(m)` → bits 6–11
+- `to_sq(m)` → bits 0–5
+
+### Special Move Flags (bits 14–15)
+
+```
+| Value | Meaning     |
+| ----: | ----------- |
+|  `00` | Normal move |
+|  `01` | Promotion   |
+|  `10` | En passant  |
+|  `11` | Castling    |
+```
+
+### Promotion Encoding (bits 12–13)
+
+Promotion piece type is encoded as:
+
+```
+promotion_piece = (promotion_type + 2)
+```
+
+```
+| Promotion | Encoded |
+| --------- | ------- |
+| Knight    | 0       |
+| Bishop    | 1       |
+| Rook      | 2       |
+| Queen     | 3       |
+```
+
+Because as per Stockfish representation, `NO_PIECE_TYPE` and `PAWN` are not useful for promotion, so we can save bits.
+
+```cpp
+enum PieceType {
+  NO_PIECE_TYPE = 0,
+  PAWN          = 1,
+  KNIGHT        = 2,
+  BISHOP        = 3,
+  ROOK          = 4,
+  QUEEN         = 5,
+  KING          = 6
+};
+```
+
+### MOVE_NONE and MOVE_NULL
+
+```cpp
+enum Move : int {
+  MOVE_NONE,
+  MOVE_NULL = 65
+};
+```
+
+Why this works
+- A legal move always has from != to
+- These special moves violate that rule
+
+#### MOVE_NONE
+
+```
+from = 0
+to   = 0
+```
+
+Used to mean:
+- “no move”
+- invalid move
+- search sentinel
+
+#### MOVE_NULL
+
+```
+from = 1
+to   = 1   // 1 | (1 << 6) = 65
+```
+
+Used for:
+- null move pruning
+- represents “pass move” (side switches, no piece moved)
+
+### Accessor Macros 
+
+Internally Stockfish uses helpers like:
+
+```cpp
+to_sq(m)      = m & 0x3F
+from_sq(m)    = (m >> 6) & 0x3F
+type_of(m)    = m & 0xC000
+promo_type(m) = ((m >> 12) & 3) + KNIGHT
+```
+
