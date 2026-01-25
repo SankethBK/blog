@@ -213,8 +213,7 @@
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(pos_is_ok());
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id="step-by-step-breakdown"&gt;Step-by-Step Breakdown&lt;/h4&gt;
-&lt;h5 id="phase-1-sanity-checks-and-bookkeeping"&gt;Phase 1: Sanity checks and bookkeeping&lt;/h5&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id="phase-1-sanity-checks-and-bookkeeping"&gt;Phase 1: Sanity checks and bookkeeping&lt;/h4&gt;
 &lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;assert(is_ok(m));
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;assert(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt &lt;span style="color:#f92672"&gt;!=&lt;/span&gt; st);
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
@@ -226,7 +225,7 @@
 &lt;li&gt;Increments node counter (used for search statistics)&lt;/li&gt;
 &lt;li&gt;Flips side-to-move bit in the Zobrist key, k is a working copy of the hash key, updated incrementally.&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h5 id="phase-2-stateinfo-chaining-undo-mechanism"&gt;Phase 2: StateInfo chaining (undo mechanism)&lt;/h5&gt;
+&lt;h4 id="phase-2-stateinfo-chaining-undo-mechanism"&gt;Phase 2: StateInfo chaining (undo mechanism)&lt;/h4&gt;
 &lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;std&lt;span style="color:#f92672"&gt;::&lt;/span&gt;memcpy(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt, st, offsetof(StateInfo, key));
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;newSt.previous &lt;span style="color:#f92672"&gt;=&lt;/span&gt; st;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;st &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt;
@@ -236,7 +235,7 @@
 &lt;li&gt;Links the new state to the previous one (stack-style undo)&lt;/li&gt;
 &lt;li&gt;Advances the st pointer&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h5 id="phase-3-ply-counters"&gt;Phase 3: Ply counters&lt;/h5&gt;
+&lt;h4 id="phase-3-ply-counters"&gt;Phase 3: Ply counters&lt;/h4&gt;
 &lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;++&lt;/span&gt;gamePly;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;++&lt;/span&gt;st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;rule50;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;++&lt;/span&gt;st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;pliesFromNull;
@@ -245,7 +244,7 @@
 &lt;li&gt;rule50: increments unless reset later&lt;/li&gt;
 &lt;li&gt;pliesFromNull: prevents consecutive null moves&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h5 id="phase-4-decode-move-and-involved-pieces"&gt;Phase 4: Decode move and involved pieces&lt;/h5&gt;
+&lt;h4 id="phase-4-decode-move-and-involved-pieces"&gt;Phase 4: Decode move and involved pieces&lt;/h4&gt;
 &lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Color us &lt;span style="color:#f92672"&gt;=&lt;/span&gt; sideToMove;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Color them &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;~&lt;/span&gt;us;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
