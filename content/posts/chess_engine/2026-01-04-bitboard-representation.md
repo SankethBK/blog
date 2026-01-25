@@ -569,3 +569,36 @@ type_of(m)    = m & 0xC000
 promo_type(m) = ((m >> 12) & 3) + KNIGHT
 ```
 
+## StepAttacksBB - Pre-computed Attack Tables
+
+`StepAttacksBB` is a lookup table that stores pre-computed attack patterns for pieces that move in fixed steps (not sliding pieces).
+
+```cpp
+Bitboard StepAttacksBB[PIECE_NB][SQUARE_NB];
+// [16 piece types][64 squares] = 1024 bitboards
+```
+
+"Step attacks" = pieces that attack a fixed pattern of squares:
+
+- Pawns (different for white/black)
+- Knights
+- Kings
+- NOT bishops, rooks, queens (these are "sliding" pieces)
+
+### What's Stored
+
+```cpp
+// For each piece type and square, store which squares it attacks
+StepAttacksBB[piece][from_square] → Bitboard of attacked squares
+```
+
+**Examples:**
+
+```cpp
+StepAttacksBB[W_PAWN][e4]  → Bitboard with d5, f5 set (white pawn attacks)
+StepAttacksBB[B_PAWN][e5]  → Bitboard with d4, f4 set (black pawn attacks)
+StepAttacksBB[W_KNIGHT][e4] → Bitboard with d2, f2, c3, g3, c5, g5, d6, f6
+StepAttacksBB[W_KING][e1]  → Bitboard with d1, f1, d2, e2, f2
+```
+
+
