@@ -218,9 +218,8 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
 }
 ```
 
-#### Step-by-Step Breakdown
 
-##### Phase 1: Sanity checks and bookkeeping
+#### Phase 1: Sanity checks and bookkeeping
 
 ```cpp
 assert(is_ok(m));
@@ -235,7 +234,7 @@ Key k = st->key ^ Zobrist::side;
 - Increments node counter (used for search statistics)
 - Flips side-to-move bit in the Zobrist key, k is a working copy of the hash key, updated incrementally.
 
-##### Phase 2: StateInfo chaining (undo mechanism)
+#### Phase 2: StateInfo chaining (undo mechanism)
 
 ```cpp
 std::memcpy(&newSt, st, offsetof(StateInfo, key));
@@ -248,7 +247,7 @@ st = &newSt;
 - Links the new state to the previous one (stack-style undo)
 - Advances the st pointer
 
-##### Phase 3: Ply counters
+#### Phase 3: Ply counters
 
 ```cpp
 ++gamePly;
@@ -260,7 +259,7 @@ st = &newSt;
 - rule50: increments unless reset later
 - pliesFromNull: prevents consecutive null moves
 
-##### Phase 4: Decode move and involved pieces
+#### Phase 4: Decode move and involved pieces
 
 ```cpp
 Color us = sideToMove;
@@ -286,7 +285,7 @@ Assertions ensure:
 - Correct colors
 - No king is ever captured
 
-##### Phase 5: Castling (special-case logic)
+#### Phase 5: Castling (special-case logic)
 
 ```cpp
 if (type_of(m) == CASTLING)
@@ -336,7 +335,7 @@ captured = NO_PIECE;
 - Special logic for castling is complete here, `captured` is set back to `NO_PIECE` (we don't actually capture in castling)
 - Prevents later code from treating this as a capture
 
-##### Phase 6: Capture handling
+#### Phase 6: Capture handling
 
 If a capture occurs: (Castling doesn't enter here)
 
@@ -516,7 +515,7 @@ Clear old en passant:
 - Reset to `SQ_NONE`
 - (Will be set again later if this move creates new ep opportunity)
 
-##### Phase 7: Update Castling Rights
+#### Phase 7: Update Castling Rights
 
 ```cpp
 if (st->castlingRights && (castlingRightsMask[from] | castlingRightsMask[to]))
@@ -535,7 +534,7 @@ int cr = castlingRightsMask[from] | castlingRightsMask[to];
 - These are the castling rights lost.
 
 
-##### Phase 8: Move the Piece
+#### Phase 8: Move the Piece
 
 ```cpp
 if (type_of(m) != CASTLING)
@@ -554,7 +553,7 @@ if (type_of(m) != CASTLING)
 - Castling already moved both king and rook in `do_castling()`
 - Would be redundant and incorrect to move again
 
-##### Phase 9: Pawn Specific handling
+#### Phase 9: Pawn Specific handling
 
 ```cpp
   // If the moving piece is a pawn do some special extra work
@@ -783,7 +782,7 @@ Meaning:
 - pawn evaluation will be needed soon
 - prefetch it into CPU cache early
 
-##### Phase 10: Wrap up
+#### Phase 10: Wrap up
 
 ```cpp
   // Update incremental scores
@@ -917,3 +916,258 @@ sideToMove = ~sideToMove;
 ```
 
 After making a move, it becomes the opponent’s turn.
+
+### 2. undo_move
+
+```cpp
+/// Position::undo_move() unmakes a move. When it returns, the position should
+/// be restored to exactly the same state as before the move was made.
+
+void Position::undo_move(Move m) {
+
+  assert(is_ok(m));
+
+  sideToMove = ~sideToMove;
+
+  Color us = sideToMove;
+  Square from = from_sq(m);
+  Square to = to_sq(m);
+  Piece pc = piece_on(to);
+
+  assert(empty(from) || type_of(m) == CASTLING);
+  assert(type_of(st->capturedPiece) != KING);
+
+  if (type_of(m) == PROMOTION)
+  {
+      assert(relative_rank(us, to) == RANK_8);
+      assert(type_of(pc) == promotion_type(m));
+      assert(type_of(pc) >= KNIGHT && type_of(pc) <= QUEEN);
+
+      remove_piece(pc, to);
+      pc = make_piece(us, PAWN);
+      put_piece(pc, to);
+  }
+
+  if (type_of(m) == CASTLING)
+  {
+      Square rfrom, rto;
+      do_castling<false>(us, from, to, rfrom, rto);
+  }
+  else
+  {
+      move_piece(pc, to, from); // Put the piece back at the source square
+
+      if (st->capturedPiece)
+      {
+          Square capsq = to;
+
+          if (type_of(m) == ENPASSANT)
+          {
+              capsq -= pawn_push(us);
+
+              assert(type_of(pc) == PAWN);
+              assert(to == st->previous->epSquare);
+              assert(relative_rank(us, to) == RANK_6);
+              assert(piece_on(capsq) == NO_PIECE);
+              assert(st->capturedPiece == make_piece(~us, PAWN));
+          }
+
+          put_piece(st->capturedPiece, capsq); // Restore the captured piece
+      }
+  }
+
+  // Finally point our state pointer back to the previous state
+  st = st->previous;
+  --gamePly;
+
+  assert(pos_is_ok());
+}
+```
+
+undo_move() reverses the effects of do_move().
+
+After this function finishes:
+- board[] must match exactly
+- bitboards must match exactly
+- piece lists must match exactly
+- hash keys, castling rights, ep square must match exactly
+- evaluation state must match exactly
+
+This is what allows Stockfish to explore:
+
+```
+Position → move → deeper search → undo → next move
+```
+
+undo_move() reverses a move by:
+- flipping side-to-move back
+- undoing promotions (piece → pawn)
+- undoing castling (king + rook)
+- moving the piece back
+- restoring captured pieces (including en passant)
+- restoring the previous StateInfo snapshot
+
+
+#### Step-by-step Breakdown
+
+#### 1. Flip Side to Move Back
+
+```cpp
+sideToMove = ~sideToMove;
+```
+
+#### 2. Special Move Reversal
+
+Undo must handle tricky move types first:
+- Promotion
+- Castling
+- En passant
+- Captures
+
+#### 3. Undo Promotion
+
+```cpp
+if (type_of(m) == PROMOTION)
+{
+    remove_piece(pc, to);
+    pc = make_piece(us, PAWN);
+    put_piece(pc, to);
+}
+```
+
+Promotion replaced a pawn with a new piece:
+
+```
+Pawn disappears → Queen appears
+```
+
+Undo must reverse:
+
+```
+Queen disappears → Pawn comes back
+```
+
+**Why is pc reassigned?**
+
+Because later we still need to move the pawn back to from.
+
+So we convert:
+
+```cpp
+pc = Pawn
+```
+
+#### 4. Undo Castling
+
+```cpp
+if (type_of(m) == CASTLING)
+{
+    Square rfrom, rto;
+    do_castling<false>(us, from, to, rfrom, rto);
+}
+```
+
+**Castling is special**
+
+Castling moves two pieces:
+- King
+- Rook
+
+So Stockfish uses a helper:
+
+```cpp
+do_castling<false>()
+```
+
+Where `<false>` means:
+
+> undo mode
+
+This restores:
+- king back to from
+- rook back to its original square
+
+#### 5. Undo Normal Moves
+
+```cpp
+else
+{
+    move_piece(pc, to, from);
+}
+```
+
+For all regular moves:
+- Move piece back from destination → origin
+
+This restores the moved piece.
+
+
+#### 6. Restoring Captures
+
+```cpp
+if (st->capturedPiece)
+{
+    Square capsq = to;
+```
+
+If something was captured, Stockfish stored it earlier in:
+
+```cpp
+st->capturedPiece
+```
+
+So undo checks:
+- Was this move a capture?
+
+If yes → restore the captured piece.
+
+
+**Special Case: En Passant Capture**
+
+```cpp
+if (type_of(m) == ENPASSANT)
+{
+    capsq -= pawn_push(us);
+}
+```
+
+Why?
+
+In en passant:
+- captured pawn is not on to
+- it is behind it
+
+#### 7. Restore the Captured Piece
+
+```cpp
+put_piece(st->capturedPiece, capsq);
+```
+
+This places the captured piece back on the board and updates:
+- board[]
+- bitboards
+- pieceList[]
+- pieceCount[]
+
+Undo is complete now.
+
+
+#### 8. Roll Back State Pointer
+
+```cpp
+st = st->previous;
+--gamePly;
+```
+
+It automatically restores:
+- zobrist key
+- pawnKey
+- materialKey
+- castling rights
+- ep square
+- rule50
+- psq score
+- check info
+
+Without recomputation.
+
