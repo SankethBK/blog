@@ -1,0 +1,917 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Game Mechanics | Sanketh's Blog</title><meta name=keywords content="game mechanics"><meta name=description content="We will go through some of the functions which are part of core game mechanics
+Game Mechanics
+1. Piece Movement
+1. do_move
+Purpose: Execute a move and update all position state incrementally.
+Critical for performance: This function is called millions of times per second during search. Every optimization matters.
+Preconditions:
+
+Move m must be legal (pseudo-legal moves should be filtered first)
+newSt must be a different StateInfo object than current state
+Caller provides givesCheck flag (optional optimization to avoid recalculating)
+
+Function Structure Overview
+
+Setup and assertions
+Copy old state → new state
+Increment counters
+Handle castling (special case)
+Handle captures
+Update position hash
+Reset en passant
+Update castling rights
+Move the piece
+Handle pawn moves (en passant, promotion)
+Update incremental scores
+Finalize state
+Flip side to move
+Compute check info
+
+/// Position::do_move() makes a move, and saves all information necessary
+/// to a StateInfo object. The move is assumed to be legal. Pseudo-legal
+/// moves should be filtered out before this function is called.
+
+void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
+
+  assert(is_ok(m));
+  assert(&amp;newSt != st);
+
+  ++nodes;
+  Key k = st->key ^ Zobrist::side;
+
+  // Copy some fields of the old state to our new StateInfo object except the
+  // ones which are going to be recalculated from scratch anyway and then switch
+  // our state pointer to point to the new (ready to be updated) state.
+  std::memcpy(&amp;newSt, st, offsetof(StateInfo, key));
+  newSt.previous = st;
+  st = &amp;newSt;
+
+  // Increment ply counters. In particular, rule50 will be reset to zero later on
+  // in case of a capture or a pawn move.
+  ++gamePly;
+  ++st->rule50;
+  ++st->pliesFromNull;
+
+  Color us = sideToMove;
+  Color them = ~us;
+  Square from = from_sq(m);
+  Square to = to_sq(m);
+  Piece pc = piece_on(from);
+  Piece captured = type_of(m) == ENPASSANT ? make_piece(them, PAWN) : piece_on(to);
+
+  assert(color_of(pc) == us);
+  assert(captured == NO_PIECE || color_of(captured) == (type_of(m) != CASTLING ? them : us));
+  assert(type_of(captured) != KING);
+
+  if (type_of(m) == CASTLING)
+  {
+      assert(pc == make_piece(us, KING));
+      assert(captured == make_piece(us, ROOK));
+
+      Square rfrom, rto;
+      do_castling<true>(us, from, to, rfrom, rto);
+
+      st->psq += PSQT::psq[captured][rto] - PSQT::psq[captured][rfrom];
+      k ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
+      captured = NO_PIECE;
+  }
+
+  if (captured)
+  {
+      Square capsq = to;
+
+      // If the captured piece is a pawn, update pawn hash key, otherwise
+      // update non-pawn material.
+      if (type_of(captured) == PAWN)
+      {
+          if (type_of(m) == ENPASSANT)
+          {
+              capsq -= pawn_push(us);
+
+              assert(pc == make_piece(us, PAWN));
+              assert(to == st->epSquare);
+              assert(relative_rank(us, to) == RANK_6);
+              assert(piece_on(to) == NO_PIECE);
+              assert(piece_on(capsq) == make_piece(them, PAWN));
+
+              board[capsq] = NO_PIECE; // Not done by remove_piece()
+          }
+
+          st->pawnKey ^= Zobrist::psq[captured][capsq];
+      }
+      else
+          st->nonPawnMaterial[them] -= PieceValue[MG][captured];
+
+      // Update board and piece lists
+      remove_piece(captured, capsq);
+
+      // Update material hash key and prefetch access to materialTable
+      k ^= Zobrist::psq[captured][capsq];
+      st->materialKey ^= Zobrist::psq[captured][pieceCount[captured]];
+      prefetch(thisThread->materialTable[st->materialKey]);
+
+      // Update incremental scores
+      st->psq -= PSQT::psq[captured][capsq];
+
+      // Reset rule 50 counter
+      st->rule50 = 0;
+  }
+
+  // Update hash key
+  k ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+
+  // Reset en passant square
+  if (st->epSquare != SQ_NONE)
+  {
+      k ^= Zobrist::enpassant[file_of(st->epSquare)];
+      st->epSquare = SQ_NONE;
+  }
+
+  // Update castling rights if needed
+  if (st->castlingRights && (castlingRightsMask[from] | castlingRightsMask[to]))
+  {
+      int cr = castlingRightsMask[from] | castlingRightsMask[to];
+      k ^= Zobrist::castling[st->castlingRights & cr];
+      st->castlingRights &= ~cr;
+  }
+
+  // Move the piece. The tricky Chess960 castling is handled earlier
+  if (type_of(m) != CASTLING)
+      move_piece(pc, from, to);
+
+  // If the moving piece is a pawn do some special extra work
+  if (type_of(pc) == PAWN)
+  {
+      // Set en-passant square if the moved pawn can be captured
+      if (   (int(to) ^ int(from)) == 16
+          && (attacks_from<PAWN>(to - pawn_push(us), us) & pieces(them, PAWN)))
+      {
+          st->epSquare = (from + to) / 2;
+          k ^= Zobrist::enpassant[file_of(st->epSquare)];
+      }
+
+      else if (type_of(m) == PROMOTION)
+      {
+          Piece promotion = make_piece(us, promotion_type(m));
+
+          assert(relative_rank(us, to) == RANK_8);
+          assert(type_of(promotion) >= KNIGHT && type_of(promotion) <= QUEEN);
+
+          remove_piece(pc, to);
+          put_piece(promotion, to);
+
+          // Update hash keys
+          k ^= Zobrist::psq[pc][to] ^ Zobrist::psq[promotion][to];
+          st->pawnKey ^= Zobrist::psq[pc][to];
+          st->materialKey ^=  Zobrist::psq[promotion][pieceCount[promotion]-1]
+                            ^ Zobrist::psq[pc][pieceCount[pc]];
+
+          // Update incremental score
+          st->psq += PSQT::psq[promotion][to] - PSQT::psq[pc][to];
+
+          // Update material
+          st->nonPawnMaterial[us] += PieceValue[MG][promotion];
+      }
+
+      // Update pawn hash key and prefetch access to pawnsTable
+      st->pawnKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+      prefetch(thisThread->pawnsTable[st->pawnKey]);
+
+      // Reset rule 50 draw counter
+      st->rule50 = 0;
+  }
+
+  // Update incremental scores
+  st->psq += PSQT::psq[pc][to] - PSQT::psq[pc][from];
+
+  // Set capture piece
+  st->capturedPiece = captured;
+
+  // Update the key with the final value
+  st->key = k;
+
+  // Calculate checkers bitboard (if move gives check)
+  st->checkersBB = givesCheck ? attackers_to(square<KING>(them)) & pieces(us) : 0;
+
+  sideToMove = ~sideToMove;
+
+  // Update king attacks used for fast check detection
+  set_check_info(st);
+
+  assert(pos_is_ok());
+}
+Step-by-Step Breakdown
+Phase 1: Sanity checks and bookkeeping
+assert(is_ok(m));
+assert(&amp;newSt != st);
+
+++nodes;
+Key k = st->key ^ Zobrist::side;
+
+Ensures the move encoding is valid
+Ensures we don’t overwrite the current state
+Increments node counter (used for search statistics)
+Flips side-to-move bit in the Zobrist key, k is a working copy of the hash key, updated incrementally.
+
+Phase 2: StateInfo chaining (undo mechanism)
+std::memcpy(&amp;newSt, st, offsetof(StateInfo, key));
+newSt.previous = st;
+st = &amp;newSt;
+
+Copies all fields up to key
+Fields after key will be recomputed
+Links the new state to the previous one (stack-style undo)
+Advances the st pointer
+
+Phase 3: Ply counters
+++gamePly;
+++st->rule50;
+++st->pliesFromNull;
+
+gamePly: depth from game start
+rule50: increments unless reset later
+pliesFromNull: prevents consecutive null moves
+
+Phase 4: Decode move and involved pieces
+Color us = sideToMove;
+Color them = ~us;
+
+Square from = from_sq(m);
+Square to   = to_sq(m);
+
+Piece pc = piece_on(from);
+Piece captured =
+    type_of(m) == ENPASSANT ? make_piece(them, PAWN) : piece_on(to);
+
+assert(color_of(pc) == us);
+assert(captured == NO_PIECE || color_of(captured) == (type_of(m) != CASTLING ? them : us));
+assert(type_of(captured) != KING);
+
+Determines moving side
+Determines source and destination squares
+Determines captured piece (special handling for en passant)
+
+Assertions ensure:"><meta name=author content="Sanketh"><link rel=canonical href=https://sankethbk.github.io/blog/posts/chess_engine/2026-01-12-game-mechanics/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.deee627d8b8d9065acc54b2c9d901e601e142335047d242a93ba7bce86f41f19.css integrity="sha256-3u5ifYuNkGWsxUssnZAeYB4UIzUEfSQqk7p7zob0Hxk=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/chess_engine/2026-01-12-game-mechanics/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/chess_engine/2026-01-12-game-mechanics/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="Game Mechanics"><meta property="og:description" content="We will go through some of the functions which are part of core game mechanics
+Game Mechanics 1. Piece Movement 1. do_move Purpose: Execute a move and update all position state incrementally.
+Critical for performance: This function is called millions of times per second during search. Every optimization matters.
+Preconditions:
+Move m must be legal (pseudo-legal moves should be filtered first) newSt must be a different StateInfo object than current state Caller provides givesCheck flag (optional optimization to avoid recalculating) Function Structure Overview Setup and assertions Copy old state → new state Increment counters Handle castling (special case) Handle captures Update position hash Reset en passant Update castling rights Move the piece Handle pawn moves (en passant, promotion) Update incremental scores Finalize state Flip side to move Compute check info /// Position::do_move() makes a move, and saves all information necessary /// to a StateInfo object. The move is assumed to be legal. Pseudo-legal /// moves should be filtered out before this function is called. void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) { assert(is_ok(m)); assert(&amp;newSt != st); ++nodes; Key k = st->key ^ Zobrist::side; // Copy some fields of the old state to our new StateInfo object except the // ones which are going to be recalculated from scratch anyway and then switch // our state pointer to point to the new (ready to be updated) state. std::memcpy(&amp;newSt, st, offsetof(StateInfo, key)); newSt.previous = st; st = &amp;newSt; // Increment ply counters. In particular, rule50 will be reset to zero later on // in case of a capture or a pawn move. ++gamePly; ++st->rule50; ++st->pliesFromNull; Color us = sideToMove; Color them = ~us; Square from = from_sq(m); Square to = to_sq(m); Piece pc = piece_on(from); Piece captured = type_of(m) == ENPASSANT ? make_piece(them, PAWN) : piece_on(to); assert(color_of(pc) == us); assert(captured == NO_PIECE || color_of(captured) == (type_of(m) != CASTLING ? them : us)); assert(type_of(captured) != KING); if (type_of(m) == CASTLING) { assert(pc == make_piece(us, KING)); assert(captured == make_piece(us, ROOK)); Square rfrom, rto; do_castling<true>(us, from, to, rfrom, rto); st->psq += PSQT::psq[captured][rto] - PSQT::psq[captured][rfrom]; k ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto]; captured = NO_PIECE; } if (captured) { Square capsq = to; // If the captured piece is a pawn, update pawn hash key, otherwise // update non-pawn material. if (type_of(captured) == PAWN) { if (type_of(m) == ENPASSANT) { capsq -= pawn_push(us); assert(pc == make_piece(us, PAWN)); assert(to == st->epSquare); assert(relative_rank(us, to) == RANK_6); assert(piece_on(to) == NO_PIECE); assert(piece_on(capsq) == make_piece(them, PAWN)); board[capsq] = NO_PIECE; // Not done by remove_piece() } st->pawnKey ^= Zobrist::psq[captured][capsq]; } else st->nonPawnMaterial[them] -= PieceValue[MG][captured]; // Update board and piece lists remove_piece(captured, capsq); // Update material hash key and prefetch access to materialTable k ^= Zobrist::psq[captured][capsq]; st->materialKey ^= Zobrist::psq[captured][pieceCount[captured]]; prefetch(thisThread->materialTable[st->materialKey]); // Update incremental scores st->psq -= PSQT::psq[captured][capsq]; // Reset rule 50 counter st->rule50 = 0; } // Update hash key k ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to]; // Reset en passant square if (st->epSquare != SQ_NONE) { k ^= Zobrist::enpassant[file_of(st->epSquare)]; st->epSquare = SQ_NONE; } // Update castling rights if needed if (st->castlingRights && (castlingRightsMask[from] | castlingRightsMask[to])) { int cr = castlingRightsMask[from] | castlingRightsMask[to]; k ^= Zobrist::castling[st->castlingRights & cr]; st->castlingRights &= ~cr; } // Move the piece. The tricky Chess960 castling is handled earlier if (type_of(m) != CASTLING) move_piece(pc, from, to); // If the moving piece is a pawn do some special extra work if (type_of(pc) == PAWN) { // Set en-passant square if the moved pawn can be captured if ( (int(to) ^ int(from)) == 16 && (attacks_from<PAWN>(to - pawn_push(us), us) & pieces(them, PAWN))) { st->epSquare = (from + to) / 2; k ^= Zobrist::enpassant[file_of(st->epSquare)]; } else if (type_of(m) == PROMOTION) { Piece promotion = make_piece(us, promotion_type(m)); assert(relative_rank(us, to) == RANK_8); assert(type_of(promotion) >= KNIGHT && type_of(promotion) <= QUEEN); remove_piece(pc, to); put_piece(promotion, to); // Update hash keys k ^= Zobrist::psq[pc][to] ^ Zobrist::psq[promotion][to]; st->pawnKey ^= Zobrist::psq[pc][to]; st->materialKey ^= Zobrist::psq[promotion][pieceCount[promotion]-1] ^ Zobrist::psq[pc][pieceCount[pc]]; // Update incremental score st->psq += PSQT::psq[promotion][to] - PSQT::psq[pc][to]; // Update material st->nonPawnMaterial[us] += PieceValue[MG][promotion]; } // Update pawn hash key and prefetch access to pawnsTable st->pawnKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to]; prefetch(thisThread->pawnsTable[st->pawnKey]); // Reset rule 50 draw counter st->rule50 = 0; } // Update incremental scores st->psq += PSQT::psq[pc][to] - PSQT::psq[pc][from]; // Set capture piece st->capturedPiece = captured; // Update the key with the final value st->key = k; // Calculate checkers bitboard (if move gives check) st->checkersBB = givesCheck ? attackers_to(square<KING>(them)) & pieces(us) : 0; sideToMove = ~sideToMove; // Update king attacks used for fast check detection set_check_info(st); assert(pos_is_ok()); } Step-by-Step Breakdown Phase 1: Sanity checks and bookkeeping assert(is_ok(m)); assert(&amp;newSt != st); ++nodes; Key k = st->key ^ Zobrist::side; Ensures the move encoding is valid Ensures we don’t overwrite the current state Increments node counter (used for search statistics) Flips side-to-move bit in the Zobrist key, k is a working copy of the hash key, updated incrementally. Phase 2: StateInfo chaining (undo mechanism) std::memcpy(&amp;newSt, st, offsetof(StateInfo, key)); newSt.previous = st; st = &amp;newSt; Copies all fields up to key Fields after key will be recomputed Links the new state to the previous one (stack-style undo) Advances the st pointer Phase 3: Ply counters ++gamePly; ++st->rule50; ++st->pliesFromNull; gamePly: depth from game start rule50: increments unless reset later pliesFromNull: prevents consecutive null moves Phase 4: Decode move and involved pieces Color us = sideToMove; Color them = ~us; Square from = from_sq(m); Square to = to_sq(m); Piece pc = piece_on(from); Piece captured = type_of(m) == ENPASSANT ? make_piece(them, PAWN) : piece_on(to); assert(color_of(pc) == us); assert(captured == NO_PIECE || color_of(captured) == (type_of(m) != CASTLING ? them : us)); assert(type_of(captured) != KING); Determines moving side Determines source and destination squares Determines captured piece (special handling for en passant) Assertions ensure:"><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2026-01-12T00:00:00+00:00"><meta property="article:modified_time" content="2026-01-12T00:00:00+00:00"><meta property="article:tag" content="Game Mechanics"><meta name=twitter:card content="summary"><meta name=twitter:title content="Game Mechanics"><meta name=twitter:description content="We will go through some of the functions which are part of core game mechanics
+Game Mechanics
+1. Piece Movement
+1. do_move
+Purpose: Execute a move and update all position state incrementally.
+Critical for performance: This function is called millions of times per second during search. Every optimization matters.
+Preconditions:
+
+Move m must be legal (pseudo-legal moves should be filtered first)
+newSt must be a different StateInfo object than current state
+Caller provides givesCheck flag (optional optimization to avoid recalculating)
+
+Function Structure Overview
+
+Setup and assertions
+Copy old state → new state
+Increment counters
+Handle castling (special case)
+Handle captures
+Update position hash
+Reset en passant
+Update castling rights
+Move the piece
+Handle pawn moves (en passant, promotion)
+Update incremental scores
+Finalize state
+Flip side to move
+Compute check info
+
+/// Position::do_move() makes a move, and saves all information necessary
+/// to a StateInfo object. The move is assumed to be legal. Pseudo-legal
+/// moves should be filtered out before this function is called.
+
+void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
+
+  assert(is_ok(m));
+  assert(&amp;newSt != st);
+
+  ++nodes;
+  Key k = st->key ^ Zobrist::side;
+
+  // Copy some fields of the old state to our new StateInfo object except the
+  // ones which are going to be recalculated from scratch anyway and then switch
+  // our state pointer to point to the new (ready to be updated) state.
+  std::memcpy(&amp;newSt, st, offsetof(StateInfo, key));
+  newSt.previous = st;
+  st = &amp;newSt;
+
+  // Increment ply counters. In particular, rule50 will be reset to zero later on
+  // in case of a capture or a pawn move.
+  ++gamePly;
+  ++st->rule50;
+  ++st->pliesFromNull;
+
+  Color us = sideToMove;
+  Color them = ~us;
+  Square from = from_sq(m);
+  Square to = to_sq(m);
+  Piece pc = piece_on(from);
+  Piece captured = type_of(m) == ENPASSANT ? make_piece(them, PAWN) : piece_on(to);
+
+  assert(color_of(pc) == us);
+  assert(captured == NO_PIECE || color_of(captured) == (type_of(m) != CASTLING ? them : us));
+  assert(type_of(captured) != KING);
+
+  if (type_of(m) == CASTLING)
+  {
+      assert(pc == make_piece(us, KING));
+      assert(captured == make_piece(us, ROOK));
+
+      Square rfrom, rto;
+      do_castling<true>(us, from, to, rfrom, rto);
+
+      st->psq += PSQT::psq[captured][rto] - PSQT::psq[captured][rfrom];
+      k ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto];
+      captured = NO_PIECE;
+  }
+
+  if (captured)
+  {
+      Square capsq = to;
+
+      // If the captured piece is a pawn, update pawn hash key, otherwise
+      // update non-pawn material.
+      if (type_of(captured) == PAWN)
+      {
+          if (type_of(m) == ENPASSANT)
+          {
+              capsq -= pawn_push(us);
+
+              assert(pc == make_piece(us, PAWN));
+              assert(to == st->epSquare);
+              assert(relative_rank(us, to) == RANK_6);
+              assert(piece_on(to) == NO_PIECE);
+              assert(piece_on(capsq) == make_piece(them, PAWN));
+
+              board[capsq] = NO_PIECE; // Not done by remove_piece()
+          }
+
+          st->pawnKey ^= Zobrist::psq[captured][capsq];
+      }
+      else
+          st->nonPawnMaterial[them] -= PieceValue[MG][captured];
+
+      // Update board and piece lists
+      remove_piece(captured, capsq);
+
+      // Update material hash key and prefetch access to materialTable
+      k ^= Zobrist::psq[captured][capsq];
+      st->materialKey ^= Zobrist::psq[captured][pieceCount[captured]];
+      prefetch(thisThread->materialTable[st->materialKey]);
+
+      // Update incremental scores
+      st->psq -= PSQT::psq[captured][capsq];
+
+      // Reset rule 50 counter
+      st->rule50 = 0;
+  }
+
+  // Update hash key
+  k ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+
+  // Reset en passant square
+  if (st->epSquare != SQ_NONE)
+  {
+      k ^= Zobrist::enpassant[file_of(st->epSquare)];
+      st->epSquare = SQ_NONE;
+  }
+
+  // Update castling rights if needed
+  if (st->castlingRights && (castlingRightsMask[from] | castlingRightsMask[to]))
+  {
+      int cr = castlingRightsMask[from] | castlingRightsMask[to];
+      k ^= Zobrist::castling[st->castlingRights & cr];
+      st->castlingRights &= ~cr;
+  }
+
+  // Move the piece. The tricky Chess960 castling is handled earlier
+  if (type_of(m) != CASTLING)
+      move_piece(pc, from, to);
+
+  // If the moving piece is a pawn do some special extra work
+  if (type_of(pc) == PAWN)
+  {
+      // Set en-passant square if the moved pawn can be captured
+      if (   (int(to) ^ int(from)) == 16
+          && (attacks_from<PAWN>(to - pawn_push(us), us) & pieces(them, PAWN)))
+      {
+          st->epSquare = (from + to) / 2;
+          k ^= Zobrist::enpassant[file_of(st->epSquare)];
+      }
+
+      else if (type_of(m) == PROMOTION)
+      {
+          Piece promotion = make_piece(us, promotion_type(m));
+
+          assert(relative_rank(us, to) == RANK_8);
+          assert(type_of(promotion) >= KNIGHT && type_of(promotion) <= QUEEN);
+
+          remove_piece(pc, to);
+          put_piece(promotion, to);
+
+          // Update hash keys
+          k ^= Zobrist::psq[pc][to] ^ Zobrist::psq[promotion][to];
+          st->pawnKey ^= Zobrist::psq[pc][to];
+          st->materialKey ^=  Zobrist::psq[promotion][pieceCount[promotion]-1]
+                            ^ Zobrist::psq[pc][pieceCount[pc]];
+
+          // Update incremental score
+          st->psq += PSQT::psq[promotion][to] - PSQT::psq[pc][to];
+
+          // Update material
+          st->nonPawnMaterial[us] += PieceValue[MG][promotion];
+      }
+
+      // Update pawn hash key and prefetch access to pawnsTable
+      st->pawnKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+      prefetch(thisThread->pawnsTable[st->pawnKey]);
+
+      // Reset rule 50 draw counter
+      st->rule50 = 0;
+  }
+
+  // Update incremental scores
+  st->psq += PSQT::psq[pc][to] - PSQT::psq[pc][from];
+
+  // Set capture piece
+  st->capturedPiece = captured;
+
+  // Update the key with the final value
+  st->key = k;
+
+  // Calculate checkers bitboard (if move gives check)
+  st->checkersBB = givesCheck ? attackers_to(square<KING>(them)) & pieces(us) : 0;
+
+  sideToMove = ~sideToMove;
+
+  // Update king attacks used for fast check detection
+  set_check_info(st);
+
+  assert(pos_is_ok());
+}
+Step-by-Step Breakdown
+Phase 1: Sanity checks and bookkeeping
+assert(is_ok(m));
+assert(&amp;newSt != st);
+
+++nodes;
+Key k = st->key ^ Zobrist::side;
+
+Ensures the move encoding is valid
+Ensures we don’t overwrite the current state
+Increments node counter (used for search statistics)
+Flips side-to-move bit in the Zobrist key, k is a working copy of the hash key, updated incrementally.
+
+Phase 2: StateInfo chaining (undo mechanism)
+std::memcpy(&amp;newSt, st, offsetof(StateInfo, key));
+newSt.previous = st;
+st = &amp;newSt;
+
+Copies all fields up to key
+Fields after key will be recomputed
+Links the new state to the previous one (stack-style undo)
+Advances the st pointer
+
+Phase 3: Ply counters
+++gamePly;
+++st->rule50;
+++st->pliesFromNull;
+
+gamePly: depth from game start
+rule50: increments unless reset later
+pliesFromNull: prevents consecutive null moves
+
+Phase 4: Decode move and involved pieces
+Color us = sideToMove;
+Color them = ~us;
+
+Square from = from_sq(m);
+Square to   = to_sq(m);
+
+Piece pc = piece_on(from);
+Piece captured =
+    type_of(m) == ENPASSANT ? make_piece(them, PAWN) : piece_on(to);
+
+assert(color_of(pc) == us);
+assert(captured == NO_PIECE || color_of(captured) == (type_of(m) != CASTLING ? them : us));
+assert(type_of(captured) != KING);
+
+Determines moving side
+Determines source and destination squares
+Determines captured piece (special handling for en passant)
+
+Assertions ensure:"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"Game Mechanics","item":"https://sankethbk.github.io/blog/posts/chess_engine/2026-01-12-game-mechanics/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Game Mechanics","name":"Game Mechanics","description":"We will go through some of the functions which are part of core game mechanics\nGame Mechanics 1. Piece Movement 1. do_move Purpose: Execute a move and update all position state incrementally.\nCritical for performance: This function is called millions of times per second during search. Every optimization matters.\nPreconditions:\nMove m must be legal (pseudo-legal moves should be filtered first) newSt must be a different StateInfo object than current state Caller provides givesCheck flag (optional optimization to avoid recalculating) Function Structure Overview Setup and assertions Copy old state → new state Increment counters Handle castling (special case) Handle captures Update position hash Reset en passant Update castling rights Move the piece Handle pawn moves (en passant, promotion) Update incremental scores Finalize state Flip side to move Compute check info /// Position::do_move() makes a move, and saves all information necessary /// to a StateInfo object. The move is assumed to be legal. Pseudo-legal /// moves should be filtered out before this function is called. void Position::do_move(Move m, StateInfo\u0026amp; newSt, bool givesCheck) { assert(is_ok(m)); assert(\u0026amp;newSt != st); ++nodes; Key k = st-\u0026gt;key ^ Zobrist::side; // Copy some fields of the old state to our new StateInfo object except the // ones which are going to be recalculated from scratch anyway and then switch // our state pointer to point to the new (ready to be updated) state. std::memcpy(\u0026amp;newSt, st, offsetof(StateInfo, key)); newSt.previous = st; st = \u0026amp;newSt; // Increment ply counters. In particular, rule50 will be reset to zero later on // in case of a capture or a pawn move. ++gamePly; ++st-\u0026gt;rule50; ++st-\u0026gt;pliesFromNull; Color us = sideToMove; Color them = ~us; Square from = from_sq(m); Square to = to_sq(m); Piece pc = piece_on(from); Piece captured = type_of(m) == ENPASSANT ? make_piece(them, PAWN) : piece_on(to); assert(color_of(pc) == us); assert(captured == NO_PIECE || color_of(captured) == (type_of(m) != CASTLING ? them : us)); assert(type_of(captured) != KING); if (type_of(m) == CASTLING) { assert(pc == make_piece(us, KING)); assert(captured == make_piece(us, ROOK)); Square rfrom, rto; do_castling\u0026lt;true\u0026gt;(us, from, to, rfrom, rto); st-\u0026gt;psq += PSQT::psq[captured][rto] - PSQT::psq[captured][rfrom]; k ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto]; captured = NO_PIECE; } if (captured) { Square capsq = to; // If the captured piece is a pawn, update pawn hash key, otherwise // update non-pawn material. if (type_of(captured) == PAWN) { if (type_of(m) == ENPASSANT) { capsq -= pawn_push(us); assert(pc == make_piece(us, PAWN)); assert(to == st-\u0026gt;epSquare); assert(relative_rank(us, to) == RANK_6); assert(piece_on(to) == NO_PIECE); assert(piece_on(capsq) == make_piece(them, PAWN)); board[capsq] = NO_PIECE; // Not done by remove_piece() } st-\u0026gt;pawnKey ^= Zobrist::psq[captured][capsq]; } else st-\u0026gt;nonPawnMaterial[them] -= PieceValue[MG][captured]; // Update board and piece lists remove_piece(captured, capsq); // Update material hash key and prefetch access to materialTable k ^= Zobrist::psq[captured][capsq]; st-\u0026gt;materialKey ^= Zobrist::psq[captured][pieceCount[captured]]; prefetch(thisThread-\u0026gt;materialTable[st-\u0026gt;materialKey]); // Update incremental scores st-\u0026gt;psq -= PSQT::psq[captured][capsq]; // Reset rule 50 counter st-\u0026gt;rule50 = 0; } // Update hash key k ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to]; // Reset en passant square if (st-\u0026gt;epSquare != SQ_NONE) { k ^= Zobrist::enpassant[file_of(st-\u0026gt;epSquare)]; st-\u0026gt;epSquare = SQ_NONE; } // Update castling rights if needed if (st-\u0026gt;castlingRights \u0026amp;\u0026amp; (castlingRightsMask[from] | castlingRightsMask[to])) { int cr = castlingRightsMask[from] | castlingRightsMask[to]; k ^= Zobrist::castling[st-\u0026gt;castlingRights \u0026amp; cr]; st-\u0026gt;castlingRights \u0026amp;= ~cr; } // Move the piece. The tricky Chess960 castling is handled earlier if (type_of(m) != CASTLING) move_piece(pc, from, to); // If the moving piece is a pawn do some special extra work if (type_of(pc) == PAWN) { // Set en-passant square if the moved pawn can be captured if ( (int(to) ^ int(from)) == 16 \u0026amp;\u0026amp; (attacks_from\u0026lt;PAWN\u0026gt;(to - pawn_push(us), us) \u0026amp; pieces(them, PAWN))) { st-\u0026gt;epSquare = (from + to) / 2; k ^= Zobrist::enpassant[file_of(st-\u0026gt;epSquare)]; } else if (type_of(m) == PROMOTION) { Piece promotion = make_piece(us, promotion_type(m)); assert(relative_rank(us, to) == RANK_8); assert(type_of(promotion) \u0026gt;= KNIGHT \u0026amp;\u0026amp; type_of(promotion) \u0026lt;= QUEEN); remove_piece(pc, to); put_piece(promotion, to); // Update hash keys k ^= Zobrist::psq[pc][to] ^ Zobrist::psq[promotion][to]; st-\u0026gt;pawnKey ^= Zobrist::psq[pc][to]; st-\u0026gt;materialKey ^= Zobrist::psq[promotion][pieceCount[promotion]-1] ^ Zobrist::psq[pc][pieceCount[pc]]; // Update incremental score st-\u0026gt;psq += PSQT::psq[promotion][to] - PSQT::psq[pc][to]; // Update material st-\u0026gt;nonPawnMaterial[us] += PieceValue[MG][promotion]; } // Update pawn hash key and prefetch access to pawnsTable st-\u0026gt;pawnKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to]; prefetch(thisThread-\u0026gt;pawnsTable[st-\u0026gt;pawnKey]); // Reset rule 50 draw counter st-\u0026gt;rule50 = 0; } // Update incremental scores st-\u0026gt;psq += PSQT::psq[pc][to] - PSQT::psq[pc][from]; // Set capture piece st-\u0026gt;capturedPiece = captured; // Update the key with the final value st-\u0026gt;key = k; // Calculate checkers bitboard (if move gives check) st-\u0026gt;checkersBB = givesCheck ? attackers_to(square\u0026lt;KING\u0026gt;(them)) \u0026amp; pieces(us) : 0; sideToMove = ~sideToMove; // Update king attacks used for fast check detection set_check_info(st); assert(pos_is_ok()); } Step-by-Step Breakdown Phase 1: Sanity checks and bookkeeping assert(is_ok(m)); assert(\u0026amp;newSt != st); ++nodes; Key k = st-\u0026gt;key ^ Zobrist::side; Ensures the move encoding is valid Ensures we don’t overwrite the current state Increments node counter (used for search statistics) Flips side-to-move bit in the Zobrist key, k is a working copy of the hash key, updated incrementally. Phase 2: StateInfo chaining (undo mechanism) std::memcpy(\u0026amp;newSt, st, offsetof(StateInfo, key)); newSt.previous = st; st = \u0026amp;newSt; Copies all fields up to key Fields after key will be recomputed Links the new state to the previous one (stack-style undo) Advances the st pointer Phase 3: Ply counters ++gamePly; ++st-\u0026gt;rule50; ++st-\u0026gt;pliesFromNull; gamePly: depth from game start rule50: increments unless reset later pliesFromNull: prevents consecutive null moves Phase 4: Decode move and involved pieces Color us = sideToMove; Color them = ~us; Square from = from_sq(m); Square to = to_sq(m); Piece pc = piece_on(from); Piece captured = type_of(m) == ENPASSANT ? make_piece(them, PAWN) : piece_on(to); assert(color_of(pc) == us); assert(captured == NO_PIECE || color_of(captured) == (type_of(m) != CASTLING ? them : us)); assert(type_of(captured) != KING); Determines moving side Determines source and destination squares Determines captured piece (special handling for en passant) Assertions ensure:\n","keywords":["game mechanics"],"articleBody":"We will go through some of the functions which are part of core game mechanics\nGame Mechanics 1. Piece Movement 1. do_move Purpose: Execute a move and update all position state incrementally.\nCritical for performance: This function is called millions of times per second during search. Every optimization matters.\nPreconditions:\nMove m must be legal (pseudo-legal moves should be filtered first) newSt must be a different StateInfo object than current state Caller provides givesCheck flag (optional optimization to avoid recalculating) Function Structure Overview Setup and assertions Copy old state → new state Increment counters Handle castling (special case) Handle captures Update position hash Reset en passant Update castling rights Move the piece Handle pawn moves (en passant, promotion) Update incremental scores Finalize state Flip side to move Compute check info /// Position::do_move() makes a move, and saves all information necessary /// to a StateInfo object. The move is assumed to be legal. Pseudo-legal /// moves should be filtered out before this function is called. void Position::do_move(Move m, StateInfo\u0026 newSt, bool givesCheck) { assert(is_ok(m)); assert(\u0026newSt != st); ++nodes; Key k = st-\u003ekey ^ Zobrist::side; // Copy some fields of the old state to our new StateInfo object except the // ones which are going to be recalculated from scratch anyway and then switch // our state pointer to point to the new (ready to be updated) state. std::memcpy(\u0026newSt, st, offsetof(StateInfo, key)); newSt.previous = st; st = \u0026newSt; // Increment ply counters. In particular, rule50 will be reset to zero later on // in case of a capture or a pawn move. ++gamePly; ++st-\u003erule50; ++st-\u003epliesFromNull; Color us = sideToMove; Color them = ~us; Square from = from_sq(m); Square to = to_sq(m); Piece pc = piece_on(from); Piece captured = type_of(m) == ENPASSANT ? make_piece(them, PAWN) : piece_on(to); assert(color_of(pc) == us); assert(captured == NO_PIECE || color_of(captured) == (type_of(m) != CASTLING ? them : us)); assert(type_of(captured) != KING); if (type_of(m) == CASTLING) { assert(pc == make_piece(us, KING)); assert(captured == make_piece(us, ROOK)); Square rfrom, rto; do_castling\u003ctrue\u003e(us, from, to, rfrom, rto); st-\u003epsq += PSQT::psq[captured][rto] - PSQT::psq[captured][rfrom]; k ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto]; captured = NO_PIECE; } if (captured) { Square capsq = to; // If the captured piece is a pawn, update pawn hash key, otherwise // update non-pawn material. if (type_of(captured) == PAWN) { if (type_of(m) == ENPASSANT) { capsq -= pawn_push(us); assert(pc == make_piece(us, PAWN)); assert(to == st-\u003eepSquare); assert(relative_rank(us, to) == RANK_6); assert(piece_on(to) == NO_PIECE); assert(piece_on(capsq) == make_piece(them, PAWN)); board[capsq] = NO_PIECE; // Not done by remove_piece() } st-\u003epawnKey ^= Zobrist::psq[captured][capsq]; } else st-\u003enonPawnMaterial[them] -= PieceValue[MG][captured]; // Update board and piece lists remove_piece(captured, capsq); // Update material hash key and prefetch access to materialTable k ^= Zobrist::psq[captured][capsq]; st-\u003ematerialKey ^= Zobrist::psq[captured][pieceCount[captured]]; prefetch(thisThread-\u003ematerialTable[st-\u003ematerialKey]); // Update incremental scores st-\u003epsq -= PSQT::psq[captured][capsq]; // Reset rule 50 counter st-\u003erule50 = 0; } // Update hash key k ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to]; // Reset en passant square if (st-\u003eepSquare != SQ_NONE) { k ^= Zobrist::enpassant[file_of(st-\u003eepSquare)]; st-\u003eepSquare = SQ_NONE; } // Update castling rights if needed if (st-\u003ecastlingRights \u0026\u0026 (castlingRightsMask[from] | castlingRightsMask[to])) { int cr = castlingRightsMask[from] | castlingRightsMask[to]; k ^= Zobrist::castling[st-\u003ecastlingRights \u0026 cr]; st-\u003ecastlingRights \u0026= ~cr; } // Move the piece. The tricky Chess960 castling is handled earlier if (type_of(m) != CASTLING) move_piece(pc, from, to); // If the moving piece is a pawn do some special extra work if (type_of(pc) == PAWN) { // Set en-passant square if the moved pawn can be captured if ( (int(to) ^ int(from)) == 16 \u0026\u0026 (attacks_from\u003cPAWN\u003e(to - pawn_push(us), us) \u0026 pieces(them, PAWN))) { st-\u003eepSquare = (from + to) / 2; k ^= Zobrist::enpassant[file_of(st-\u003eepSquare)]; } else if (type_of(m) == PROMOTION) { Piece promotion = make_piece(us, promotion_type(m)); assert(relative_rank(us, to) == RANK_8); assert(type_of(promotion) \u003e= KNIGHT \u0026\u0026 type_of(promotion) \u003c= QUEEN); remove_piece(pc, to); put_piece(promotion, to); // Update hash keys k ^= Zobrist::psq[pc][to] ^ Zobrist::psq[promotion][to]; st-\u003epawnKey ^= Zobrist::psq[pc][to]; st-\u003ematerialKey ^= Zobrist::psq[promotion][pieceCount[promotion]-1] ^ Zobrist::psq[pc][pieceCount[pc]]; // Update incremental score st-\u003epsq += PSQT::psq[promotion][to] - PSQT::psq[pc][to]; // Update material st-\u003enonPawnMaterial[us] += PieceValue[MG][promotion]; } // Update pawn hash key and prefetch access to pawnsTable st-\u003epawnKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to]; prefetch(thisThread-\u003epawnsTable[st-\u003epawnKey]); // Reset rule 50 draw counter st-\u003erule50 = 0; } // Update incremental scores st-\u003epsq += PSQT::psq[pc][to] - PSQT::psq[pc][from]; // Set capture piece st-\u003ecapturedPiece = captured; // Update the key with the final value st-\u003ekey = k; // Calculate checkers bitboard (if move gives check) st-\u003echeckersBB = givesCheck ? attackers_to(square\u003cKING\u003e(them)) \u0026 pieces(us) : 0; sideToMove = ~sideToMove; // Update king attacks used for fast check detection set_check_info(st); assert(pos_is_ok()); } Step-by-Step Breakdown Phase 1: Sanity checks and bookkeeping assert(is_ok(m)); assert(\u0026newSt != st); ++nodes; Key k = st-\u003ekey ^ Zobrist::side; Ensures the move encoding is valid Ensures we don’t overwrite the current state Increments node counter (used for search statistics) Flips side-to-move bit in the Zobrist key, k is a working copy of the hash key, updated incrementally. Phase 2: StateInfo chaining (undo mechanism) std::memcpy(\u0026newSt, st, offsetof(StateInfo, key)); newSt.previous = st; st = \u0026newSt; Copies all fields up to key Fields after key will be recomputed Links the new state to the previous one (stack-style undo) Advances the st pointer Phase 3: Ply counters ++gamePly; ++st-\u003erule50; ++st-\u003epliesFromNull; gamePly: depth from game start rule50: increments unless reset later pliesFromNull: prevents consecutive null moves Phase 4: Decode move and involved pieces Color us = sideToMove; Color them = ~us; Square from = from_sq(m); Square to = to_sq(m); Piece pc = piece_on(from); Piece captured = type_of(m) == ENPASSANT ? make_piece(them, PAWN) : piece_on(to); assert(color_of(pc) == us); assert(captured == NO_PIECE || color_of(captured) == (type_of(m) != CASTLING ? them : us)); assert(type_of(captured) != KING); Determines moving side Determines source and destination squares Determines captured piece (special handling for en passant) Assertions ensure:\nCorrect colors No king is ever captured Phase 5: Castling (special-case logic) if (type_of(m) == CASTLING) { assert(pc == make_piece(us, KING)); assert(captured == make_piece(us, ROOK)); Square rfrom, rto; do_castling\u003ctrue\u003e(us, from, to, rfrom, rto); st-\u003epsq += PSQT::psq[captured][rto] - PSQT::psq[captured][rfrom]; k ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto]; captured = NO_PIECE; } Castling is encoded as “king captures rook”:\nfrom = king square (e.g., e1) to = rook square (e.g., h1 for kingside) captured = our own rook do_castling() does:\nMoves king to final square (g1) Moves rook to final square (f1) Returns rfrom and rto (rook’s old and new squares) st-\u003epsq += PSQT::psq[captured][rto] - PSQT::psq[captured][rfrom]; Remove rook’s old position score Add rook’s new position score (King’s score updated later in main move code) k ^= Zobrist::psq[captured][rfrom] ^ Zobrist::psq[captured][rto]; XOR out rook from old square XOR in rook on new square captured = NO_PIECE; Special logic for castling is complete here, captured is set back to NO_PIECE (we don’t actually capture in castling) Prevents later code from treating this as a capture Phase 6: Capture handling If a capture occurs: (Castling doesn’t enter here)\nif (captured) { Square capsq = to; // If the captured piece is a pawn, update pawn hash key, otherwise // update non-pawn material. if (type_of(captured) == PAWN) { if (type_of(m) == ENPASSANT) { capsq -= pawn_push(us); assert(pc == make_piece(us, PAWN)); assert(to == st-\u003eepSquare); assert(relative_rank(us, to) == RANK_6); assert(piece_on(to) == NO_PIECE); assert(piece_on(capsq) == make_piece(them, PAWN)); board[capsq] = NO_PIECE; // Not done by remove_piece() } st-\u003epawnKey ^= Zobrist::psq[captured][capsq]; } else st-\u003enonPawnMaterial[them] -= PieceValue[MG][captured]; // Update board and piece lists remove_piece(captured, capsq); // Update material hash key and prefetch access to materialTable k ^= Zobrist::psq[captured][capsq]; st-\u003ematerialKey ^= Zobrist::psq[captured][pieceCount[captured]]; prefetch(thisThread-\u003ematerialTable[st-\u003ematerialKey]); // Update incremental scores st-\u003epsq -= PSQT::psq[captured][capsq]; // Reset rule 50 counter st-\u003erule50 = 0; } Capture square:\nUsually to (normal capture) Exception: En passant (handled next) if (type_of(m) == ENPASSANT) { capsq -= pawn_push(us); For Enpassant, captured piece is one square behind the captured square. Example: White pawn on e5, black pawn on d5 (just moved d7-d5) Move: exd6 (en passant) to = d6 (target square, EMPTY) capsq = d6 - pawn_push(WHITE) = d6 - 8 = d5 (where black pawn actually is) board[capsq] = NO_PIECE; // Not done by remove_piece() Special case for Enpassant, we need to clear the mailbox board manually, for other captures it will be handled by move_piece later. st-\u003epawnKey ^= Zobrist::psq[captured][capsq]; Remove captured pawn from pawn structure hash. else st-\u003enonPawnMaterial[them] -= PieceValue[MG][captured]; nonPawnMaterial excludes pawns (used for endgame detection) Pawn captures don’t change this value Remove Captured Piece\nremove_piece(captured, capsq); remove_piece() does:\nClear from byTypeBB[type] Clear from byColorBB[color] Remove from pieceList[captured] Update index[] array Decrement pieceCount[captured] At this point, captured piece is completely out of the board. Update Material Hash\nk ^= Zobrist::psq[captured][capsq]; st-\u003ematerialKey ^= Zobrist::psq[captured][pieceCount[captured]]; Captured piece is removed from Zobrist hash key k Same for materialKey. Remember: Material hash uses count, not square Prefetch Material Table\nprefetch(thisThread-\u003ematerialTable[st-\u003ematerialKey]); Prefetch explained:\nModern CPUs have cache hierarchy (L1/L2/L3). Prefetching hints the CPU to load data into cache before it’s needed.\nprefetch(address) // → CPU instruction: load this memory into cache Why prefetch?\nWe’ll need materialTable[st-\u003ematerialKey] soon (for evaluation) Loading from RAM is slow (~100+ cycles) Prefetching starts the load now (overlaps with other work) By the time we need it, it’s already in cache Update PSQ Score\nst-\u003epsq -= PSQT::psq[captured][capsq]; Remove captured piece’s positional bonus from total score. Reset 50-Move Rule\nst-\u003erule50 = 0; Captures reset the 50-move draw counter. Update Hash for Moving Piece\nk ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to]; We already removed only the captured piece from hash, this is just a piece moving from one swuare to another. Reset En Passant Square\nif (st-\u003eepSquare != SQ_NONE) { k ^= Zobrist::enpassant[file_of(st-\u003eepSquare)]; st-\u003eepSquare = SQ_NONE; } Clear old en passant:\nOld state might have had en passant opportunity Remove it from hash Reset to SQ_NONE (Will be set again later if this move creates new ep opportunity) Phase 7: Update Castling Rights if (st-\u003ecastlingRights \u0026\u0026 (castlingRightsMask[from] | castlingRightsMask[to])) { int cr = castlingRightsMask[from] | castlingRightsMask[to]; k ^= Zobrist::castling[st-\u003ecastlingRights \u0026 cr]; st-\u003ecastlingRights \u0026= ~cr; } If castlingRights is present and the current move touches any of the square that disturbs any castling rights int cr = castlingRightsMask[from] | castlingRightsMask[to]; These are the castling rights lost. Phase 8: Move the Piece if (type_of(m) != CASTLING) move_piece(pc, from, to); move_piece() does:\nUpdate board[from] and board[to] Update bitboards Update pieceList[] Update index[] Why skip for castling?\nCastling already moved both king and rook in do_castling() Would be redundant and incorrect to move again Phase 9: Pawn Specific handling // If the moving piece is a pawn do some special extra work if (type_of(pc) == PAWN) { // Set en-passant square if the moved pawn can be captured if ( (int(to) ^ int(from)) == 16 \u0026\u0026 (attacks_from\u003cPAWN\u003e(to - pawn_push(us), us) \u0026 pieces(them, PAWN))) { st-\u003eepSquare = (from + to) / 2; k ^= Zobrist::enpassant[file_of(st-\u003eepSquare)]; } else if (type_of(m) == PROMOTION) { Piece promotion = make_piece(us, promotion_type(m)); assert(relative_rank(us, to) == RANK_8); assert(type_of(promotion) \u003e= KNIGHT \u0026\u0026 type_of(promotion) \u003c= QUEEN); remove_piece(pc, to); put_piece(promotion, to); // Update hash keys k ^= Zobrist::psq[pc][to] ^ Zobrist::psq[promotion][to]; st-\u003epawnKey ^= Zobrist::psq[pc][to]; st-\u003ematerialKey ^= Zobrist::psq[promotion][pieceCount[promotion]-1] ^ Zobrist::psq[pc][pieceCount[pc]]; // Update incremental score st-\u003epsq += PSQT::psq[promotion][to] - PSQT::psq[pc][to]; // Update material st-\u003enonPawnMaterial[us] += PieceValue[MG][promotion]; } // Update pawn hash key and prefetch access to pawnsTable st-\u003epawnKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to]; prefetch(thisThread-\u003epawnsTable[st-\u003epawnKey]); // Reset rule 50 draw counter st-\u003erule50 = 0; } Pawns require extra handling because they have unique rules:\ndouble pushes create en-passant rights promotions replace the pawn with a new piece pawn structure is evaluated separately pawn moves reset the 50-move draw counter if ( (int(to) ^ int(from)) == 16 \u0026\u0026 (attacks_from\u003cPAWN\u003e(to - pawn_push(us), us) \u0026 pieces(them, PAWN))) A pawn double push always moves exactly 16 squares in index space:\nWhite: rank 2 → rank 4 Black: rank 7 → rank 5 Stockfish uses XOR instead of subtraction because it’s slightly faster and works reliably with square encoding.\nCan the pawn actually be captured?\nMeaning:\nlook at the square the pawn passed over generate pawn attacks from that square check if enemy pawns exist on those attack squares So en-passant is only enabled if it is a real tactical possibility.\nSetting the en-passant square\nst-\u003eepSquare = (from + to) / 2; The en-passant target is the square “in between”.\nExample:\ne2 → e4 epSquare = e3 Let’s take a scenario where blakc pawn is on d4 and white just moved pawn from e2 to e4.\nfrom = e2 = 12 to = e4 = 28 // Condition 1: Double push? (int(to) ^ int(from)) == 16 (28 ^ 12) == 16 16 == 16 ✓ // Condition 2: Can be captured? to - pawn_push(WHITE) = 28 - 8 = 20 (e3) attacks_from\u003cPAWN\u003e(e3, WHITE) = StepAttacksBB[W_PAWN][e3] = Bitboard{d4, f4} = 0x0000000014000000 pieces(BLACK, PAWN) = Bitboard{d4} d4_and_f4 \u0026 black_pawns = Bitboard{d4} \u0026 Bitboard{d4} = Bitboard{d4} ✓ Non-zero! // En passant IS set: st-\u003eepSquare = (e2 + e4) / 2 = (12 + 28) / 2 = 20 (e3) Updating the Zobrist hash\nk ^= Zobrist::enpassant[file_of(st-\u003eepSquare)]; En-passant affects legality and repetition detection, so it must be included in the position hash. Stockfish hashes only the file (not full square) because en-passant is file-dependent.\nHandling Pawn Promotion\nelse if (type_of(m) == PROMOTION) Promotions are special because the pawn is removed and replaced by a stronger piece.\nCreate the promoted piece Piece promotion = make_piece(us, promotion_type(m)); Example:\nWhite pawn promotes to queen → W_QUEEN Sanity checks\nassert(relative_rank(us, to) == RANK_8); assert(type_of(promotion) \u003e= KNIGHT \u0026\u0026 type_of(promotion) \u003c= QUEEN); Promotion must occur on the last rank, and only to:\nKnight Bishop Rook Queen Replace pawn with promoted piece remove_piece(pc, to); put_piece(promotion, to); So the board now contains the new piece instead of the pawn.\nUpdating Hash Keys During Promotion k ^= Zobrist::psq[pc][to] ^ Zobrist::psq[promotion][to]; Meaning:\nremove pawn from hash add promoted piece to hash Pawn structure hash\nst-\u003epawnKey ^= Zobrist::psq[pc][to]; Pawn hash only tracks pawns, so the pawn disappears from it.\nMaterial hash\nst-\u003ematerialKey ^= Zobrist::psq[promotion][pieceCount[promotion]-1] ^ Zobrist::psq[pc][pieceCount[pc]]; MaterialKey tracks piece counts, so promotion changes:\npawn count decreases promoted piece count increases This hash is used for caching evaluation terms like bishop pair bonuses.\nUpdating Incremental Evaluation (PSQT) st-\u003epsq += PSQT::psq[promotion][to] - PSQT::psq[pc][to]; This is an incremental update:\nsubtract pawn-square contribution add promoted piece-square contribution Updating Material Balance st-\u003enonPawnMaterial[us] += PieceValue[MG][promotion]; Promotion increases non-pawn material:\npawn is removed queen/rook/etc is added Updating Pawn Hash After Any Pawn Move Regardless of promotion:\nst-\u003epawnKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to]; Pawn structure is extremely important, so Stockfish maintains a separate pawn hash key.\nThis enables a pawn evaluation cache:\nprefetch(thisThread-\u003epawnsTable[st-\u003epawnKey]); Meaning:\npawn evaluation will be needed soon prefetch it into CPU cache early Phase 10: Wrap up // Update incremental scores st-\u003epsq += PSQT::psq[pc][to] - PSQT::psq[pc][from]; // Set capture piece st-\u003ecapturedPiece = captured; // Update the key with the final value st-\u003ekey = k; // Calculate checkers bitboard (if move gives check) st-\u003echeckersBB = givesCheck ? attackers_to(square\u003cKING\u003e(them)) \u0026 pieces(us) : 0; sideToMove = ~sideToMove; // Update king attacks used for fast check detection set_check_info(st); assert(pos_is_ok()); This section completes the move by updating:\nevaluation bookkeeping (PSQT) captured piece info (for undo) final Zobrist key check detection bitboards side-to-move switch king safety helper data 1. Incremental PSQT Update\n// Update incremental scores st-\u003epsq += PSQT::psq[pc][to] - PSQT::psq[pc][from]; st-\u003epsq is the piece-square evaluation score of the current position.\nInstead of recomputing evaluation from scratch every move, Stockfish maintains it incrementally:\nRemove the piece’s contribution from the old square Add the contribution from the new square 2. Store Captured Piece for Undo\n// Set capture piece st-\u003ecapturedPiece = captured; Why store this?\nWhen search backtracks, Stockfish calls:\nundo_move(m); To undo correctly, it must know:\nWas something captured? What piece was it? Where should it be restored? So capturedPiece is saved inside StateInfo.\n3. Finalize the Zobrist Key\n// Update the key with the final value st-\u003ekey = k; What is k?\nThroughout do_move(), Stockfish incrementally updated:\npiece-square hash changes castling rights changes en-passant changes side-to-move flip Now the hash is complete.\n4. Compute Checkers Bitboard\n// Calculate checkers bitboard (if move gives check) st-\u003echeckersBB = givesCheck ? attackers_to(square\u003cKING\u003e(them)) \u0026 pieces(us) : 0; What is checkersBB?\nA bitboard containing all pieces currently giving check to the opponent king.\nWhy only if givesCheck?\nStockfish already computed earlier whether this move gives check.\nSo instead of recomputing always, it does:\nIf check → compute attackers Else → set to 0 How does it work?\nattackers_to(enemyKingSquare) returns all pieces attacking that square.\nIntersect with:\npieces(us) to keep only the current side’s attackers.\nWhy store it?\nLater, move generation and legality checks depend heavily on:\n“Are we in check?” “Who is checking us?” 5. Switch Side to Move\nsideToMove = ~sideToMove; After making a move, it becomes the opponent’s turn.\n","wordCount":"2715","inLanguage":"en","datePublished":"2026-01-12T00:00:00Z","dateModified":"2026-01-12T00:00:00Z","author":{"@type":"Person","name":"Sanketh"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/chess_engine/2026-01-12-game-mechanics/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload=renderMathInElement(document.body)></script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">Game Mechanics</h1><div class=post-meta><span title='2026-01-12 00:00:00 +0000 UTC'>January 12, 2026</span>&nbsp;·&nbsp;13 min&nbsp;·&nbsp;Sanketh&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/chess_engine/2026-01-12-game-mechanics.md rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#game-mechanics aria-label="Game Mechanics">Game Mechanics</a><ul><li><a href=#1-piece-movement aria-label="1. Piece Movement">1. Piece Movement</a><ul><li><a href=#1-do_move aria-label="1. do_move">1. do_move</a><ul><li><a href=#function-structure-overview aria-label="Function Structure Overview">Function Structure Overview</a></li><li><a href=#step-by-step-breakdown aria-label="Step-by-Step Breakdown">Step-by-Step Breakdown</a><ul><li><a href=#phase-1-sanity-checks-and-bookkeeping aria-label="Phase 1: Sanity checks and bookkeeping">Phase 1: Sanity checks and bookkeeping</a></li><li><a href=#phase-2-stateinfo-chaining-undo-mechanism aria-label="Phase 2: StateInfo chaining (undo mechanism)">Phase 2: StateInfo chaining (undo mechanism)</a></li><li><a href=#phase-3-ply-counters aria-label="Phase 3: Ply counters">Phase 3: Ply counters</a></li><li><a href=#phase-4-decode-move-and-involved-pieces aria-label="Phase 4: Decode move and involved pieces">Phase 4: Decode move and involved pieces</a></li><li><a href=#phase-5-castling-special-case-logic aria-label="Phase 5: Castling (special-case logic)">Phase 5: Castling (special-case logic)</a></li><li><a href=#phase-6-capture-handling aria-label="Phase 6: Capture handling">Phase 6: Capture handling</a></li><li><a href=#phase-7-update-castling-rights aria-label="Phase 7: Update Castling Rights">Phase 7: Update Castling Rights</a></li><li><a href=#phase-8-move-the-piece aria-label="Phase 8: Move the Piece">Phase 8: Move the Piece</a></li><li><a href=#phase-9-pawn-specific-handling aria-label="Phase 9: Pawn Specific handling">Phase 9: Pawn Specific handling</a></li><li><a href=#phase-10-wrap-up aria-label="Phase 10: Wrap up">Phase 10: Wrap up</a></li></ul></li></ul></li></ul></li></ul></li></ul></div></details></div><div class=post-content><p>We will go through some of the functions which are part of core game mechanics</p><h1 id=game-mechanics>Game Mechanics<a hidden class=anchor aria-hidden=true href=#game-mechanics>#</a></h1><h2 id=1-piece-movement>1. Piece Movement<a hidden class=anchor aria-hidden=true href=#1-piece-movement>#</a></h2><h3 id=1-do_move>1. do_move<a hidden class=anchor aria-hidden=true href=#1-do_move>#</a></h3><p><strong>Purpose</strong>: Execute a move and update all position state incrementally.</p><p><strong>Critical for performance</strong>: This function is called <strong>millions of times per second</strong> during search. Every optimization matters.</p><p><strong>Preconditions</strong>:</p><ul><li>Move <code>m</code> must be <strong>legal</strong> (pseudo-legal moves should be filtered first)</li><li><code>newSt</code> must be a <strong>different</strong> StateInfo object than current state</li><li>Caller provides <code>givesCheck</code> flag (optional optimization to avoid recalculating)</li></ul><h4 id=function-structure-overview>Function Structure Overview<a hidden class=anchor aria-hidden=true href=#function-structure-overview>#</a></h4><ol><li>Setup and assertions</li><li>Copy old state → new state</li><li>Increment counters</li><li>Handle castling (special case)</li><li>Handle captures</li><li>Update position hash</li><li>Reset en passant</li><li>Update castling rights</li><li>Move the piece</li><li>Handle pawn moves (en passant, promotion)</li><li>Update incremental scores</li><li>Finalize state</li><li>Flip side to move</li><li>Compute check info</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#75715e>/// Position::do_move() makes a move, and saves all information necessary
+</span></span></span><span style=display:flex><span><span style=color:#75715e>/// to a StateInfo object. The move is assumed to be legal. Pseudo-legal
+</span></span></span><span style=display:flex><span><span style=color:#75715e>/// moves should be filtered out before this function is called.
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>void</span> Position<span style=color:#f92672>::</span>do_move(Move m, StateInfo<span style=color:#f92672>&amp;</span> newSt, <span style=color:#66d9ef>bool</span> givesCheck) {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  assert(is_ok(m));
+</span></span><span style=display:flex><span>  assert(<span style=color:#f92672>&amp;</span>newSt <span style=color:#f92672>!=</span> st);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>++</span>nodes;
+</span></span><span style=display:flex><span>  Key k <span style=color:#f92672>=</span> st<span style=color:#f92672>-&gt;</span>key <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>side;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Copy some fields of the old state to our new StateInfo object except the
+</span></span></span><span style=display:flex><span>  <span style=color:#75715e>// ones which are going to be recalculated from scratch anyway and then switch
+</span></span></span><span style=display:flex><span>  <span style=color:#75715e>// our state pointer to point to the new (ready to be updated) state.
+</span></span></span><span style=display:flex><span>  std<span style=color:#f92672>::</span>memcpy(<span style=color:#f92672>&amp;</span>newSt, st, offsetof(StateInfo, key));
+</span></span><span style=display:flex><span>  newSt.previous <span style=color:#f92672>=</span> st;
+</span></span><span style=display:flex><span>  st <span style=color:#f92672>=</span> <span style=color:#f92672>&amp;</span>newSt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Increment ply counters. In particular, rule50 will be reset to zero later on
+</span></span></span><span style=display:flex><span>  <span style=color:#75715e>// in case of a capture or a pawn move.
+</span></span></span><span style=display:flex><span>  <span style=color:#f92672>++</span>gamePly;
+</span></span><span style=display:flex><span>  <span style=color:#f92672>++</span>st<span style=color:#f92672>-&gt;</span>rule50;
+</span></span><span style=display:flex><span>  <span style=color:#f92672>++</span>st<span style=color:#f92672>-&gt;</span>pliesFromNull;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  Color us <span style=color:#f92672>=</span> sideToMove;
+</span></span><span style=display:flex><span>  Color them <span style=color:#f92672>=</span> <span style=color:#f92672>~</span>us;
+</span></span><span style=display:flex><span>  Square from <span style=color:#f92672>=</span> from_sq(m);
+</span></span><span style=display:flex><span>  Square to <span style=color:#f92672>=</span> to_sq(m);
+</span></span><span style=display:flex><span>  Piece pc <span style=color:#f92672>=</span> piece_on(from);
+</span></span><span style=display:flex><span>  Piece captured <span style=color:#f92672>=</span> type_of(m) <span style=color:#f92672>==</span> ENPASSANT <span style=color:#f92672>?</span> make_piece(them, PAWN) <span style=color:#f92672>:</span> piece_on(to);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  assert(color_of(pc) <span style=color:#f92672>==</span> us);
+</span></span><span style=display:flex><span>  assert(captured <span style=color:#f92672>==</span> NO_PIECE <span style=color:#f92672>||</span> color_of(captured) <span style=color:#f92672>==</span> (type_of(m) <span style=color:#f92672>!=</span> CASTLING <span style=color:#f92672>?</span> them : us));
+</span></span><span style=display:flex><span>  assert(type_of(captured) <span style=color:#f92672>!=</span> KING);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (type_of(m) <span style=color:#f92672>==</span> CASTLING)
+</span></span><span style=display:flex><span>  {
+</span></span><span style=display:flex><span>      assert(pc <span style=color:#f92672>==</span> make_piece(us, KING));
+</span></span><span style=display:flex><span>      assert(captured <span style=color:#f92672>==</span> make_piece(us, ROOK));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      Square rfrom, rto;
+</span></span><span style=display:flex><span>      do_castling<span style=color:#f92672>&lt;</span>true<span style=color:#f92672>&gt;</span>(us, from, to, rfrom, rto);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      st<span style=color:#f92672>-&gt;</span>psq <span style=color:#f92672>+=</span> PSQT<span style=color:#f92672>::</span>psq[captured][rto] <span style=color:#f92672>-</span> PSQT<span style=color:#f92672>::</span>psq[captured][rfrom];
+</span></span><span style=display:flex><span>      k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[captured][rfrom] <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[captured][rto];
+</span></span><span style=display:flex><span>      captured <span style=color:#f92672>=</span> NO_PIECE;
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (captured)
+</span></span><span style=display:flex><span>  {
+</span></span><span style=display:flex><span>      Square capsq <span style=color:#f92672>=</span> to;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// If the captured piece is a pawn, update pawn hash key, otherwise
+</span></span></span><span style=display:flex><span>      <span style=color:#75715e>// update non-pawn material.
+</span></span></span><span style=display:flex><span>      <span style=color:#66d9ef>if</span> (type_of(captured) <span style=color:#f92672>==</span> PAWN)
+</span></span><span style=display:flex><span>      {
+</span></span><span style=display:flex><span>          <span style=color:#66d9ef>if</span> (type_of(m) <span style=color:#f92672>==</span> ENPASSANT)
+</span></span><span style=display:flex><span>          {
+</span></span><span style=display:flex><span>              capsq <span style=color:#f92672>-=</span> pawn_push(us);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>              assert(pc <span style=color:#f92672>==</span> make_piece(us, PAWN));
+</span></span><span style=display:flex><span>              assert(to <span style=color:#f92672>==</span> st<span style=color:#f92672>-&gt;</span>epSquare);
+</span></span><span style=display:flex><span>              assert(relative_rank(us, to) <span style=color:#f92672>==</span> RANK_6);
+</span></span><span style=display:flex><span>              assert(piece_on(to) <span style=color:#f92672>==</span> NO_PIECE);
+</span></span><span style=display:flex><span>              assert(piece_on(capsq) <span style=color:#f92672>==</span> make_piece(them, PAWN));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>              board[capsq] <span style=color:#f92672>=</span> NO_PIECE; <span style=color:#75715e>// Not done by remove_piece()
+</span></span></span><span style=display:flex><span>          }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>pawnKey <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[captured][capsq];
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>else</span>
+</span></span><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>nonPawnMaterial[them] <span style=color:#f92672>-=</span> PieceValue[MG][captured];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// Update board and piece lists
+</span></span></span><span style=display:flex><span>      remove_piece(captured, capsq);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// Update material hash key and prefetch access to materialTable
+</span></span></span><span style=display:flex><span>      k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[captured][capsq];
+</span></span><span style=display:flex><span>      st<span style=color:#f92672>-&gt;</span>materialKey <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[captured][pieceCount[captured]];
+</span></span><span style=display:flex><span>      prefetch(thisThread<span style=color:#f92672>-&gt;</span>materialTable[st<span style=color:#f92672>-&gt;</span>materialKey]);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// Update incremental scores
+</span></span></span><span style=display:flex><span>      st<span style=color:#f92672>-&gt;</span>psq <span style=color:#f92672>-=</span> PSQT<span style=color:#f92672>::</span>psq[captured][capsq];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// Reset rule 50 counter
+</span></span></span><span style=display:flex><span>      st<span style=color:#f92672>-&gt;</span>rule50 <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Update hash key
+</span></span></span><span style=display:flex><span>  k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[pc][from] <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[pc][to];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Reset en passant square
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (st<span style=color:#f92672>-&gt;</span>epSquare <span style=color:#f92672>!=</span> SQ_NONE)
+</span></span><span style=display:flex><span>  {
+</span></span><span style=display:flex><span>      k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>enpassant[file_of(st<span style=color:#f92672>-&gt;</span>epSquare)];
+</span></span><span style=display:flex><span>      st<span style=color:#f92672>-&gt;</span>epSquare <span style=color:#f92672>=</span> SQ_NONE;
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Update castling rights if needed
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (st<span style=color:#f92672>-&gt;</span>castlingRights <span style=color:#f92672>&amp;&amp;</span> (castlingRightsMask[from] <span style=color:#f92672>|</span> castlingRightsMask[to]))
+</span></span><span style=display:flex><span>  {
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>int</span> cr <span style=color:#f92672>=</span> castlingRightsMask[from] <span style=color:#f92672>|</span> castlingRightsMask[to];
+</span></span><span style=display:flex><span>      k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>castling[st<span style=color:#f92672>-&gt;</span>castlingRights <span style=color:#f92672>&amp;</span> cr];
+</span></span><span style=display:flex><span>      st<span style=color:#f92672>-&gt;</span>castlingRights <span style=color:#f92672>&amp;=</span> <span style=color:#f92672>~</span>cr;
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Move the piece. The tricky Chess960 castling is handled earlier
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (type_of(m) <span style=color:#f92672>!=</span> CASTLING)
+</span></span><span style=display:flex><span>      move_piece(pc, from, to);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// If the moving piece is a pawn do some special extra work
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (type_of(pc) <span style=color:#f92672>==</span> PAWN)
+</span></span><span style=display:flex><span>  {
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// Set en-passant square if the moved pawn can be captured
+</span></span></span><span style=display:flex><span>      <span style=color:#66d9ef>if</span> (   (<span style=color:#66d9ef>int</span>(to) <span style=color:#f92672>^</span> <span style=color:#66d9ef>int</span>(from)) <span style=color:#f92672>==</span> <span style=color:#ae81ff>16</span>
+</span></span><span style=display:flex><span>          <span style=color:#f92672>&amp;&amp;</span> (attacks_from<span style=color:#f92672>&lt;</span>PAWN<span style=color:#f92672>&gt;</span>(to <span style=color:#f92672>-</span> pawn_push(us), us) <span style=color:#f92672>&amp;</span> pieces(them, PAWN)))
+</span></span><span style=display:flex><span>      {
+</span></span><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>epSquare <span style=color:#f92672>=</span> (from <span style=color:#f92672>+</span> to) <span style=color:#f92672>/</span> <span style=color:#ae81ff>2</span>;
+</span></span><span style=display:flex><span>          k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>enpassant[file_of(st<span style=color:#f92672>-&gt;</span>epSquare)];
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>else</span> <span style=color:#a6e22e>if</span> (type_of(m) <span style=color:#f92672>==</span> PROMOTION)
+</span></span><span style=display:flex><span>      {
+</span></span><span style=display:flex><span>          Piece promotion <span style=color:#f92672>=</span> make_piece(us, promotion_type(m));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          assert(relative_rank(us, to) <span style=color:#f92672>==</span> RANK_8);
+</span></span><span style=display:flex><span>          assert(type_of(promotion) <span style=color:#f92672>&gt;=</span> KNIGHT <span style=color:#f92672>&amp;&amp;</span> type_of(promotion) <span style=color:#f92672>&lt;=</span> QUEEN);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          remove_piece(pc, to);
+</span></span><span style=display:flex><span>          put_piece(promotion, to);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e>// Update hash keys
+</span></span></span><span style=display:flex><span>          k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[pc][to] <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[promotion][to];
+</span></span><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>pawnKey <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[pc][to];
+</span></span><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>materialKey <span style=color:#f92672>^=</span>  Zobrist<span style=color:#f92672>::</span>psq[promotion][pieceCount[promotion]<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]
+</span></span><span style=display:flex><span>                            <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[pc][pieceCount[pc]];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e>// Update incremental score
+</span></span></span><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>psq <span style=color:#f92672>+=</span> PSQT<span style=color:#f92672>::</span>psq[promotion][to] <span style=color:#f92672>-</span> PSQT<span style=color:#f92672>::</span>psq[pc][to];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e>// Update material
+</span></span></span><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>nonPawnMaterial[us] <span style=color:#f92672>+=</span> PieceValue[MG][promotion];
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// Update pawn hash key and prefetch access to pawnsTable
+</span></span></span><span style=display:flex><span>      st<span style=color:#f92672>-&gt;</span>pawnKey <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[pc][from] <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[pc][to];
+</span></span><span style=display:flex><span>      prefetch(thisThread<span style=color:#f92672>-&gt;</span>pawnsTable[st<span style=color:#f92672>-&gt;</span>pawnKey]);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// Reset rule 50 draw counter
+</span></span></span><span style=display:flex><span>      st<span style=color:#f92672>-&gt;</span>rule50 <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Update incremental scores
+</span></span></span><span style=display:flex><span>  st<span style=color:#f92672>-&gt;</span>psq <span style=color:#f92672>+=</span> PSQT<span style=color:#f92672>::</span>psq[pc][to] <span style=color:#f92672>-</span> PSQT<span style=color:#f92672>::</span>psq[pc][from];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Set capture piece
+</span></span></span><span style=display:flex><span>  st<span style=color:#f92672>-&gt;</span>capturedPiece <span style=color:#f92672>=</span> captured;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Update the key with the final value
+</span></span></span><span style=display:flex><span>  st<span style=color:#f92672>-&gt;</span>key <span style=color:#f92672>=</span> k;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Calculate checkers bitboard (if move gives check)
+</span></span></span><span style=display:flex><span>  st<span style=color:#f92672>-&gt;</span>checkersBB <span style=color:#f92672>=</span> givesCheck <span style=color:#f92672>?</span> attackers_to(square<span style=color:#f92672>&lt;</span>KING<span style=color:#f92672>&gt;</span>(them)) <span style=color:#f92672>&amp;</span> pieces(us) <span style=color:#f92672>:</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  sideToMove <span style=color:#f92672>=</span> <span style=color:#f92672>~</span>sideToMove;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Update king attacks used for fast check detection
+</span></span></span><span style=display:flex><span>  set_check_info(st);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  assert(pos_is_ok());
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h4 id=step-by-step-breakdown>Step-by-Step Breakdown<a hidden class=anchor aria-hidden=true href=#step-by-step-breakdown>#</a></h4><h5 id=phase-1-sanity-checks-and-bookkeeping>Phase 1: Sanity checks and bookkeeping<a hidden class=anchor aria-hidden=true href=#phase-1-sanity-checks-and-bookkeeping>#</a></h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>assert(is_ok(m));
+</span></span><span style=display:flex><span>assert(<span style=color:#f92672>&amp;</span>newSt <span style=color:#f92672>!=</span> st);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>++</span>nodes;
+</span></span><span style=display:flex><span>Key k <span style=color:#f92672>=</span> st<span style=color:#f92672>-&gt;</span>key <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>side;
+</span></span></code></pre></div><ul><li>Ensures the move encoding is valid</li><li>Ensures we don’t overwrite the current state</li><li>Increments node counter (used for search statistics)</li><li>Flips side-to-move bit in the Zobrist key, k is a working copy of the hash key, updated incrementally.</li></ul><h5 id=phase-2-stateinfo-chaining-undo-mechanism>Phase 2: StateInfo chaining (undo mechanism)<a hidden class=anchor aria-hidden=true href=#phase-2-stateinfo-chaining-undo-mechanism>#</a></h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>std<span style=color:#f92672>::</span>memcpy(<span style=color:#f92672>&amp;</span>newSt, st, offsetof(StateInfo, key));
+</span></span><span style=display:flex><span>newSt.previous <span style=color:#f92672>=</span> st;
+</span></span><span style=display:flex><span>st <span style=color:#f92672>=</span> <span style=color:#f92672>&amp;</span>newSt;
+</span></span></code></pre></div><ul><li>Copies all fields up to key</li><li>Fields after key will be recomputed</li><li>Links the new state to the previous one (stack-style undo)</li><li>Advances the st pointer</li></ul><h5 id=phase-3-ply-counters>Phase 3: Ply counters<a hidden class=anchor aria-hidden=true href=#phase-3-ply-counters>#</a></h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#f92672>++</span>gamePly;
+</span></span><span style=display:flex><span><span style=color:#f92672>++</span>st<span style=color:#f92672>-&gt;</span>rule50;
+</span></span><span style=display:flex><span><span style=color:#f92672>++</span>st<span style=color:#f92672>-&gt;</span>pliesFromNull;
+</span></span></code></pre></div><ul><li>gamePly: depth from game start</li><li>rule50: increments unless reset later</li><li>pliesFromNull: prevents consecutive null moves</li></ul><h5 id=phase-4-decode-move-and-involved-pieces>Phase 4: Decode move and involved pieces<a hidden class=anchor aria-hidden=true href=#phase-4-decode-move-and-involved-pieces>#</a></h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>Color us <span style=color:#f92672>=</span> sideToMove;
+</span></span><span style=display:flex><span>Color them <span style=color:#f92672>=</span> <span style=color:#f92672>~</span>us;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Square from <span style=color:#f92672>=</span> from_sq(m);
+</span></span><span style=display:flex><span>Square to   <span style=color:#f92672>=</span> to_sq(m);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Piece pc <span style=color:#f92672>=</span> piece_on(from);
+</span></span><span style=display:flex><span>Piece captured <span style=color:#f92672>=</span>
+</span></span><span style=display:flex><span>    type_of(m) <span style=color:#f92672>==</span> ENPASSANT <span style=color:#f92672>?</span> make_piece(them, PAWN) <span style=color:#f92672>:</span> piece_on(to);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>assert(color_of(pc) <span style=color:#f92672>==</span> us);
+</span></span><span style=display:flex><span>assert(captured <span style=color:#f92672>==</span> NO_PIECE <span style=color:#f92672>||</span> color_of(captured) <span style=color:#f92672>==</span> (type_of(m) <span style=color:#f92672>!=</span> CASTLING <span style=color:#f92672>?</span> them : us));
+</span></span><span style=display:flex><span>assert(type_of(captured) <span style=color:#f92672>!=</span> KING);
+</span></span></code></pre></div><ul><li>Determines moving side</li><li>Determines source and destination squares</li><li>Determines captured piece (special handling for en passant)</li></ul><p>Assertions ensure:</p><ul><li>Correct colors</li><li>No king is ever captured</li></ul><h5 id=phase-5-castling-special-case-logic>Phase 5: Castling (special-case logic)<a hidden class=anchor aria-hidden=true href=#phase-5-castling-special-case-logic>#</a></h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (type_of(m) <span style=color:#f92672>==</span> CASTLING)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    assert(pc <span style=color:#f92672>==</span> make_piece(us, KING));
+</span></span><span style=display:flex><span>    assert(captured <span style=color:#f92672>==</span> make_piece(us, ROOK));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    Square rfrom, rto;
+</span></span><span style=display:flex><span>    do_castling<span style=color:#f92672>&lt;</span>true<span style=color:#f92672>&gt;</span>(us, from, to, rfrom, rto);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    st<span style=color:#f92672>-&gt;</span>psq <span style=color:#f92672>+=</span> PSQT<span style=color:#f92672>::</span>psq[captured][rto] <span style=color:#f92672>-</span> PSQT<span style=color:#f92672>::</span>psq[captured][rfrom];
+</span></span><span style=display:flex><span>    k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[captured][rfrom] <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[captured][rto];
+</span></span><span style=display:flex><span>    captured <span style=color:#f92672>=</span> NO_PIECE;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Castling is encoded as &ldquo;king captures rook&rdquo;:</p><ul><li><code>from</code> = king square (e.g., e1)</li><li><code>to</code> = rook square (e.g., h1 for kingside)</li><li><code>captured</code> = our own rook</li></ul><p><code>do_castling&lt;true>()</code> does:</p><ul><li>Moves king to final square (g1)</li><li>Moves rook to final square (f1)</li><li>Returns <code>rfrom</code> and <code>rto</code> (rook&rsquo;s old and new squares)</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>psq <span style=color:#f92672>+=</span> PSQT<span style=color:#f92672>::</span>psq[captured][rto] <span style=color:#f92672>-</span> PSQT<span style=color:#f92672>::</span>psq[captured][rfrom];
+</span></span></code></pre></div><ul><li>Remove rook&rsquo;s old position score</li><li>Add rook&rsquo;s new position score</li><li>(King&rsquo;s score updated later in main move code)</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[captured][rfrom] <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[captured][rto];
+</span></span></code></pre></div><ul><li>XOR out rook from old square</li><li>XOR in rook on new square</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>captured <span style=color:#f92672>=</span> NO_PIECE;
+</span></span></code></pre></div><ul><li>Special logic for castling is complete here, <code>captured</code> is set back to <code>NO_PIECE</code> (we don&rsquo;t actually capture in castling)</li><li>Prevents later code from treating this as a capture</li></ul><h5 id=phase-6-capture-handling>Phase 6: Capture handling<a hidden class=anchor aria-hidden=true href=#phase-6-capture-handling>#</a></h5><p>If a capture occurs: (Castling doesn&rsquo;t enter here)</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (captured)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    Square capsq <span style=color:#f92672>=</span> to;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// If the captured piece is a pawn, update pawn hash key, otherwise
+</span></span></span><span style=display:flex><span>    <span style=color:#75715e>// update non-pawn material.
+</span></span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> (type_of(captured) <span style=color:#f92672>==</span> PAWN)
+</span></span><span style=display:flex><span>    {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (type_of(m) <span style=color:#f92672>==</span> ENPASSANT)
+</span></span><span style=display:flex><span>        {
+</span></span><span style=display:flex><span>            capsq <span style=color:#f92672>-=</span> pawn_push(us);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>            assert(pc <span style=color:#f92672>==</span> make_piece(us, PAWN));
+</span></span><span style=display:flex><span>            assert(to <span style=color:#f92672>==</span> st<span style=color:#f92672>-&gt;</span>epSquare);
+</span></span><span style=display:flex><span>            assert(relative_rank(us, to) <span style=color:#f92672>==</span> RANK_6);
+</span></span><span style=display:flex><span>            assert(piece_on(to) <span style=color:#f92672>==</span> NO_PIECE);
+</span></span><span style=display:flex><span>            assert(piece_on(capsq) <span style=color:#f92672>==</span> make_piece(them, PAWN));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>            board[capsq] <span style=color:#f92672>=</span> NO_PIECE; <span style=color:#75715e>// Not done by remove_piece()
+</span></span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        st<span style=color:#f92672>-&gt;</span>pawnKey <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[captured][capsq];
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>else</span>
+</span></span><span style=display:flex><span>        st<span style=color:#f92672>-&gt;</span>nonPawnMaterial[them] <span style=color:#f92672>-=</span> PieceValue[MG][captured];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Update board and piece lists
+</span></span></span><span style=display:flex><span>    remove_piece(captured, capsq);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Update material hash key and prefetch access to materialTable
+</span></span></span><span style=display:flex><span>    k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[captured][capsq];
+</span></span><span style=display:flex><span>    st<span style=color:#f92672>-&gt;</span>materialKey <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[captured][pieceCount[captured]];
+</span></span><span style=display:flex><span>    prefetch(thisThread<span style=color:#f92672>-&gt;</span>materialTable[st<span style=color:#f92672>-&gt;</span>materialKey]);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Update incremental scores
+</span></span></span><span style=display:flex><span>    st<span style=color:#f92672>-&gt;</span>psq <span style=color:#f92672>-=</span> PSQT<span style=color:#f92672>::</span>psq[captured][capsq];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Reset rule 50 counter
+</span></span></span><span style=display:flex><span>    st<span style=color:#f92672>-&gt;</span>rule50 <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Capture square:</p><ul><li>Usually <code>to</code> (normal capture)</li><li>Exception: En passant (handled next)</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>    <span style=color:#66d9ef>if</span> (type_of(m) <span style=color:#f92672>==</span> ENPASSANT)
+</span></span><span style=display:flex><span>    {
+</span></span><span style=display:flex><span>        capsq <span style=color:#f92672>-=</span> pawn_push(us);
+</span></span></code></pre></div><ul><li>For Enpassant, captured piece is one square behind the captured square.</li></ul><pre tabindex=0><code>Example: White pawn on e5, black pawn on d5 (just moved d7-d5)
+Move: exd6 (en passant)
+
+to = d6 (target square, EMPTY)
+capsq = d6 - pawn_push(WHITE)
+      = d6 - 8
+      = d5 (where black pawn actually is)
+</code></pre><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>        board[capsq] <span style=color:#f92672>=</span> NO_PIECE; <span style=color:#75715e>// Not done by remove_piece()
+</span></span></span></code></pre></div><ul><li>Special case for Enpassant, we need to clear the mailbox board manually, for other captures it will be handled by <code>move_piece</code> later.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>pawnKey <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[captured][capsq];
+</span></span></code></pre></div><ul><li>Remove captured pawn from pawn structure hash.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>else</span>
+</span></span><span style=display:flex><span>    st<span style=color:#f92672>-&gt;</span>nonPawnMaterial[them] <span style=color:#f92672>-=</span> PieceValue[MG][captured];
+</span></span></code></pre></div><ul><li><code>nonPawnMaterial</code> excludes pawns (used for endgame detection)</li><li>Pawn captures don&rsquo;t change this value</li></ul><p><strong>Remove Captured Piece</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>remove_piece(captured, capsq);
+</span></span></code></pre></div><p><code>remove_piece()</code> does:</p><ul><li>Clear from <code>byTypeBB[type]</code></li><li>Clear from <code>byColorBB[color]</code></li><li>Remove from <code>pieceList[captured]</code></li><li>Update <code>index[]</code> array</li><li>Decrement <code>pieceCount[captured]</code></li><li>At this point, captured piece is completely out of the board.</li></ul><p><strong>Update Material Hash</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[captured][capsq];
+</span></span><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>materialKey <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[captured][pieceCount[captured]];
+</span></span></code></pre></div><ul><li>Captured piece is removed from Zobrist hash key <code>k</code></li><li>Same for <code>materialKey</code>. Remember: Material hash uses count, not square</li></ul><p><strong>Prefetch Material Table</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>prefetch(thisThread<span style=color:#f92672>-&gt;</span>materialTable[st<span style=color:#f92672>-&gt;</span>materialKey]);
+</span></span></code></pre></div><p>Prefetch explained:</p><p>Modern CPUs have cache hierarchy (L1/L2/L3). Prefetching hints the CPU to load data into cache before it&rsquo;s needed.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>prefetch(address)  <span style=color:#75715e>// → CPU instruction: load this memory into cache
+</span></span></span></code></pre></div><p>Why prefetch?</p><ul><li>We&rsquo;ll need <code>materialTable[st->materialKey]</code> soon (for evaluation)</li><li>Loading from RAM is slow (~100+ cycles)</li><li>Prefetching starts the load now (overlaps with other work)</li><li>By the time we need it, it&rsquo;s already in cache</li></ul><p><strong>Update PSQ Score</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>psq <span style=color:#f92672>-=</span> PSQT<span style=color:#f92672>::</span>psq[captured][capsq];
+</span></span></code></pre></div><ul><li>Remove captured piece&rsquo;s positional bonus from total score.</li></ul><p><strong>Reset 50-Move Rule</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>rule50 <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span></code></pre></div><ul><li>Captures reset the 50-move draw counter.</li></ul><p><strong>Update Hash for Moving Piece</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[pc][from] <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[pc][to];
+</span></span></code></pre></div><ul><li>We already removed only the captured piece from hash, this is just a piece moving from one swuare to another.</li></ul><p><strong>Reset En Passant Square</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (st<span style=color:#f92672>-&gt;</span>epSquare <span style=color:#f92672>!=</span> SQ_NONE)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>enpassant[file_of(st<span style=color:#f92672>-&gt;</span>epSquare)];
+</span></span><span style=display:flex><span>    st<span style=color:#f92672>-&gt;</span>epSquare <span style=color:#f92672>=</span> SQ_NONE;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Clear old en passant:</p><ul><li>Old state might have had en passant opportunity</li><li>Remove it from hash</li><li>Reset to <code>SQ_NONE</code></li><li>(Will be set again later if this move creates new ep opportunity)</li></ul><h5 id=phase-7-update-castling-rights>Phase 7: Update Castling Rights<a hidden class=anchor aria-hidden=true href=#phase-7-update-castling-rights>#</a></h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (st<span style=color:#f92672>-&gt;</span>castlingRights <span style=color:#f92672>&amp;&amp;</span> (castlingRightsMask[from] <span style=color:#f92672>|</span> castlingRightsMask[to]))
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>int</span> cr <span style=color:#f92672>=</span> castlingRightsMask[from] <span style=color:#f92672>|</span> castlingRightsMask[to];
+</span></span><span style=display:flex><span>    k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>castling[st<span style=color:#f92672>-&gt;</span>castlingRights <span style=color:#f92672>&amp;</span> cr];
+</span></span><span style=display:flex><span>    st<span style=color:#f92672>-&gt;</span>castlingRights <span style=color:#f92672>&amp;=</span> <span style=color:#f92672>~</span>cr;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ul><li>If <code>castlingRights</code> is present and the current move touches any of the square that disturbs any castling rights</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>int</span> cr <span style=color:#f92672>=</span> castlingRightsMask[from] <span style=color:#f92672>|</span> castlingRightsMask[to];
+</span></span></code></pre></div><ul><li>These are the castling rights lost.</li></ul><h5 id=phase-8-move-the-piece>Phase 8: Move the Piece<a hidden class=anchor aria-hidden=true href=#phase-8-move-the-piece>#</a></h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (type_of(m) <span style=color:#f92672>!=</span> CASTLING)
+</span></span><span style=display:flex><span>    move_piece(pc, from, to);
+</span></span></code></pre></div><p><code>move_piece()</code> does:</p><ul><li>Update <code>board[from]</code> and <code>board[to]</code></li><li>Update bitboards</li><li>Update <code>pieceList[]</code></li><li>Update <code>index[]</code></li></ul><p><strong>Why skip for castling?</strong></p><ul><li>Castling already moved both king and rook in <code>do_castling()</code></li><li>Would be redundant and incorrect to move again</li></ul><h5 id=phase-9-pawn-specific-handling>Phase 9: Pawn Specific handling<a hidden class=anchor aria-hidden=true href=#phase-9-pawn-specific-handling>#</a></h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>  <span style=color:#75715e>// If the moving piece is a pawn do some special extra work
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (type_of(pc) <span style=color:#f92672>==</span> PAWN)
+</span></span><span style=display:flex><span>  {
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// Set en-passant square if the moved pawn can be captured
+</span></span></span><span style=display:flex><span>      <span style=color:#66d9ef>if</span> (   (<span style=color:#66d9ef>int</span>(to) <span style=color:#f92672>^</span> <span style=color:#66d9ef>int</span>(from)) <span style=color:#f92672>==</span> <span style=color:#ae81ff>16</span>
+</span></span><span style=display:flex><span>          <span style=color:#f92672>&amp;&amp;</span> (attacks_from<span style=color:#f92672>&lt;</span>PAWN<span style=color:#f92672>&gt;</span>(to <span style=color:#f92672>-</span> pawn_push(us), us) <span style=color:#f92672>&amp;</span> pieces(them, PAWN)))
+</span></span><span style=display:flex><span>      {
+</span></span><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>epSquare <span style=color:#f92672>=</span> (from <span style=color:#f92672>+</span> to) <span style=color:#f92672>/</span> <span style=color:#ae81ff>2</span>;
+</span></span><span style=display:flex><span>          k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>enpassant[file_of(st<span style=color:#f92672>-&gt;</span>epSquare)];
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>else</span> <span style=color:#a6e22e>if</span> (type_of(m) <span style=color:#f92672>==</span> PROMOTION)
+</span></span><span style=display:flex><span>      {
+</span></span><span style=display:flex><span>          Piece promotion <span style=color:#f92672>=</span> make_piece(us, promotion_type(m));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          assert(relative_rank(us, to) <span style=color:#f92672>==</span> RANK_8);
+</span></span><span style=display:flex><span>          assert(type_of(promotion) <span style=color:#f92672>&gt;=</span> KNIGHT <span style=color:#f92672>&amp;&amp;</span> type_of(promotion) <span style=color:#f92672>&lt;=</span> QUEEN);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          remove_piece(pc, to);
+</span></span><span style=display:flex><span>          put_piece(promotion, to);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e>// Update hash keys
+</span></span></span><span style=display:flex><span>          k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[pc][to] <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[promotion][to];
+</span></span><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>pawnKey <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[pc][to];
+</span></span><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>materialKey <span style=color:#f92672>^=</span>  Zobrist<span style=color:#f92672>::</span>psq[promotion][pieceCount[promotion]<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]
+</span></span><span style=display:flex><span>                            <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[pc][pieceCount[pc]];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e>// Update incremental score
+</span></span></span><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>psq <span style=color:#f92672>+=</span> PSQT<span style=color:#f92672>::</span>psq[promotion][to] <span style=color:#f92672>-</span> PSQT<span style=color:#f92672>::</span>psq[pc][to];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e>// Update material
+</span></span></span><span style=display:flex><span>          st<span style=color:#f92672>-&gt;</span>nonPawnMaterial[us] <span style=color:#f92672>+=</span> PieceValue[MG][promotion];
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// Update pawn hash key and prefetch access to pawnsTable
+</span></span></span><span style=display:flex><span>      st<span style=color:#f92672>-&gt;</span>pawnKey <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[pc][from] <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[pc][to];
+</span></span><span style=display:flex><span>      prefetch(thisThread<span style=color:#f92672>-&gt;</span>pawnsTable[st<span style=color:#f92672>-&gt;</span>pawnKey]);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// Reset rule 50 draw counter
+</span></span></span><span style=display:flex><span>      st<span style=color:#f92672>-&gt;</span>rule50 <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>  }
+</span></span></code></pre></div><p>Pawns require extra handling because they have unique rules:</p><ul><li>double pushes create en-passant rights</li><li>promotions replace the pawn with a new piece</li><li>pawn structure is evaluated separately</li><li>pawn moves reset the 50-move draw counter</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (   (<span style=color:#66d9ef>int</span>(to) <span style=color:#f92672>^</span> <span style=color:#66d9ef>int</span>(from)) <span style=color:#f92672>==</span> <span style=color:#ae81ff>16</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>&amp;&amp;</span> (attacks_from<span style=color:#f92672>&lt;</span>PAWN<span style=color:#f92672>&gt;</span>(to <span style=color:#f92672>-</span> pawn_push(us), us) <span style=color:#f92672>&amp;</span> pieces(them, PAWN)))
+</span></span></code></pre></div><p>A pawn double push always moves exactly 16 squares in index space:</p><ul><li>White: rank 2 → rank 4</li><li>Black: rank 7 → rank 5</li></ul><p>Stockfish uses XOR instead of subtraction because it’s slightly faster and works reliably with square encoding.</p><p><strong>Can the pawn actually be captured?</strong></p><p>Meaning:</p><ul><li>look at the square the pawn passed over</li><li>generate pawn attacks from that square</li><li>check if enemy pawns exist on those attack squares</li></ul><p>So en-passant is only enabled if it is a real tactical possibility.</p><p><strong>Setting the en-passant square</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>epSquare <span style=color:#f92672>=</span> (from <span style=color:#f92672>+</span> to) <span style=color:#f92672>/</span> <span style=color:#ae81ff>2</span>;
+</span></span></code></pre></div><p>The en-passant target is the square “in between”.</p><p>Example:</p><ul><li>e2 → e4</li><li>epSquare = e3</li></ul><p>Let&rsquo;s take a scenario where blakc pawn is on d4 and white just moved pawn from e2 to e4.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>from <span style=color:#f92672>=</span> e2 <span style=color:#f92672>=</span> <span style=color:#ae81ff>12</span>
+</span></span><span style=display:flex><span>to <span style=color:#f92672>=</span> e4 <span style=color:#f92672>=</span> <span style=color:#ae81ff>28</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// Condition 1: Double push?
+</span></span></span><span style=display:flex><span>(<span style=color:#66d9ef>int</span>(to) <span style=color:#f92672>^</span> <span style=color:#66d9ef>int</span>(from)) <span style=color:#f92672>==</span> <span style=color:#ae81ff>16</span>
+</span></span><span style=display:flex><span>(<span style=color:#ae81ff>28</span> <span style=color:#f92672>^</span> <span style=color:#ae81ff>12</span>) <span style=color:#f92672>==</span> <span style=color:#ae81ff>16</span>
+</span></span><span style=display:flex><span><span style=color:#ae81ff>16</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>16</span>  <span style=color:#960050;background-color:#1e0010>✓</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// Condition 2: Can be captured?
+</span></span></span><span style=display:flex><span>to <span style=color:#f92672>-</span> pawn_push(WHITE) <span style=color:#f92672>=</span> <span style=color:#ae81ff>28</span> <span style=color:#f92672>-</span> <span style=color:#ae81ff>8</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>20</span> (e3)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>attacks_from<span style=color:#f92672>&lt;</span>PAWN<span style=color:#f92672>&gt;</span>(e3, WHITE) <span style=color:#f92672>=</span> StepAttacksBB[W_PAWN][e3]
+</span></span><span style=display:flex><span>                               <span style=color:#f92672>=</span> Bitboard{d4, f4}
+</span></span><span style=display:flex><span>                               <span style=color:#f92672>=</span> <span style=color:#ae81ff>0x0000000014000000</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>pieces(BLACK, PAWN) <span style=color:#f92672>=</span> Bitboard{d4}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>d4_and_f4 <span style=color:#f92672>&amp;</span> black_pawns <span style=color:#f92672>=</span> Bitboard{d4} <span style=color:#f92672>&amp;</span> Bitboard{d4}
+</span></span><span style=display:flex><span>                        <span style=color:#f92672>=</span> Bitboard{d4}  <span style=color:#960050;background-color:#1e0010>✓</span> Non<span style=color:#f92672>-</span>zero<span style=color:#f92672>!</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// En passant IS set:
+</span></span></span><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>epSquare <span style=color:#f92672>=</span> (e2 <span style=color:#f92672>+</span> e4) <span style=color:#f92672>/</span> <span style=color:#ae81ff>2</span> <span style=color:#f92672>=</span> (<span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>28</span>) <span style=color:#f92672>/</span> <span style=color:#ae81ff>2</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>20</span> (e3)
+</span></span></code></pre></div><p><strong>Updating the Zobrist hash</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>enpassant[file_of(st<span style=color:#f92672>-&gt;</span>epSquare)];
+</span></span></code></pre></div><p>En-passant affects legality and repetition detection, so it must be included in the position hash. Stockfish hashes only the file (not full square) because en-passant is file-dependent.</p><p><strong>Handling Pawn Promotion</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (type_of(m) <span style=color:#f92672>==</span> PROMOTION)
+</span></span></code></pre></div><p>Promotions are special because the pawn is removed and replaced by a stronger piece.</p><ol><li>Create the promoted piece</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>Piece promotion <span style=color:#f92672>=</span> make_piece(us, promotion_type(m));
+</span></span></code></pre></div><p>Example:</p><ul><li>White pawn promotes to queen → W_QUEEN</li></ul><p>Sanity checks</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>assert(relative_rank(us, to) <span style=color:#f92672>==</span> RANK_8);
+</span></span><span style=display:flex><span>assert(type_of(promotion) <span style=color:#f92672>&gt;=</span> KNIGHT <span style=color:#f92672>&amp;&amp;</span> type_of(promotion) <span style=color:#f92672>&lt;=</span> QUEEN);
+</span></span></code></pre></div><p>Promotion must occur on the last rank, and only to:</p><ul><li>Knight</li><li>Bishop</li><li>Rook</li><li>Queen</li></ul><ol start=2><li>Replace pawn with promoted piece</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>remove_piece(pc, to);
+</span></span><span style=display:flex><span>put_piece(promotion, to);
+</span></span></code></pre></div><p>So the board now contains the new piece instead of the pawn.</p><ol start=3><li>Updating Hash Keys During Promotion</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>k <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[pc][to] <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[promotion][to];
+</span></span></code></pre></div><p>Meaning:</p><ul><li>remove pawn from hash</li><li>add promoted piece to hash</li></ul><p>Pawn structure hash</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>pawnKey <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[pc][to];
+</span></span></code></pre></div><p>Pawn hash only tracks pawns, so the pawn disappears from it.</p><p>Material hash</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>materialKey <span style=color:#f92672>^=</span>  Zobrist<span style=color:#f92672>::</span>psq[promotion][pieceCount[promotion]<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]
+</span></span><span style=display:flex><span>                  <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[pc][pieceCount[pc]];
+</span></span></code></pre></div><p>MaterialKey tracks piece counts, so promotion changes:</p><ul><li>pawn count decreases</li><li>promoted piece count increases</li></ul><p>This hash is used for caching evaluation terms like bishop pair bonuses.</p><ol start=4><li>Updating Incremental Evaluation (PSQT)</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>psq <span style=color:#f92672>+=</span> PSQT<span style=color:#f92672>::</span>psq[promotion][to] <span style=color:#f92672>-</span> PSQT<span style=color:#f92672>::</span>psq[pc][to];
+</span></span></code></pre></div><p>This is an incremental update:</p><ul><li>subtract pawn-square contribution</li><li>add promoted piece-square contribution</li></ul><ol start=5><li>Updating Material Balance</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>nonPawnMaterial[us] <span style=color:#f92672>+=</span> PieceValue[MG][promotion];
+</span></span></code></pre></div><p>Promotion increases non-pawn material:</p><ul><li>pawn is removed</li><li>queen/rook/etc is added</li></ul><ol start=6><li>Updating Pawn Hash After Any Pawn Move</li></ol><p>Regardless of promotion:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>pawnKey <span style=color:#f92672>^=</span> Zobrist<span style=color:#f92672>::</span>psq[pc][from] <span style=color:#f92672>^</span> Zobrist<span style=color:#f92672>::</span>psq[pc][to];
+</span></span></code></pre></div><p>Pawn structure is extremely important, so Stockfish maintains a separate pawn hash key.</p><p>This enables a pawn evaluation cache:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>prefetch(thisThread<span style=color:#f92672>-&gt;</span>pawnsTable[st<span style=color:#f92672>-&gt;</span>pawnKey]);
+</span></span></code></pre></div><p>Meaning:</p><ul><li>pawn evaluation will be needed soon</li><li>prefetch it into CPU cache early</li></ul><h5 id=phase-10-wrap-up>Phase 10: Wrap up<a hidden class=anchor aria-hidden=true href=#phase-10-wrap-up>#</a></h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>  <span style=color:#75715e>// Update incremental scores
+</span></span></span><span style=display:flex><span>  st<span style=color:#f92672>-&gt;</span>psq <span style=color:#f92672>+=</span> PSQT<span style=color:#f92672>::</span>psq[pc][to] <span style=color:#f92672>-</span> PSQT<span style=color:#f92672>::</span>psq[pc][from];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Set capture piece
+</span></span></span><span style=display:flex><span>  st<span style=color:#f92672>-&gt;</span>capturedPiece <span style=color:#f92672>=</span> captured;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Update the key with the final value
+</span></span></span><span style=display:flex><span>  st<span style=color:#f92672>-&gt;</span>key <span style=color:#f92672>=</span> k;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Calculate checkers bitboard (if move gives check)
+</span></span></span><span style=display:flex><span>  st<span style=color:#f92672>-&gt;</span>checkersBB <span style=color:#f92672>=</span> givesCheck <span style=color:#f92672>?</span> attackers_to(square<span style=color:#f92672>&lt;</span>KING<span style=color:#f92672>&gt;</span>(them)) <span style=color:#f92672>&amp;</span> pieces(us) <span style=color:#f92672>:</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  sideToMove <span style=color:#f92672>=</span> <span style=color:#f92672>~</span>sideToMove;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Update king attacks used for fast check detection
+</span></span></span><span style=display:flex><span>  set_check_info(st);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  assert(pos_is_ok());
+</span></span></code></pre></div><p>This section completes the move by updating:</p><ul><li>evaluation bookkeeping (PSQT)</li><li>captured piece info (for undo)</li><li>final Zobrist key</li><li>check detection bitboards</li><li>side-to-move switch</li><li>king safety helper data</li></ul><p><strong>1. Incremental PSQT Update</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#75715e>// Update incremental scores
+</span></span></span><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>psq <span style=color:#f92672>+=</span> PSQT<span style=color:#f92672>::</span>psq[pc][to] <span style=color:#f92672>-</span> PSQT<span style=color:#f92672>::</span>psq[pc][from];
+</span></span></code></pre></div><p>st->psq is the piece-square evaluation score of the current position.</p><p>Instead of recomputing evaluation from scratch every move, Stockfish maintains it incrementally:</p><ul><li>Remove the piece’s contribution from the old square</li><li>Add the contribution from the new square</li></ul><p><strong>2. Store Captured Piece for Undo</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#75715e>// Set capture piece
+</span></span></span><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>capturedPiece <span style=color:#f92672>=</span> captured;
+</span></span></code></pre></div><p>Why store this?</p><p>When search backtracks, Stockfish calls:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>undo_move(m);
+</span></span></code></pre></div><p>To undo correctly, it must know:</p><ul><li>Was something captured?</li><li>What piece was it?</li><li>Where should it be restored?</li></ul><p>So <code>capturedPiece</code> is saved inside <code>StateInfo</code>.</p><p><strong>3. Finalize the Zobrist Key</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#75715e>// Update the key with the final value
+</span></span></span><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>key <span style=color:#f92672>=</span> k;
+</span></span></code></pre></div><p>What is k?</p><p>Throughout do_move(), Stockfish incrementally updated:</p><ul><li>piece-square hash changes</li><li>castling rights changes</li><li>en-passant changes</li><li>side-to-move flip</li></ul><p>Now the hash is complete.</p><p><strong>4. Compute Checkers Bitboard</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#75715e>// Calculate checkers bitboard (if move gives check)
+</span></span></span><span style=display:flex><span>st<span style=color:#f92672>-&gt;</span>checkersBB <span style=color:#f92672>=</span>
+</span></span><span style=display:flex><span>    givesCheck <span style=color:#f92672>?</span> attackers_to(square<span style=color:#f92672>&lt;</span>KING<span style=color:#f92672>&gt;</span>(them)) <span style=color:#f92672>&amp;</span> pieces(us) <span style=color:#f92672>:</span> <span style=color:#ae81ff>0</span>;
+</span></span></code></pre></div><p>What is checkersBB?</p><p>A bitboard containing all pieces currently giving check to the opponent king.</p><p>Why only if givesCheck?</p><p>Stockfish already computed earlier whether this move gives check.</p><p>So instead of recomputing always, it does:</p><ul><li>If check → compute attackers</li><li>Else → set to 0</li></ul><p>How does it work?</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>attackers_to(enemyKingSquare)
+</span></span></code></pre></div><p>returns all pieces attacking that square.</p><p>Intersect with:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>pieces(us)
+</span></span></code></pre></div><p>to keep only the current side’s attackers.</p><p>Why store it?</p><p>Later, move generation and legality checks depend heavily on:</p><ul><li>“Are we in check?”</li><li>“Who is checking us?”</li></ul><p><strong>5. Switch Side to Move</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>sideToMove <span style=color:#f92672>=</span> <span style=color:#f92672>~</span>sideToMove;
+</span></span></code></pre></div><p>After making a move, it becomes the opponent’s turn.</p></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/game-mechanics/>Game Mechanics</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>

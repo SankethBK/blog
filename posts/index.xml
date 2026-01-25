@@ -1,4 +1,270 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/posts/</link><description>Recent content in Posts on Sanketh's Blog</description><generator>Hugo -- 0.154.4</generator><language>en-us</language><lastBuildDate>Sat, 10 Jan 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Zobrist Hashing</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-10-zobrist-hashing/</link><pubDate>Sat, 10 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-10-zobrist-hashing/</guid><description>&lt;h1 id="zobrist-hashing"&gt;Zobrist Hashing&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/posts/</link><description>Recent content in Posts on Sanketh's Blog</description><generator>Hugo -- 0.154.5</generator><language>en-us</language><lastBuildDate>Sun, 25 Jan 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>PSQT (Piece-Square Tables)</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-25-psqt/</link><pubDate>Sun, 25 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-25-psqt/</guid><description>&lt;h1 id="psqt-piece-square-tables"&gt;PSQT (Piece-Square Tables)&lt;/h1&gt;
+&lt;h2 id="1-what-is-psqt"&gt;1. What is PSQT?&lt;/h2&gt;
+&lt;p&gt;It is a traditional evaluation technique where every piece gets:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;a base material value (pawn = 100, queen = 900…)&lt;/li&gt;
+&lt;li&gt;plus a square bonus/penalty depending on where it stands&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Example intuition:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Knights are better in the center → bonus on d4/e4&lt;/li&gt;
+&lt;li&gt;Pawns advanced are better → bonus on 6th/7th rank&lt;/li&gt;
+&lt;li&gt;King is safer in corner early → penalty for being central in middlegame&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;So evaluation includes:&lt;/p&gt;</description></item><item><title>Game Mechanics</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-12-game-mechanics/</link><pubDate>Mon, 12 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-12-game-mechanics/</guid><description>&lt;p&gt;We will go through some of the functions which are part of core game mechanics&lt;/p&gt;
+&lt;h1 id="game-mechanics"&gt;Game Mechanics&lt;/h1&gt;
+&lt;h2 id="1-piece-movement"&gt;1. Piece Movement&lt;/h2&gt;
+&lt;h3 id="1-do_move"&gt;1. do_move&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Purpose&lt;/strong&gt;: Execute a move and update all position state incrementally.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Critical for performance&lt;/strong&gt;: This function is called &lt;strong&gt;millions of times per second&lt;/strong&gt; during search. Every optimization matters.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Preconditions&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Move &lt;code&gt;m&lt;/code&gt; must be &lt;strong&gt;legal&lt;/strong&gt; (pseudo-legal moves should be filtered first)&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;newSt&lt;/code&gt; must be a &lt;strong&gt;different&lt;/strong&gt; StateInfo object than current state&lt;/li&gt;
+&lt;li&gt;Caller provides &lt;code&gt;givesCheck&lt;/code&gt; flag (optional optimization to avoid recalculating)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id="function-structure-overview"&gt;Function Structure Overview&lt;/h4&gt;
+&lt;ol&gt;
+&lt;li&gt;Setup and assertions&lt;/li&gt;
+&lt;li&gt;Copy old state → new state&lt;/li&gt;
+&lt;li&gt;Increment counters&lt;/li&gt;
+&lt;li&gt;Handle castling (special case)&lt;/li&gt;
+&lt;li&gt;Handle captures&lt;/li&gt;
+&lt;li&gt;Update position hash&lt;/li&gt;
+&lt;li&gt;Reset en passant&lt;/li&gt;
+&lt;li&gt;Update castling rights&lt;/li&gt;
+&lt;li&gt;Move the piece&lt;/li&gt;
+&lt;li&gt;Handle pawn moves (en passant, promotion)&lt;/li&gt;
+&lt;li&gt;Update incremental scores&lt;/li&gt;
+&lt;li&gt;Finalize state&lt;/li&gt;
+&lt;li&gt;Flip side to move&lt;/li&gt;
+&lt;li&gt;Compute check info&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;/// Position::do_move() makes a move, and saves all information necessary
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;/// to a StateInfo object. The move is assumed to be legal. Pseudo-legal
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;/// moves should be filtered out before this function is called.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;void&lt;/span&gt; Position&lt;span style="color:#f92672"&gt;::&lt;/span&gt;do_move(Move m, StateInfo&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; newSt, &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; givesCheck) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(is_ok(m));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt &lt;span style="color:#f92672"&gt;!=&lt;/span&gt; st);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;++&lt;/span&gt;nodes;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Key k &lt;span style="color:#f92672"&gt;=&lt;/span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;key &lt;span style="color:#f92672"&gt;^&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;side;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Copy some fields of the old state to our new StateInfo object except the
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// ones which are going to be recalculated from scratch anyway and then switch
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// our state pointer to point to the new (ready to be updated) state.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; std&lt;span style="color:#f92672"&gt;::&lt;/span&gt;memcpy(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt, st, offsetof(StateInfo, key));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; newSt.previous &lt;span style="color:#f92672"&gt;=&lt;/span&gt; st;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Increment ply counters. In particular, rule50 will be reset to zero later on
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// in case of a capture or a pawn move.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;++&lt;/span&gt;gamePly;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;++&lt;/span&gt;st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;rule50;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;++&lt;/span&gt;st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;pliesFromNull;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Color us &lt;span style="color:#f92672"&gt;=&lt;/span&gt; sideToMove;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Color them &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;~&lt;/span&gt;us;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Square from &lt;span style="color:#f92672"&gt;=&lt;/span&gt; from_sq(m);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Square to &lt;span style="color:#f92672"&gt;=&lt;/span&gt; to_sq(m);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Piece pc &lt;span style="color:#f92672"&gt;=&lt;/span&gt; piece_on(from);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Piece captured &lt;span style="color:#f92672"&gt;=&lt;/span&gt; type_of(m) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; ENPASSANT &lt;span style="color:#f92672"&gt;?&lt;/span&gt; make_piece(them, PAWN) &lt;span style="color:#f92672"&gt;:&lt;/span&gt; piece_on(to);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(color_of(pc) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; us);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(captured &lt;span style="color:#f92672"&gt;==&lt;/span&gt; NO_PIECE &lt;span style="color:#f92672"&gt;||&lt;/span&gt; color_of(captured) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; (type_of(m) &lt;span style="color:#f92672"&gt;!=&lt;/span&gt; CASTLING &lt;span style="color:#f92672"&gt;?&lt;/span&gt; them : us));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(type_of(captured) &lt;span style="color:#f92672"&gt;!=&lt;/span&gt; KING);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (type_of(m) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; CASTLING)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(pc &lt;span style="color:#f92672"&gt;==&lt;/span&gt; make_piece(us, KING));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(captured &lt;span style="color:#f92672"&gt;==&lt;/span&gt; make_piece(us, ROOK));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Square rfrom, rto;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; do_castling&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;true&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt;(us, from, to, rfrom, rto);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;psq &lt;span style="color:#f92672"&gt;+=&lt;/span&gt; PSQT&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[captured][rto] &lt;span style="color:#f92672"&gt;-&lt;/span&gt; PSQT&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[captured][rfrom];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; k &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[captured][rfrom] &lt;span style="color:#f92672"&gt;^&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[captured][rto];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; captured &lt;span style="color:#f92672"&gt;=&lt;/span&gt; NO_PIECE;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (captured)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Square capsq &lt;span style="color:#f92672"&gt;=&lt;/span&gt; to;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// If the captured piece is a pawn, update pawn hash key, otherwise
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// update non-pawn material.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (type_of(captured) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; PAWN)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (type_of(m) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; ENPASSANT)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; capsq &lt;span style="color:#f92672"&gt;-=&lt;/span&gt; pawn_push(us);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(pc &lt;span style="color:#f92672"&gt;==&lt;/span&gt; make_piece(us, PAWN));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(to &lt;span style="color:#f92672"&gt;==&lt;/span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;epSquare);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(relative_rank(us, to) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; RANK_6);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(piece_on(to) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; NO_PIECE);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(piece_on(capsq) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; make_piece(them, PAWN));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; board[capsq] &lt;span style="color:#f92672"&gt;=&lt;/span&gt; NO_PIECE; &lt;span style="color:#75715e"&gt;// Not done by remove_piece()
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;pawnKey &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[captured][capsq];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;else&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;nonPawnMaterial[them] &lt;span style="color:#f92672"&gt;-=&lt;/span&gt; PieceValue[MG][captured];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Update board and piece lists
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; remove_piece(captured, capsq);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Update material hash key and prefetch access to materialTable
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; k &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[captured][capsq];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;materialKey &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[captured][pieceCount[captured]];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; prefetch(thisThread&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;materialTable[st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;materialKey]);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Update incremental scores
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;psq &lt;span style="color:#f92672"&gt;-=&lt;/span&gt; PSQT&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[captured][capsq];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Reset rule 50 counter
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;rule50 &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Update hash key
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; k &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[pc][from] &lt;span style="color:#f92672"&gt;^&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[pc][to];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Reset en passant square
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;epSquare &lt;span style="color:#f92672"&gt;!=&lt;/span&gt; SQ_NONE)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; k &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;enpassant[file_of(st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;epSquare)];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;epSquare &lt;span style="color:#f92672"&gt;=&lt;/span&gt; SQ_NONE;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Update castling rights if needed
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;castlingRights &lt;span style="color:#f92672"&gt;&amp;amp;&amp;amp;&lt;/span&gt; (castlingRightsMask[from] &lt;span style="color:#f92672"&gt;|&lt;/span&gt; castlingRightsMask[to]))
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt; cr &lt;span style="color:#f92672"&gt;=&lt;/span&gt; castlingRightsMask[from] &lt;span style="color:#f92672"&gt;|&lt;/span&gt; castlingRightsMask[to];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; k &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;castling[st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;castlingRights &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; cr];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;castlingRights &lt;span style="color:#f92672"&gt;&amp;amp;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;~&lt;/span&gt;cr;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Move the piece. The tricky Chess960 castling is handled earlier
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (type_of(m) &lt;span style="color:#f92672"&gt;!=&lt;/span&gt; CASTLING)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; move_piece(pc, from, to);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// If the moving piece is a pawn do some special extra work
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (type_of(pc) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; PAWN)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Set en-passant square if the moved pawn can be captured
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; ( (&lt;span style="color:#66d9ef"&gt;int&lt;/span&gt;(to) &lt;span style="color:#f92672"&gt;^&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;int&lt;/span&gt;(from)) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;16&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;&amp;amp;&amp;amp;&lt;/span&gt; (attacks_from&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;PAWN&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt;(to &lt;span style="color:#f92672"&gt;-&lt;/span&gt; pawn_push(us), us) &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; pieces(them, PAWN)))
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;epSquare &lt;span style="color:#f92672"&gt;=&lt;/span&gt; (from &lt;span style="color:#f92672"&gt;+&lt;/span&gt; to) &lt;span style="color:#f92672"&gt;/&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;2&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; k &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;enpassant[file_of(st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;epSquare)];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;else&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;if&lt;/span&gt; (type_of(m) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; PROMOTION)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Piece promotion &lt;span style="color:#f92672"&gt;=&lt;/span&gt; make_piece(us, promotion_type(m));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(relative_rank(us, to) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; RANK_8);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(type_of(promotion) &lt;span style="color:#f92672"&gt;&amp;gt;=&lt;/span&gt; KNIGHT &lt;span style="color:#f92672"&gt;&amp;amp;&amp;amp;&lt;/span&gt; type_of(promotion) &lt;span style="color:#f92672"&gt;&amp;lt;=&lt;/span&gt; QUEEN);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; remove_piece(pc, to);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; put_piece(promotion, to);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Update hash keys
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; k &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[pc][to] &lt;span style="color:#f92672"&gt;^&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[promotion][to];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;pawnKey &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[pc][to];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;materialKey &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[promotion][pieceCount[promotion]&lt;span style="color:#f92672"&gt;-&lt;/span&gt;&lt;span style="color:#ae81ff"&gt;1&lt;/span&gt;]
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;^&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[pc][pieceCount[pc]];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Update incremental score
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;psq &lt;span style="color:#f92672"&gt;+=&lt;/span&gt; PSQT&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[promotion][to] &lt;span style="color:#f92672"&gt;-&lt;/span&gt; PSQT&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[pc][to];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Update material
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;nonPawnMaterial[us] &lt;span style="color:#f92672"&gt;+=&lt;/span&gt; PieceValue[MG][promotion];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Update pawn hash key and prefetch access to pawnsTable
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;pawnKey &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[pc][from] &lt;span style="color:#f92672"&gt;^&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[pc][to];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; prefetch(thisThread&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;pawnsTable[st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;pawnKey]);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Reset rule 50 draw counter
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;rule50 &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Update incremental scores
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;psq &lt;span style="color:#f92672"&gt;+=&lt;/span&gt; PSQT&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[pc][to] &lt;span style="color:#f92672"&gt;-&lt;/span&gt; PSQT&lt;span style="color:#f92672"&gt;::&lt;/span&gt;psq[pc][from];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Set capture piece
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;capturedPiece &lt;span style="color:#f92672"&gt;=&lt;/span&gt; captured;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Update the key with the final value
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;key &lt;span style="color:#f92672"&gt;=&lt;/span&gt; k;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Calculate checkers bitboard (if move gives check)
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;checkersBB &lt;span style="color:#f92672"&gt;=&lt;/span&gt; givesCheck &lt;span style="color:#f92672"&gt;?&lt;/span&gt; attackers_to(square&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;KING&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt;(them)) &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; pieces(us) &lt;span style="color:#f92672"&gt;:&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; sideToMove &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;~&lt;/span&gt;sideToMove;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Update king attacks used for fast check detection
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; set_check_info(st);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(pos_is_ok());
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id="step-by-step-breakdown"&gt;Step-by-Step Breakdown&lt;/h4&gt;
+&lt;h5 id="phase-1-sanity-checks-and-bookkeeping"&gt;Phase 1: Sanity checks and bookkeeping&lt;/h5&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;assert(is_ok(m));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;assert(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt &lt;span style="color:#f92672"&gt;!=&lt;/span&gt; st);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;++&lt;/span&gt;nodes;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Key k &lt;span style="color:#f92672"&gt;=&lt;/span&gt; st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;key &lt;span style="color:#f92672"&gt;^&lt;/span&gt; Zobrist&lt;span style="color:#f92672"&gt;::&lt;/span&gt;side;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Ensures the move encoding is valid&lt;/li&gt;
+&lt;li&gt;Ensures we don’t overwrite the current state&lt;/li&gt;
+&lt;li&gt;Increments node counter (used for search statistics)&lt;/li&gt;
+&lt;li&gt;Flips side-to-move bit in the Zobrist key, k is a working copy of the hash key, updated incrementally.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h5 id="phase-2-stateinfo-chaining-undo-mechanism"&gt;Phase 2: StateInfo chaining (undo mechanism)&lt;/h5&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;std&lt;span style="color:#f92672"&gt;::&lt;/span&gt;memcpy(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt, st, offsetof(StateInfo, key));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;newSt.previous &lt;span style="color:#f92672"&gt;=&lt;/span&gt; st;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;st &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Copies all fields up to key&lt;/li&gt;
+&lt;li&gt;Fields after key will be recomputed&lt;/li&gt;
+&lt;li&gt;Links the new state to the previous one (stack-style undo)&lt;/li&gt;
+&lt;li&gt;Advances the st pointer&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h5 id="phase-3-ply-counters"&gt;Phase 3: Ply counters&lt;/h5&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;++&lt;/span&gt;gamePly;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;++&lt;/span&gt;st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;rule50;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;++&lt;/span&gt;st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;pliesFromNull;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;gamePly: depth from game start&lt;/li&gt;
+&lt;li&gt;rule50: increments unless reset later&lt;/li&gt;
+&lt;li&gt;pliesFromNull: prevents consecutive null moves&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h5 id="phase-4-decode-move-and-involved-pieces"&gt;Phase 4: Decode move and involved pieces&lt;/h5&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Color us &lt;span style="color:#f92672"&gt;=&lt;/span&gt; sideToMove;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Color them &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;~&lt;/span&gt;us;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Square from &lt;span style="color:#f92672"&gt;=&lt;/span&gt; from_sq(m);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Square to &lt;span style="color:#f92672"&gt;=&lt;/span&gt; to_sq(m);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Piece pc &lt;span style="color:#f92672"&gt;=&lt;/span&gt; piece_on(from);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Piece captured &lt;span style="color:#f92672"&gt;=&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; type_of(m) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; ENPASSANT &lt;span style="color:#f92672"&gt;?&lt;/span&gt; make_piece(them, PAWN) &lt;span style="color:#f92672"&gt;:&lt;/span&gt; piece_on(to);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;assert(color_of(pc) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; us);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;assert(captured &lt;span style="color:#f92672"&gt;==&lt;/span&gt; NO_PIECE &lt;span style="color:#f92672"&gt;||&lt;/span&gt; color_of(captured) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; (type_of(m) &lt;span style="color:#f92672"&gt;!=&lt;/span&gt; CASTLING &lt;span style="color:#f92672"&gt;?&lt;/span&gt; them : us));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;assert(type_of(captured) &lt;span style="color:#f92672"&gt;!=&lt;/span&gt; KING);
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Determines moving side&lt;/li&gt;
+&lt;li&gt;Determines source and destination squares&lt;/li&gt;
+&lt;li&gt;Determines captured piece (special handling for en passant)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Assertions ensure:&lt;/p&gt;</description></item><item><title>Zobrist Hashing</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-10-zobrist-hashing/</link><pubDate>Sat, 10 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-10-zobrist-hashing/</guid><description>&lt;h1 id="zobrist-hashing"&gt;Zobrist Hashing&lt;/h1&gt;
 &lt;h2 id="what-problem-zobrist-hashing-solves"&gt;What problem Zobrist hashing solves&lt;/h2&gt;
 &lt;p&gt;In a chess engine, we constantly need to:&lt;/p&gt;
 &lt;ul&gt;
