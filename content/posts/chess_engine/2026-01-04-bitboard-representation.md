@@ -462,10 +462,10 @@ flags | promo |   from      |   to
 ```
 | Bits    | Meaning                       |
 | ------- | ----------------------------- |
-| `0–5`   | **Destination square** (0–63) |
-| `6–11`  | **Origin square** (0–63)      |
-| `12–13` | **Promotion piece − 2**       |
-| `14–15` | **Special move flag**         |
+| 0–5     | Destination square (0–63)     |
+| 6–11    | Origin square (0–63)          |
+| 12–13   | Promotion piece − 2           |
+| 14–15   | Special move flag             |
 ```
 
 ### Squares (6 bits each)

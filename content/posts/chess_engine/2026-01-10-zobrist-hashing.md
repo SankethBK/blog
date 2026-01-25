@@ -149,7 +149,9 @@ Used for:
 Zobrist::side
 ```
 
+- Side is assigned with a random number at the start of the program
 - XORed once per move
+- The XOR operation sets and unsets the random number alternatively, helps in considering the move factor as part of game state hash
 - Ensures same board with different side ≠ same key
 
 ### 3. Castling rights
@@ -158,6 +160,8 @@ Zobrist::side
 Zobrist::castling[rights_mask]
 ```
 
+- Each possible castling right is assigned a random number at the start
+- Helps in considering castling rights as part of the game state hash
 - Indexed by castling-rights bitmask
 - Rights are removed incrementally
 
@@ -167,6 +171,8 @@ Zobrist::castling[rights_mask]
 Zobrist::enpassant[file]
 ```
 
+- Each possible file is assigned a random number at the start
+- Helps in considering enpassant oppurtunities as part of game state hash
 - Only the file matters (rank is implicit)
 - Only added if EP capture is legal
 - Prevents false repetition detection
