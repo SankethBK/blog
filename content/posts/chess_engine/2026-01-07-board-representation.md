@@ -338,6 +338,54 @@ int index[SQUARE_NB];
 - `index[b1]` → 0 (first white knight in pieceList)
 - Used when moving/removing pieces to update pieceList efficiently
 
+For each square on the board, index[s] stores:
+
+The index of the piece on square s inside that piece’s `pieceList[]` array (`index[square]` → position inside `pieceList[piece][…]`)
+
+**Why this exists**
+
+Stockfish maintains two parallel representations of pieces:
+	1.	Bitboards → fast attacks & occupancy
+	2.	Piece lists → fast iteration over pieces of a given type
+
+To make removals and moves O(1), Stockfish needs a way to jump directly to the piece’s position inside the list.
+
+
+#### 5. castlingRightsMask
+
+```cpp
+int castlingRightsMask[SQUARE_NB];
+```
+
+For each square, tells you which castling rights are lost if a piece moves from or to that square.
+
+This allows Stockfish to update castling rights in O(1) with no conditionals.
+
+**Why this exists**
+
+Castling rights are affected when:
+- The king moves
+- The rook moves
+- The rook is captured
+
+```
+castlingRightsMask[sq] =
+    which castling rights are invalidated
+    if a move touches this square
+```
+
+| Square     | Mask                 |
+| ---------- | -------------------- |
+| E1         | WHITE_OO | WHITE_OOO |
+| A1         | WHITE_OOO            |
+| H1         | WHITE_OO             |
+| E8         | BLACK_OO | BLACK_OOO |
+| A8         | BLACK_OOO            |
+| H8         | BLACK_OO             |
+| All others | 0                    |
+
+
+
 #### Why Multiple Representations?
 
 Redundancy for speed! Different operations need different views:
