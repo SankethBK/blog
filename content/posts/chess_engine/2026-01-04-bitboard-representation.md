@@ -601,4 +601,70 @@ StepAttacksBB[W_KNIGHT][e4] → Bitboard with d2, f2, c3, g3, c5, g5, d6, f6
 StepAttacksBB[W_KING][e1]  → Bitboard with d1, f1, d2, e2, f2
 ```
 
+## LineBB
+
+```cpp
+Bitboard LineBB[SQUARE_NB][SQUARE_NB];
+```
+
+LineBB is a precomputed bitboard table that represents:
+
+> The entire straight line passing through two squares
+> if they are aligned (same rank/file/diagonal)
+
+Otherwise:
+
+```cpp
+LineBB[a][b] = 0
+```
+
+Intuition
+
+If you pick two squares:
+- e1 and e8 → same file
+- c1 and h6 → same diagonal
+- a1 and h1 → same rank
+
+Then the squares between them lie on a straight line.
+
+
+So `LineBB[s1][s2] `is a bitboard answers:
+
+> Which squares belong to the line containing both s1 and s2?
+
+Example:
+
+Squares: e1 and e8
+
+They are aligned vertically.
+
+So `LineBB[e1][e8]` returns bitboard containing `e1 e2 e3 e4 e5 e6 e7 e8`.
+
+Squares: c1 and h6
+
+Diagonal alignment: So `LineBB[c1][h6]` returns `c1 d2 e3 f4 g5 h6`.
+
+Squares: a1 and c2
+
+Not aligned (not same file/rank/diagonal). So `LineBB[a1][c2] == 0`.
+
+### Used in aligned()
+
+
+```cpp
+aligned(from, to, kingSquare)
+```
+
+This is implemented as:
+
+```cpp
+inline bool aligned(Square a, Square b, Square c) {
+    return LineBB[a][b] & c;
+}
+```
+
+Meaning:
+
+> Is square c on the line through a and b?
+
 
