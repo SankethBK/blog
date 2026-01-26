@@ -1384,4 +1384,481 @@ aligned(from, to_sq(m), square<KING>(us))
 
 Only checked if Case 1 fails (piece IS pinned).
 
+### 2. pseudo_legal
+
+```cpp
+/// Position::pseudo_legal() takes a random move and tests whether the move is
+/// pseudo legal. It is used to validate moves from TT that can be corrupted
+/// due to SMP concurrent access or hash position key aliasing.
+
+bool Position::pseudo_legal(const Move m) const {
+
+  Color us = sideToMove;
+  Square from = from_sq(m);
+  Square to = to_sq(m);
+  Piece pc = moved_piece(m);
+
+  // Use a slower but simpler function for uncommon cases
+  if (type_of(m) != NORMAL)
+      return MoveList<LEGAL>(*this).contains(m);
+
+  // Is not a promotion, so promotion piece must be empty
+  if (promotion_type(m) - KNIGHT != NO_PIECE_TYPE)
+      return false;
+
+  // If the 'from' square is not occupied by a piece belonging to the side to
+  // move, the move is obviously not legal.
+  if (pc == NO_PIECE || color_of(pc) != us)
+      return false;
+
+  // The destination square cannot be occupied by a friendly piece
+  if (pieces(us) & to)
+      return false;
+
+  // Handle the special case of a pawn move
+  if (type_of(pc) == PAWN)
+  {
+      // We have already handled promotion moves, so destination
+      // cannot be on the 8th/1st rank.
+      if (rank_of(to) == relative_rank(us, RANK_8))
+          return false;
+
+      if (   !(attacks_from<PAWN>(from, us) & pieces(~us) & to) // Not a capture
+          && !((from + pawn_push(us) == to) && empty(to))       // Not a single push
+          && !(   (from + 2 * pawn_push(us) == to)              // Not a double push
+               && (rank_of(from) == relative_rank(us, RANK_2))
+               && empty(to)
+               && empty(to - pawn_push(us))))
+          return false;
+  }
+  else if (!(attacks_from(pc, from) & to))
+      return false;
+
+  // Evasions generator already takes care to avoid some kind of illegal moves
+  // and legal() relies on this. We therefore have to take care that the same
+  // kind of moves are filtered out here.
+  if (checkers())
+  {
+      if (type_of(pc) != KING)
+      {
+          // Double check? In this case a king move is required
+          if (more_than_one(checkers()))
+              return false;
+
+          // Our move must be a blocking evasion or a capture of the checking piece
+          if (!((between_bb(lsb(checkers()), square<KING>(us)) | checkers()) & to))
+              return false;
+      }
+      // In case of king moves under check we have to remove king so as to catch
+      // invalid moves like b1a1 when opposite queen is on c1.
+      else if (attackers_to(to, pieces() ^ from) & pieces(~us))
+          return false;
+  }
+
+  return true;
+}
+```
+
+**Purpose:** Validate that a move is **pseudo-legal** (follows piece movement rules, but may leave king in check).
+
+**Use case:** Validate moves from **transposition table** that might be corrupted due to:
+- Hash collisions (different positions with same key)
+- SMP concurrent access (race conditions)
+- Memory corruption
+
+**Pseudo-legal vs Legal:**
+- **Pseudo-legal:** Piece can physically make the move (ignoring king safety)
+- **Legal:** Pseudo-legal AND doesn't leave own king in check
+
+
+#### Function Structure
+
+1. Extract move information
+2. Handle special moves (promotion, castling, en passant) via slow path
+3. Basic validation (piece exists, colors match)
+4. Validate destination square
+5. Validate piece-specific movement rules
+6. Handle check evasions
+7. Return result
+
+#### 1. Extract Move Information
+
+```cpp
+Color us = sideToMove;
+Square from = from_sq(m);
+Square to = to_sq(m);
+Piece pc = moved_piece(m);
+```
+
+
+Standard setup:
+
+- `us`: Whose turn it is
+- `from`: Source square
+- `to`: Destination square
+- `pc`: What piece is moving (from the move encoding or board)
+
+
+#### 2. Special Move Types (Slow Path)
+
+```cpp
+// Use a slower but simpler function for uncommon cases
+if (type_of(m) != NORMAL)
+    return MoveList<LEGAL>(*this).contains(m);
+```
+
+Handle special cases by generating all legal moves:
+- `PROMOTION`: Pawn reaching 8th rank
+- `ENPASSANT`: En passant capture
+- `CASTLING`: Castling
+
+Why slow path?
+
+```cpp
+MoveList<LEGAL>(*this)  // Generates ALL legal moves for position
+.contains(m)            // Checks if m is in the list
+```
+
+This generates every legal move (expensive!) just to validate one move.
+
+**Why do this?**
+
+- Special moves have complex validation rules
+- They're rare (~5% of moves)
+- Simpler to reuse existing move generation than duplicate logic
+
+
+**Example:**
+
+```cpp
+Move m = make_move(e7, e8, PROMOTION, QUEEN);
+
+type_of(m) = PROMOTION  ✓ Not NORMAL
+
+// Generate all legal moves:
+MoveList<LEGAL> moves(*this);  // {e7e8q, e7e8r, e7e8b, e7e8n, Nf6, ...}
+
+// Check if our move is in the list:
+return moves.contains(e7e8q);  ✓ true
+```
+
+**Performance:** This is acceptable because:
+
+- TT validation is infrequent (only when probe succeeds)
+- Special moves are rare
+- Correctness > speed for this function
+
+#### 3. Promotion Validation
+
+```cpp
+// Is not a promotion, so promotion piece must be empty
+if (promotion_type(m) - KNIGHT != NO_PIECE_TYPE)
+    return false;
+```
+
+What this checks: If move type is NORMAL, there should be no promotion piece encoded. Its subtracting KNIGHT, because promotion pieces are encoded as KNIGHT - 2. 
+
+#### 4. Basic Piece Validation
+
+```cpp
+// If the 'from' square is not occupied by a piece belonging to the side to
+// move, the move is obviously not legal.
+if (pc == NO_PIECE || color_of(pc) != us)
+    return false;
+```
+
+##### Check 1: Piece exists
+
+```cpp
+pc == NO_PIECE
+```
+
+**Example of failure:**
+
+```
+Board:
+  4  . . . . . . . .  ← e4 is empty
+  
+Move: e4-e5
+
+pc = piece_on(e4) = NO_PIECE  ✗
+
+return false  // Can't move nothing!
+```
+
+##### Check 2: Correct color
+
+```cpp
+color_of(pc) != us
+```
+
+**Example of failure:**
+```
+Board:
+  4  . . . . ● . . .  ← e4 has black pawn
+  
+Side to move: WHITE
+Move: e4-e5
+
+pc = B_PAWN
+color_of(B_PAWN) = BLACK
+BLACK != WHITE  ✗
+
+return false  // Can't move opponent's piece!
+```
+
+**Why these can fail:**
+
+- Hash collision: Different position mapped to same TT entry
+- Concurrent access: Position changed while reading TT entry
+- Move encoding corruption
+
+#### 5. Destination Square Validation
+
+```cpp
+// The destination square cannot be occupied by a friendly piece
+if (pieces(us) & to)
+    return false;
+```
+
+Can't capture our own pieces:
+
+#### 6. Pawn Movement Validation
+
+```cpp
+if (type_of(pc) == PAWN)
+{
+    // We have already handled promotion moves, so destination
+    // cannot be on the 8th/1st rank.
+    if (rank_of(to) == relative_rank(us, RANK_8))
+        return false;
+```
+
+##### Check 1: Not on promotion rank
+
+Since promotions were handled earlier (slow path), a NORMAL pawn move can't end on the 8th rank.
+
+```cpp
+relative_rank(WHITE, RANK_8) = RANK_8 (8th rank for white)
+relative_rank(BLACK, RANK_8) = RANK_1 (1st rank for black, which is black's 8th)
+
+// Example:
+us = WHITE
+to = e8
+rank_of(e8) = RANK_8
+RANK_8 == RANK_8  ✗
+
+return false  // Pawn to 8th rank must be promotion!
+```
+
+##### Pawn Movement Rules
+
+```cpp
+if (   !(attacks_from<PAWN>(from, us) & pieces(~us) & to) // Not a capture
+    && !((from + pawn_push(us) == to) && empty(to))       // Not a single push
+    && !(   (from + 2 * pawn_push(us) == to)              // Not a double push
+         && (rank_of(from) == relative_rank(us, RANK_2))
+         && empty(to)
+         && empty(to - pawn_push(us))))
+    return false;
+```
+
+This is a complex condition: Move is valid if ANY of these is true:
+- Pawn capture
+- Single push
+- Double push
+
+If NONE are true → invalid.
+
+**Part 1: Pawn Capture**
+
+```cpp
+!(attacks_from<PAWN>(from, us) & pieces(~us) & to)
+```
+
+Check: Is this a valid pawn capture?
+
+```cpp
+attacks_from<PAWN>(from, us)  // Diagonal attacks from source
+& pieces(~us)                 // Enemy pieces
+& to                          // Destination square
+```
+
+Example - Valid capture:
+```cpp
+  5  . . . ○ . . . .  ← d5: black pawn
+  4  . . . . ● . . .  ← e4: white pawn
+  
+Move: e4xd5
+
+attacks_from<PAWN>(e4, WHITE) = {d5, f5}
+pieces(BLACK) = {d5, ...}
+to = d5
+
+{d5, f5} & {d5, ...} & d5 = {d5}  ✓ Non-empty (valid capture)
+!{d5} = false
+
+// This part fails, but that's OK - we check other parts
+```
+
+**Part 2: Single Push**
+
+```cpp
+!((from + pawn_push(us) == to) && empty(to))
+```
+
+Check: Is this a valid single square forward move?
+
+```cpp
+pawn_push(WHITE) = 8  (NORTH)
+pawn_push(BLACK) = -8 (SOUTH)
+
+from + pawn_push(us) == to  // Is destination one square forward?
+&& empty(to)                // Is destination empty?
+```
+
+Example - Valid single push:
+```cpp
+  5  . . . . . . . .  ← e5: empty
+  4  . . . . ● . . .  ← e4: white pawn
+  
+Move: e4-e5
+
+from + pawn_push(WHITE) = e4 + 8 = e5
+e5 == e5  ✓
+empty(e5) = true  ✓
+
+(true && true) = true
+!(true) = false
+
+// This part fails, but that's OK (valid move)
+```
+
+**Part 3: Double Push**
+
+```cpp
+!(   (from + 2 * pawn_push(us) == to)              // Two squares forward
+  && (rank_of(from) == relative_rank(us, RANK_2))  // From starting rank
+  && empty(to)                                      // Destination empty
+  && empty(to - pawn_push(us)))                    // Square in between empty
+```
+
+#### 7. Non-Pawn Movement Validation
+
+```cpp
+else if (!(attacks_from(pc, from) & to))
+    return false;
+```
+
+For knights, bishops, rooks, queens, kings:
+
+example - Valid knight move:
+
+Move: Nd3-e4
+
+```cpp
+
+attacks_from(pc, from)  // Bitboard of squares piece can attack
+& to                    // Is destination in attack set?
+
+attacks_from(W_KNIGHT, d3) & e4 = {e4}  ✓ Non-empty
+!{e5} = false
+
+// Don't return false, continue checking...
+```
+
+#### 8. Check Evasion Validation
+
+```cpp
+if (checkers())
+{
+```
+
+If we're in check, additional restrictions apply:
+
+```cpp
+if (type_of(pc) != KING)
+{
+```
+
+It means the piece we moved is not king, even though we were in check.
+
+##### 1. Double Check → Must Move King
+
+```cpp
+    // Double check? In this case a king move is required
+    if (more_than_one(checkers()))
+        return false;
+```
+
+```cpp
+checkers()  // Bitboard of pieces giving check
+more_than_one(checkers())  // Are there 2+ checkers?
+```
+
+If its double check and king hasn't moved, we can return false.
+
+##### 2. Single Check → Block or Capture
+
+```cpp
+    // Our move must be a blocking evasion or a capture of the checking piece
+    if (!((between_bb(lsb(checkers()), square<KING>(us)) | checkers()) & to))
+        return false;
+}
+```
+
+In single check, move must EITHER:
+- Block the check (move to a square between attacker and king)
+- Capture the checking piece
+
+```cpp
+(between_bb(lsb(checkers()), square<KING>(us))  // Squares between checker and king
+| checkers())                                   // OR the checker's square itself
+& to                                           // Is destination one of these?
+```
+It means we should move to a square in-between king and checker or capture the checker. 
+
+Since we know it can't be double check, we can safely extract checker by `lsb(checkers())`
+
+##### 3. King Moves Under Check
+
+```cpp
+// In case of king moves under check we have to remove king so as to catch
+// invalid moves like b1a1 when opposite queen is on c1.
+else if (attackers_to(to, pieces() ^ from) & pieces(~us))
+    return false;
+```
+
+**Special handling for king moves when in check:**
+
+```cpp
+pieces() ^ from  // Occupancy with king removed from current square
+```
+
+**Why remove king?** To detect attacks "through" the king's current square.
+
+**Example - Invalid king move:**
+
+```
+  2  . . . . . . . .
+  1  . K . q . . . .  ← b1: king, d1: black queen
+     a b c d e f g h
+     ╰───╯
+     King trying to move along queen's attack ray
+
+Move: Kb1-a1
+
+
+Without removing king:
+attackers_to(a1, pieces()) queen on d1 doesn't attack b1 and a1, since its blocked by our king.
+```
+
+#### 9. All Tests passed
+
+```cpp
+  return true;
+```
+
+
+
 
