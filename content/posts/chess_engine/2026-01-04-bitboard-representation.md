@@ -693,7 +693,7 @@ Because chess is full of “line relationships”:
 - discovering check
 - legality testing
 
-Example BetweenBB[a1][a8] returns a bitboard of these squares {a1, a2, a3, a4, a5, a6, a7, a8}
+Example BetweenBB[a1][a8] returns a bitboard of these squares {a2, a3, a4, a5, a6, a7}
 
 If squares are not aligned → empty bitboard
 
