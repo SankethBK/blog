@@ -1171,3 +1171,217 @@ It automatically restores:
 
 Without recomputation.
 
+## 2. Move Generation
+
+### 1. legal
+
+```cpp
+
+/// Position::legal() tests whether a pseudo-legal move is legal
+
+bool Position::legal(Move m) const {
+
+  assert(is_ok(m));
+
+  Color us = sideToMove;
+  Square from = from_sq(m);
+
+  assert(color_of(moved_piece(m)) == us);
+  assert(piece_on(square<KING>(us)) == make_piece(us, KING));
+
+  // En passant captures are a tricky special case. Because they are rather
+  // uncommon, we do it simply by testing whether the king is attacked after
+  // the move is made.
+  if (type_of(m) == ENPASSANT)
+  {
+      Square ksq = square<KING>(us);
+      Square to = to_sq(m);
+      Square capsq = to - pawn_push(us);
+      Bitboard occupied = (pieces() ^ from ^ capsq) | to;
+
+      assert(to == ep_square());
+      assert(moved_piece(m) == make_piece(us, PAWN));
+      assert(piece_on(capsq) == make_piece(~us, PAWN));
+      assert(piece_on(to) == NO_PIECE);
+
+      return   !(attacks_bb<  ROOK>(ksq, occupied) & pieces(~us, QUEEN, ROOK))
+            && !(attacks_bb<BISHOP>(ksq, occupied) & pieces(~us, QUEEN, BISHOP));
+  }
+```
+
+Purpose
+
+```cpp
+/// Position::legal() tests whether a pseudo-legal move is legal
+```
+
+Stockfish generates pseudo-legal moves first:
+- piece moves correctly
+- ignores king safety
+
+Then legal() filters out moves that are illegal because:
+- king is left in check
+- pinned piece moved wrongly
+- en passant reveals discovered attack
+
+#### 1. Basic Setup
+
+```cpp
+Color us = sideToMove;
+Square from = from_sq(m);
+```
+
+- us = side making the move
+- from = origin square of the move
+
+```cpp
+assert(color_of(moved_piece(m)) == us);
+assert(piece_on(square<KING>(us)) == make_piece(us, KING));
+```
+
+These ensure:
+- the moving piece belongs to the side to move
+- the king exists where expected
+
+These are debugging correctness checks.
+
+
+#### 2. Special Case 1: En Passant
+
+```cpp
+if (type_of(m) == ENPASSANT)
+```
+
+En passant is special because the captured pawn is not on the destination square.
+
+Example:
+
+```
+White pawn e5 captures d6 en passant
+Captured pawn was actually on d5
+```
+
+So removing that pawn can suddenly open a file/diagonal and expose the king.
+
+That means:
+
+> An en passant move may be pseudo-legal but illegal because it reveals check.
+
+##### Stockfish’s solution: simulate occupancy
+
+```
+Square ksq = square<KING>(us);
+Square to = to_sq(m);
+Square capsq = to - pawn_push(us);
+Bitboard occupied = (pieces() ^ from ^ capsq) | to;
+```
+
+This creates a simulated occupancy bitboard showing what the board would look like after the en passant.
+
+Breaking it down:
+
+```cpp
+pieces()        // All pieces currently on the board
+^ from          // XOR with 'from' → removes our pawn from e4
+^ capsq         // XOR with 'capsq' → removes their pawn from d5
+| to            // OR with 'to' → adds our pawn to d6
+```
+
+
+So occupied is:
+
+> what the board would look like after en passant
+
+##### Check if king becomes attacked
+
+```cpp
+return   !(attacks_bb<ROOK>(ksq, occupied) & pieces(~us, QUEEN, ROOK))
+      && !(attacks_bb<BISHOP>(ksq, occupied) & pieces(~us, QUEEN, BISHOP));
+```
+
+This checks TWO conditions (both must be true):
+
+- King not attacked by enemy rooks/queens (along ranks/files)
+- King not attacked by enemy bishops/queens (along diagonals)
+
+**Check 1: Rook/Queen Attacks**
+
+```cpp
+!(attacks_bb<ROOK>(ksq, occupied) & pieces(~us, QUEEN, ROOK))
+```
+
+```cpp
+attacks_bb<ROOK>(ksq, occupied)
+```
+**What it does:** Computes **rook attacks from the king's square** using the simulated occupancy.
+
+**Interpretation:** "If there were a rook on the king's square, what squares could it attack?"
+
+**Reverse logic:** "What squares have line-of-sight to the king along ranks/files?"
+
+```cpp
+pieces(~us, QUEEN, ROOK)
+```
+
+All enemy queens and rooks.
+
+```cpp
+attacks_bb<ROOK>(ksq, occupied) & pieces(~us, QUEEN, ROOK)
+```
+**Intersection:** Are any enemy rooks/queens on squares that have rook-line-of-sight to our king?
+
+If there was any bishop or rook in place of our king, will it see any enemy rook, bishop or queen? If so it means our king will end up in check after this move. 
+
+If intersection is non-empty → function returns false (illegal move).
+
+#### 3. Special Case 2: King Moves
+
+```cpp
+// If the moving piece is a king, check whether the destination
+// square is attacked by the opponent. Castling moves are checked
+// for legality during move generation.
+
+if (type_of(piece_on(from)) == KING)
+    return type_of(m) == CASTLING || !(attackers_to(to_sq(m)) & pieces(~us));
+```
+
+If the moving piece is the king:
+- king cannot move into check
+
+Castling rules are checked during move generation itself. 
+
+#### 4. Non-King Move Legality Check 
+
+```cpp
+  // A non-king move is legal if and only if it is not pinned or it
+  // is moving along the ray towards or away from the king.
+  return   !(pinned_pieces(us) & from)
+        ||  aligned(from, to_sq(m), square<KING>(us));
+```
+
+This handles legality for all non-king, non-en-passant moves by checking if the move would expose the king to check.
+
+```cpp
+Case 1: !(pinned_pieces(us) & from)     // Piece is NOT pinned
+   OR
+Case 2: aligned(from, to_sq(m), square<KING>(us))  // Move is along pin line
+```
+
+**Case 1: Piece is NOT Pinned**
+
+```cpp
+Bitboard pinned_pieces(Color c) const;
+```
+Returns: Bitboard of all our pieces that are pinned to our king.
+
+Bitwise and with `from` gives the intersection, it tells if the moving piece is pinned. 
+
+**Case 2: Move Along Pin Line**
+
+```cpp
+aligned(from, to_sq(m), square<KING>(us))
+```
+
+Only checked if Case 1 fails (piece IS pinned).
+
+
