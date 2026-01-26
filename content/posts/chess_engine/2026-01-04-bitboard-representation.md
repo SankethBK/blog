@@ -667,4 +667,65 @@ Meaning:
 
 > Is square c on the line through a and b?
 
+## BetweenBB
+
+```cpp
+Bitboard BetweenBB[SQUARE_NB][SQUARE_NB];
+```
+
+This is a precomputed lookup table:
+
+BetweenBB[a][b] gives the bitboard of all squares strictly between square a and square b, if they are aligned.
+
+What does “between” mean?
+
+If two squares lie on the same:
+- rank (horizontal)
+- file (vertical)
+- diagonal
+
+**Why is this useful?**
+
+Because chess is full of “line relationships”:
+- pinned pieces
+- blocking checks
+- sliding attacks (rook/bishop/queen)
+- discovering check
+- legality testing
+
+Example BetweenBB[a1][a8] returns a bitboard of these squares {a1, a2, a3, a4, a5, a6, a7, a8}
+
+If squares are not aligned → empty bitboard
+
+
+### Key usage: Blocking a check
+
+
+Suppose black queen gives check:
+
+```
+Black queen: e7
+White king:  e1
+```
+
+BetweenBB[E7][E1] = {E6,E5,E4,E3,E2}
+
+Now, if white is in check, legal responses include:
+- capture attacker
+- move king
+- block the line
+
+Stockfish uses this here:
+
+```cpp
+if (!((between_bb(checkerSq, kingSq) | checkers()) & to))
+    return false;
+```
+
+Means you must do either
+- capture the checker, or
+- land on a square between checker and king
+
+BetweenBB is precomputed for speed
+
 
