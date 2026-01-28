@@ -1859,6 +1859,146 @@ attackers_to(a1, pieces()) queen on d1 doesn't attack b1 and a1, since its block
   return true;
 ```
 
+### 3. attackers_to
+
+`attackers_to(sq)` answers the question:
+
+> “Which pieces (of either side) are currently attacking square sq?”
+
+It returns a bitboard containing all attackers.
+
+**Function Signatures**
+
+```cpp
+Bitboard attackers_to(Square s) const;
+Bitboard attackers_to(Square s, Bitboard occupied) const;
+```
+
+- `attackers_to(s)`: attackers using current board occupancy
+- `attackers_to(s, occupied)`: attackers assuming a custom occupancy mask
+
+The second one is used in tricky cases like:
+- en passant legality
+- discovered attacks
+- move simulation without actually making the move
+
+```cpp
+inline Bitboard Position::attackers_to(Square s) const {
+  return attackers_to(s, byTypeBB[ALL_PIECES]);
+}
+```
+
+```cpp
+/// Position::attackers_to() computes a bitboard of all pieces which attack a
+/// given square. Slider attacks use the occupied bitboard to indicate occupancy.
+
+Bitboard Position::attackers_to(Square s, Bitboard occupied) const {
+
+  return  (attacks_from<PAWN>(s, BLACK)    & pieces(WHITE, PAWN))
+        | (attacks_from<PAWN>(s, WHITE)    & pieces(BLACK, PAWN))
+        | (attacks_from<KNIGHT>(s)         & pieces(KNIGHT))
+        | (attacks_bb<ROOK  >(s, occupied) & pieces(ROOK,   QUEEN))
+        | (attacks_bb<BISHOP>(s, occupied) & pieces(BISHOP, QUEEN))
+        | (attacks_from<KING>(s)           & pieces(KING));
+}
+```
+
+Attackers come from 6 piece types:
+- pawns
+- knights
+- bishops
+- rooks
+- queens
+- king
+
+So conceptually:
+
+```cpp
+attackers =
+    pawn_attackers +
+    knight_attackers +
+    bishop_attackers +
+    rook_attackers +
+    queen_attackers +
+    king_attackers;
+```
+
+#### 1. Pawn Attackers
+
+Pawns are asymmetric:
+white pawns attack upward, black pawns downward.
+
+So Stockfish reverses the logic:
+
+```cpp
+(attacks_from<PAWN>(s, BLACK) & pieces(WHITE, PAWN))
+```
+
+To answer which white pawns attack the square s, stockfish asks the reverse questions: 
+
+```cpp
+attacks_from<PAWN>(s, BLACK)
+```
+If a black pawn was present in square s, which squares would it attack? 
+
+```cpp
+pieces(WHITE, PAWN)
+```
+
+This returns a bitboard with only squares containing white pawns, so the final result contains only those squares which are under attack by a hypothetical black pawn in square s, bitwise and white pawns. So final bitboard will give us all white pawns which can attack this square s. 
+
+`attacks_from<PAWN>` uses `StepAttacksBB` which is a map of precomputed attack squares. 
+
+```cpp
+template<>
+inline Bitboard Position::attacks_from<PAWN>(Square s, Color c) const {
+  return StepAttacksBB[make_piece(c, PAWN)][s];
+}
+```
 
 
+**Examples:**
+
+```cpp
+StepAttacksBB[W_PAWN][e4]  → Bitboard with d5, f5 set (white pawn attacks)
+StepAttacksBB[B_PAWN][e5]  → Bitboard with d4, f4 set (black pawn attacks)
+StepAttacksBB[W_KNIGHT][e4] → Bitboard with d2, f2, c3, g3, c5, g5, d6, f6
+StepAttacksBB[W_KING][e1]  → Bitboard with d1, f1, d2, e2, f2
+```
+
+Similar logic is used to find all black pawns attacking the square s
+
+```cpp
+(attacks_from<PAWN>(s, WHITE) & pieces(BLACK, PAWN))
+```
+
+#### 2. Knight Attacks 
+
+```cpp
+(attacks_from<KNIGHT>(s)         & pieces(KNIGHT))
+```
+
+Knights are color-independent (same attack pattern for white/black).
+
+```cpp
+attacks_from<KNIGHT>(s)  // All squares a knight on `s` could attack
+pieces(KNIGHT)           // All knights (both colors)
+```
+
+This is again a reverse lookup with same logic. 
+
+In this case, the implementation of `attacks_from` is 
+
+```cpp
+template<PieceType Pt>
+inline Bitboard Position::attacks_from(Square s) const {
+  return  Pt == BISHOP || Pt == ROOK ? attacks_bb<Pt>(s, byTypeBB[ALL_PIECES])
+        : Pt == QUEEN  ? attacks_from<ROOK>(s) | attacks_from<BISHOP>(s)
+        : StepAttacksBB[Pt][s];
+}
+```
+
+For knight also its just `StepAttacksBB[Pt][s]` after stripping all the polymorphic code
+
+#### 3. Rook Attacks (Sliding, Occupancy-Dependent)
 
