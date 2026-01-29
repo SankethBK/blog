@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Game Mechanics on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/game-mechanics/</link><description>Recent content in Game Mechanics on Sanketh's Blog</description><generator>Hugo -- 0.154.5</generator><language>en-us</language><lastBuildDate>Mon, 12 Jan 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/game-mechanics/index.xml" rel="self" type="application/rss+xml"/><item><title>Game Mechanics</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-12-game-mechanics/</link><pubDate>Mon, 12 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-12-game-mechanics/</guid><description>&lt;p&gt;We will go through some of the functions which are part of core game mechanics&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Game Mechanics on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/game-mechanics/</link><description>Recent content in Game Mechanics on Sanketh's Blog</description><generator>Hugo -- 0.155.0</generator><language>en-us</language><lastBuildDate>Mon, 12 Jan 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/game-mechanics/index.xml" rel="self" type="application/rss+xml"/><item><title>Game Mechanics</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-12-game-mechanics/</link><pubDate>Mon, 12 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-12-game-mechanics/</guid><description>&lt;p&gt;We will go through some of the functions which are part of core game mechanics&lt;/p&gt;
 &lt;h1 id="game-mechanics"&gt;Game Mechanics&lt;/h1&gt;
 &lt;h2 id="1-piece-movement"&gt;1. Piece Movement&lt;/h2&gt;
 &lt;h3 id="1-do_move"&gt;1. do_move&lt;/h3&gt;
@@ -27,7 +27,7 @@
 &lt;li&gt;Flip side to move&lt;/li&gt;
 &lt;li&gt;Compute check info&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;/// Position::do_move() makes a move, and saves all information necessary
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;/// Position::do_move() makes a move, and saves all information necessary
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;/// to a StateInfo object. The move is assumed to be legal. Pseudo-legal
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;/// moves should be filtered out before this function is called.
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
@@ -201,7 +201,7 @@
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(pos_is_ok());
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id="phase-1-sanity-checks-and-bookkeeping"&gt;Phase 1: Sanity checks and bookkeeping&lt;/h4&gt;
-&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;assert(is_ok(m));
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;assert(is_ok(m));
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;assert(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt &lt;span style="color:#f92672"&gt;!=&lt;/span&gt; st);
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;++&lt;/span&gt;nodes;
@@ -213,7 +213,7 @@
 &lt;li&gt;Flips side-to-move bit in the Zobrist key, k is a working copy of the hash key, updated incrementally.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h4 id="phase-2-stateinfo-chaining-undo-mechanism"&gt;Phase 2: StateInfo chaining (undo mechanism)&lt;/h4&gt;
-&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;std&lt;span style="color:#f92672"&gt;::&lt;/span&gt;memcpy(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt, st, offsetof(StateInfo, key));
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;std&lt;span style="color:#f92672"&gt;::&lt;/span&gt;memcpy(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt, st, offsetof(StateInfo, key));
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;newSt.previous &lt;span style="color:#f92672"&gt;=&lt;/span&gt; st;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;st &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;newSt;
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
@@ -223,7 +223,7 @@
 &lt;li&gt;Advances the st pointer&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h4 id="phase-3-ply-counters"&gt;Phase 3: Ply counters&lt;/h4&gt;
-&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;++&lt;/span&gt;gamePly;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;++&lt;/span&gt;gamePly;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;++&lt;/span&gt;st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;rule50;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;++&lt;/span&gt;st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;pliesFromNull;
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
@@ -232,7 +232,7 @@
 &lt;li&gt;pliesFromNull: prevents consecutive null moves&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h4 id="phase-4-decode-move-and-involved-pieces"&gt;Phase 4: Decode move and involved pieces&lt;/h4&gt;
-&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Color us &lt;span style="color:#f92672"&gt;=&lt;/span&gt; sideToMove;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Color us &lt;span style="color:#f92672"&gt;=&lt;/span&gt; sideToMove;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Color them &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;~&lt;/span&gt;us;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;Square from &lt;span style="color:#f92672"&gt;=&lt;/span&gt; from_sq(m);

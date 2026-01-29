@@ -1,0 +1,234 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Magic Bitboards and PEXT | Sanketh's Blog</title><meta name=keywords content="magic bitboards,pext"><meta name=description content="Magic Bitboards and PEXT
+The Problem: Sliding Piece Attacks
+Why Sliding Pieces Are Hard
+Non-sliding pieces (knight, king, pawn):
+
+Fixed attack pattern regardless of board state
+Can pre-compute all attacks at startup
+Simple lookup: StepAttacksBB[piece][square]
+
+Sliding pieces (rook, bishop, queen):
+
+Attack pattern depends on blocking pieces
+Can&rsquo;t pre-compute all possibilities (too many combinations)
+
+The Challenge
+Rook on e4 - different scenarios:
+
+Scenario 1: Empty board
+  8  . . . . X . . .
+  7  . . . . X . . .
+  6  . . . . X . . .
+  5  . . . . X . . .
+  4  X X X X R X X X  ← Attacks entire rank and file
+  3  . . . . X . . .
+  2  . . . . X . . .
+  1  . . . . X . . .
+     a b c d e f g h
+
+Scenario 2: Blocked by pieces
+  8  . . . . . . . .
+  7  . . . . . . . .
+  6  . . . . X . . .
+  5  . . . . X . . .
+  4  . . X X R X . .  ← Blocked at c4 and f4
+  3  . . . . X . . .
+  2  . . . . . . . .
+  1  . . . . . . . .
+     a b c d e f g h
+     (Pieces at: c4, e2, e6, f4)
+The question: How do we efficiently compute attacks for ANY occupancy pattern?"><meta name=author content="Sanketh"><link rel=canonical href=https://sankethbk.github.io/blog/posts/chess_engine/2026-01-29-magic-bitboards-and-pext/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.deee627d8b8d9065acc54b2c9d901e601e142335047d242a93ba7bce86f41f19.css integrity="sha256-3u5ifYuNkGWsxUssnZAeYB4UIzUEfSQqk7p7zob0Hxk=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/chess_engine/2026-01-29-magic-bitboards-and-pext/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/chess_engine/2026-01-29-magic-bitboards-and-pext/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="Magic Bitboards and PEXT"><meta property="og:description" content="Magic Bitboards and PEXT The Problem: Sliding Piece Attacks Why Sliding Pieces Are Hard Non-sliding pieces (knight, king, pawn):
+Fixed attack pattern regardless of board state Can pre-compute all attacks at startup Simple lookup: StepAttacksBB[piece][square] Sliding pieces (rook, bishop, queen):
+Attack pattern depends on blocking pieces Can’t pre-compute all possibilities (too many combinations) The Challenge Rook on e4 - different scenarios: Scenario 1: Empty board 8 . . . . X . . . 7 . . . . X . . . 6 . . . . X . . . 5 . . . . X . . . 4 X X X X R X X X ← Attacks entire rank and file 3 . . . . X . . . 2 . . . . X . . . 1 . . . . X . . . a b c d e f g h Scenario 2: Blocked by pieces 8 . . . . . . . . 7 . . . . . . . . 6 . . . . X . . . 5 . . . . X . . . 4 . . X X R X . . ← Blocked at c4 and f4 3 . . . . X . . . 2 . . . . . . . . 1 . . . . . . . . a b c d e f g h (Pieces at: c4, e2, e6, f4) The question: How do we efficiently compute attacks for ANY occupancy pattern?"><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2026-01-29T00:00:00+00:00"><meta property="article:modified_time" content="2026-01-29T00:00:00+00:00"><meta property="article:tag" content="Magic Bitboards"><meta property="article:tag" content="Pext"><meta name=twitter:card content="summary"><meta name=twitter:title content="Magic Bitboards and PEXT"><meta name=twitter:description content="Magic Bitboards and PEXT
+The Problem: Sliding Piece Attacks
+Why Sliding Pieces Are Hard
+Non-sliding pieces (knight, king, pawn):
+
+Fixed attack pattern regardless of board state
+Can pre-compute all attacks at startup
+Simple lookup: StepAttacksBB[piece][square]
+
+Sliding pieces (rook, bishop, queen):
+
+Attack pattern depends on blocking pieces
+Can&rsquo;t pre-compute all possibilities (too many combinations)
+
+The Challenge
+Rook on e4 - different scenarios:
+
+Scenario 1: Empty board
+  8  . . . . X . . .
+  7  . . . . X . . .
+  6  . . . . X . . .
+  5  . . . . X . . .
+  4  X X X X R X X X  ← Attacks entire rank and file
+  3  . . . . X . . .
+  2  . . . . X . . .
+  1  . . . . X . . .
+     a b c d e f g h
+
+Scenario 2: Blocked by pieces
+  8  . . . . . . . .
+  7  . . . . . . . .
+  6  . . . . X . . .
+  5  . . . . X . . .
+  4  . . X X R X . .  ← Blocked at c4 and f4
+  3  . . . . X . . .
+  2  . . . . . . . .
+  1  . . . . . . . .
+     a b c d e f g h
+     (Pieces at: c4, e2, e6, f4)
+The question: How do we efficiently compute attacks for ANY occupancy pattern?"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"Magic Bitboards and PEXT","item":"https://sankethbk.github.io/blog/posts/chess_engine/2026-01-29-magic-bitboards-and-pext/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Magic Bitboards and PEXT","name":"Magic Bitboards and PEXT","description":"Magic Bitboards and PEXT The Problem: Sliding Piece Attacks Why Sliding Pieces Are Hard Non-sliding pieces (knight, king, pawn):\nFixed attack pattern regardless of board state Can pre-compute all attacks at startup Simple lookup: StepAttacksBB[piece][square] Sliding pieces (rook, bishop, queen):\nAttack pattern depends on blocking pieces Can\u0026rsquo;t pre-compute all possibilities (too many combinations) The Challenge Rook on e4 - different scenarios: Scenario 1: Empty board 8 . . . . X . . . 7 . . . . X . . . 6 . . . . X . . . 5 . . . . X . . . 4 X X X X R X X X ← Attacks entire rank and file 3 . . . . X . . . 2 . . . . X . . . 1 . . . . X . . . a b c d e f g h Scenario 2: Blocked by pieces 8 . . . . . . . . 7 . . . . . . . . 6 . . . . X . . . 5 . . . . X . . . 4 . . X X R X . . ← Blocked at c4 and f4 3 . . . . X . . . 2 . . . . . . . . 1 . . . . . . . . a b c d e f g h (Pieces at: c4, e2, e6, f4) The question: How do we efficiently compute attacks for ANY occupancy pattern?\n","keywords":["magic bitboards","pext"],"articleBody":"Magic Bitboards and PEXT The Problem: Sliding Piece Attacks Why Sliding Pieces Are Hard Non-sliding pieces (knight, king, pawn):\nFixed attack pattern regardless of board state Can pre-compute all attacks at startup Simple lookup: StepAttacksBB[piece][square] Sliding pieces (rook, bishop, queen):\nAttack pattern depends on blocking pieces Can’t pre-compute all possibilities (too many combinations) The Challenge Rook on e4 - different scenarios: Scenario 1: Empty board 8 . . . . X . . . 7 . . . . X . . . 6 . . . . X . . . 5 . . . . X . . . 4 X X X X R X X X ← Attacks entire rank and file 3 . . . . X . . . 2 . . . . X . . . 1 . . . . X . . . a b c d e f g h Scenario 2: Blocked by pieces 8 . . . . . . . . 7 . . . . . . . . 6 . . . . X . . . 5 . . . . X . . . 4 . . X X R X . . ← Blocked at c4 and f4 3 . . . . X . . . 2 . . . . . . . . 1 . . . . . . . . a b c d e f g h (Pieces at: c4, e2, e6, f4) The question: How do we efficiently compute attacks for ANY occupancy pattern?\nNaive Solutions (Too Slow) Solution 1: Compute On-Demand Bitboard rook_attacks(Square sq, Bitboard occupied) { Bitboard attacks = 0; // North for (Square s = sq + 8; s \u003c= SQ_H8; s += 8) { attacks |= s; if (occupied \u0026 s) break; // Hit a piece, stop } // South for (Square s = sq - 8; s \u003e= SQ_A1; s -= 8) { attacks |= s; if (occupied \u0026 s) break; } // East, West (similar) ... return attacks; } Cost: 4 loops, up to 7 iterations each = ~20-30 cycles Called: Millions of times per second Too slow!\nSolution 2: Pre-compute Everything // For EACH square (64) and EACH possible occupancy pattern Bitboard RookAttacks[64][2^64]; // Store all possibilities Problem:\n64 squares × 2^64 occupancies = impossibly large (10^19 entries!) Would need exabytes of RAM The Insight: Most Bits Don’t Matter Relevant Occupancy For a rook on e4, only these squares matter:\n8 . . . . . . . . 7 . . . . X . . . ← Only e7 matters (not e8 - edge) 6 . . . . X . . . 5 . . . . X . . . 4 . X X X R X X . ← Only b4-d4 and f4-g4 (not a4, h4 - edges) 3 . . . . X . . . 2 . . . . X . . . 1 . . . . . . . . ← Only e2 matters (not e1 - edge) a b c d e f g h Relevant squares: {b4, c4, d4, f4, g4, e2, e3, e5, e6, e7} = 10 squares\nSimilarly for a rook in a1\nFor a rook on e4, only these squares matter:\n8 . . . . . . . . 7 X . . . . . . . 6 X . . . . . . . 5 X . . . . . . . 4 X . . . . . . . 3 X . . . . . . . 2 X . . . . . . . 1 R X X X X X X . a b c d e f g h Relevant squares: {a2, a3, a4, a5, a6, a7, b1, c1, d1, e1, f1, g1} = 12 squares\nWhy ignore edges?\nAttacks always stop at or go past the edge Occupancy of edge squares doesn’t change the attack pattern This is the maximum number of squares we would ever need for a rook.\nThe Next Idea: Perfect Hashing The Problem We Still Have Even with only relevant squares, we still need efficient lookup:\nRook on e4: 10 relevant squares → 2^10 = 1,024 possible occupancy patterns Rook on a1: 12 relevant squares → 2^12 = 4,096 possible occupancy patterns We could create a table like:\nBitboard RookAttacks[64][4096]; // Much better than 2^64! Let’s take a step back and understand what is the 4096 here, its 2^12. At worst, we might need to represent 12 squares whose occupancy affects rook reachability. Since each square can be occupied or empty, we take 2^12.\nThis means the second index is an encoded way to tell which of these relevant squares are occupied by any piece (blockers),\nConcrete Example: Rook on a1 (12 relevant squares)\n8 . . . . . . . . 7 X . . . . . . . ← a7 (relevant) 6 X . . . . . . . ← a6 (relevant) 5 X . . . . . . . ← a5 (relevant) 4 X . . . . . . . ← a4 (relevant) 3 X . . . . . . . ← a3 (relevant) 2 X . . . . . . . ← a2 (relevant) 1 R X X X X X X . ← b1,c1,d1,e1,f1,g1 (relevant) a b c d e f g h Relevant squares: {a2, a3, a4, a5, a6, a7, b1, c1, d1, e1, f1, g1} = 12 squares\nAll Possible Occupancy Patterns Pattern 0: All 12 squares empty Occupancy: [0,0,0,0,0,0,0,0,0,0,0,0] → Attacks go to edges Pattern 1: Only a2 occupied Occupancy: [1,0,0,0,0,0,0,0,0,0,0,0] → Attacks blocked at a2 vertically Pattern 2: Only a3 occupied Occupancy: [0,1,0,0,0,0,0,0,0,0,0,0] → Attacks blocked at a3 vertically Pattern 3: Both a2 and a3 occupied Occupancy: [1,1,0,0,0,0,0,0,0,0,0,0] → Attacks blocked at a2 (closer blocker) … continuing through …\nPattern 4095: All 12 squares occupied Occupancy: [1,1,1,1,1,1,1,1,1,1,1,1] → Attacks only to a2 and b1 Why We Need All Combinations Each combination produces a different attack pattern:\n// Example: Different occupancies → Different attacks // Empty board Occupancy: 000000000000 → Attacks: a2-a7, b1-g1 // Piece at a4 only Occupancy: 000100000000 → Attacks: a2-a4, b1-g1 // Piece at c1 only Occupancy: 000000010000 → Attacks: a2-a7, b1-c1 // Pieces at both a4 AND c1 Occupancy: 000100010000 → Attacks: a2-a4, b1-c1 (different from either alone!) The Table Structure So we build:\n// For rook on a1 with 12 relevant squares: Bitboard RookAttacks_a1[4096]; // One entry for each occupancy pattern RookAttacks_a1[0] = attacks when all relevant squares empty RookAttacks_a1[1] = attacks when only a2 occupied RookAttacks_a1[2] = attacks when only a3 occupied RookAttacks_a1[3] = attacks when a2 and a3 occupied ... RookAttacks_a1[4095] = attacks when all 12 squares occupied But in order to generate the second index, we must encode the information of pieces present on same rank and file into a integer.\nNaive Approach A naive way of building the second index would be to loop through the corresponding file and column and set the bits, but loops defeat the whole purpose here.\nFor a rook on a1\n// Extract relevant bits manually int index = 0; if (occupied \u0026 (1ULL \u003c\u003c 1)) index |= (1 \u003c\u003c 0); // Check a2 if (occupied \u0026 (1ULL \u003c\u003c 2)) index |= (1 \u003c\u003c 1); // Check b1 if (occupied \u0026 (1ULL \u003c\u003c 3)) index |= (1 \u003c\u003c 2); // Check c1 if (occupied \u0026 (1ULL \u003c\u003c 4)) index |= (1 \u003c\u003c 3); // Check d1 if (occupied \u0026 (1ULL \u003c\u003c 5)) index |= (1 \u003c\u003c 4); // Check e1 if (occupied \u0026 (1ULL \u003c\u003c 6)) index |= (1 \u003c\u003c 5); // Check f1 if (occupied \u0026 (1ULL \u003c\u003c 8)) index |= (1 \u003c\u003c 6); // Check a3 if (occupied \u0026 (1ULL \u003c\u003c 16)) index |= (1 \u003c\u003c 7); // Check a4 // ... 12 checks total! // Finally lookup: Bitboard attacks = RookAttacks_a1[index]; Cost: 12 conditional checks, 12 bit operations = ~30-40 CPU cycles\nThe Magic Bitboard Solution The Mask In order to quickly extract only the pieces on relevant rank and file, we can use pre-computed masks.\nFor eg: for a rook on a1, the mask will be\n8 . . . . . . . . 7 1 . . . . . . . ← a7 (relevant) 6 1 . . . . . . . ← a6 (relevant) 5 1 . . . . . . . ← a5 (relevant) 4 1 . . . . . . . ← a4 (relevant) 3 1 . . . . . . . ← a3 (relevant) 2 1 . . . . . . . ← a2 (relevant) 1 0 1 1 1 1 1 1 . ← b1,c1,d1,e1,f1,g1 (relevant) a b c d e f g h In hex it can be written as\nBitboard mask = 0x0001010101010126; // Relevant squares Similarly there are 64 squares, each square will have a mask for each type of sliding piece.\nThe Mapping Problem Once we have the mask, we can extract only the pieces on relevant rank/file/diagonal by using pre-computed mask.\noccupied \u0026 mask will give us the bitboard of only relevant pieces.\nNow for rook on a1, there can be 4096 such bitboards, we need a way to map each of them uniquely to a number between 0 and 4095.\nIt doesn’t matter which scenario corresponds to what number.\nFor eg: for rook on a1 scenario:\nindex 0 could be the case where there are no blockers index 1 could be the case where there is a blocker on c1 index 2 could be the case where there is a blocker on a6, a3. … index 4095 could be the case where are blockers on d1, g1, a4, a6 We need a function which consumes occupied \u0026 mask and outputs a unique index between 0 and 4095. Since the input space is finite and bounded, ensuring collision free output space is possible.\nHow multiplication helps The key insight: A single multiplication can rearrange bits!\nWhen you multiply two numbers, bits from the multiplicand appear at different positions in the result:\nExample: x = 0b00001010 (bits at positions 1 and 3) m = 0b00000011 (magic multiplier) x * m = ? In binary multiplication: 00001010 × 00000011 ────────── 00001010 (x × 1) 00001010 (x × 2, shifted left 1) ────────── 000011110 Notice: The bits from x appeared at new positions in the result!\nMultiplication causes the relevant occupancy bits to interact and spread into the upper bits. With the right magic constant, every different occupancy produces a unique high-bit pattern.\nThe Magic Bitboard For each scenario, eg: rook on a1, we choose a seemingly random magic bitboard\nBitboard magic = 0x0080001020400080; Magic bitboards work like a hash function:\nhash(occupancy_pattern) = ((occupancy \u0026 mask) * magic) \u003e\u003e shift Requirements:\nDifferent patterns → Different indices (no collisions) Same pattern → Same index (deterministic) Index range: 0 to 2^N - 1 (where N = number of relevant squares) For our case of rook on a1, N = 12\nBitboard magic = 0x0080001020400080; hash(occupancy_pattern) = ((occupancy \u0026 mask) * magic) \u003e\u003e 52 Reason for right shifting by 52 is:\nRight shifting by 52 ensures the range is within 0 to 4095 because 2^64 / 2^52 = 2^12. After multiplication, the useful information ends up in the top bits We discard the lower noisy bits The magic mask is not randomly selected, it is carefully found via search such that it scatters the patterns so that there is no collision in the end result of 0 to 4095.\nEach square will have its own unique magic mask for each type of sliding piece.\n","wordCount":"1954","inLanguage":"en","datePublished":"2026-01-29T00:00:00Z","dateModified":"2026-01-29T00:00:00Z","author":{"@type":"Person","name":"Sanketh"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/chess_engine/2026-01-29-magic-bitboards-and-pext/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload=renderMathInElement(document.body)></script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">Magic Bitboards and PEXT</h1><div class=post-meta><span title='2026-01-29 00:00:00 +0000 UTC'>January 29, 2026</span>&nbsp;·&nbsp;10 min&nbsp;·&nbsp;Sanketh&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/chess_engine/2026-01-29-magic-bitboards-and-pext.md rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#magic-bitboards-and-pext aria-label="Magic Bitboards and PEXT">Magic Bitboards and PEXT</a><ul><li><a href=#the-problem-sliding-piece-attacks aria-label="The Problem: Sliding Piece Attacks">The Problem: Sliding Piece Attacks</a><ul><li><a href=#why-sliding-pieces-are-hard aria-label="Why Sliding Pieces Are Hard">Why Sliding Pieces Are Hard</a></li><li><a href=#the-challenge aria-label="The Challenge">The Challenge</a></li></ul></li><li><a href=#naive-solutions-too-slow aria-label="Naive Solutions (Too Slow)">Naive Solutions (Too Slow)</a><ul><li><a href=#solution-1-compute-on-demand aria-label="Solution 1: Compute On-Demand">Solution 1: Compute On-Demand</a></li><li><a href=#solution-2-pre-compute-everything aria-label="Solution 2: Pre-compute Everything">Solution 2: Pre-compute Everything</a></li></ul></li><li><a href=#the-insight-most-bits-dont-matter aria-label="The Insight: Most Bits Don&rsquo;t Matter">The Insight: Most Bits Don&rsquo;t Matter</a><ul><li><a href=#relevant-occupancy aria-label="Relevant Occupancy">Relevant Occupancy</a></li></ul></li><li><a href=#the-next-idea-perfect-hashing aria-label="The Next Idea: Perfect Hashing">The Next Idea: Perfect Hashing</a><ul><li><a href=#the-problem-we-still-have aria-label="The Problem We Still Have">The Problem We Still Have</a><ul><li><a href=#all-possible-occupancy-patterns aria-label="All Possible Occupancy Patterns">All Possible Occupancy Patterns</a></li><li><a href=#why-we-need-all-combinations aria-label="Why We Need All Combinations">Why We Need All Combinations</a></li><li><a href=#the-table-structure aria-label="The Table Structure">The Table Structure</a></li></ul></li><li><a href=#naive-approach aria-label="Naive Approach">Naive Approach</a></li></ul></li><li><a href=#the-magic-bitboard-solution aria-label="The Magic Bitboard Solution">The Magic Bitboard Solution</a><ul><li><a href=#the-mask aria-label="The Mask">The Mask</a></li><li><a href=#the-mapping-problem aria-label="The Mapping Problem">The Mapping Problem</a></li><li><a href=#how-multiplication-helps aria-label="How multiplication helps">How multiplication helps</a></li><li><a href=#the-magic-bitboard aria-label="The Magic Bitboard">The Magic Bitboard</a></li></ul></li></ul></li></ul></div></details></div><div class=post-content><h1 id=magic-bitboards-and-pext>Magic Bitboards and PEXT<a hidden class=anchor aria-hidden=true href=#magic-bitboards-and-pext>#</a></h1><h2 id=the-problem-sliding-piece-attacks>The Problem: Sliding Piece Attacks<a hidden class=anchor aria-hidden=true href=#the-problem-sliding-piece-attacks>#</a></h2><h3 id=why-sliding-pieces-are-hard>Why Sliding Pieces Are Hard<a hidden class=anchor aria-hidden=true href=#why-sliding-pieces-are-hard>#</a></h3><p><strong>Non-sliding pieces (knight, king, pawn):</strong></p><ul><li>Fixed attack pattern regardless of board state</li><li>Can pre-compute all attacks at startup</li><li>Simple lookup: <code>StepAttacksBB[piece][square]</code></li></ul><p><strong>Sliding pieces (rook, bishop, queen):</strong></p><ul><li>Attack pattern depends on blocking pieces</li><li>Can&rsquo;t pre-compute all possibilities (too many combinations)</li></ul><h3 id=the-challenge>The Challenge<a hidden class=anchor aria-hidden=true href=#the-challenge>#</a></h3><pre tabindex=0><code>Rook on e4 - different scenarios:
+
+Scenario 1: Empty board
+  8  . . . . X . . .
+  7  . . . . X . . .
+  6  . . . . X . . .
+  5  . . . . X . . .
+  4  X X X X R X X X  ← Attacks entire rank and file
+  3  . . . . X . . .
+  2  . . . . X . . .
+  1  . . . . X . . .
+     a b c d e f g h
+
+Scenario 2: Blocked by pieces
+  8  . . . . . . . .
+  7  . . . . . . . .
+  6  . . . . X . . .
+  5  . . . . X . . .
+  4  . . X X R X . .  ← Blocked at c4 and f4
+  3  . . . . X . . .
+  2  . . . . . . . .
+  1  . . . . . . . .
+     a b c d e f g h
+     (Pieces at: c4, e2, e6, f4)
+</code></pre><p>The question: How do we efficiently compute attacks for ANY occupancy pattern?</p><h2 id=naive-solutions-too-slow>Naive Solutions (Too Slow)<a hidden class=anchor aria-hidden=true href=#naive-solutions-too-slow>#</a></h2><h3 id=solution-1-compute-on-demand>Solution 1: Compute On-Demand<a hidden class=anchor aria-hidden=true href=#solution-1-compute-on-demand>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>Bitboard <span style=color:#a6e22e>rook_attacks</span>(Square sq, Bitboard occupied) {
+</span></span><span style=display:flex><span>    Bitboard attacks <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// North
+</span></span></span><span style=display:flex><span>    <span style=color:#66d9ef>for</span> (Square s <span style=color:#f92672>=</span> sq <span style=color:#f92672>+</span> <span style=color:#ae81ff>8</span>; s <span style=color:#f92672>&lt;=</span> SQ_H8; s <span style=color:#f92672>+=</span> <span style=color:#ae81ff>8</span>) {
+</span></span><span style=display:flex><span>        attacks <span style=color:#f92672>|=</span> s;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (occupied <span style=color:#f92672>&amp;</span> s) <span style=color:#66d9ef>break</span>;  <span style=color:#75715e>// Hit a piece, stop
+</span></span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// South
+</span></span></span><span style=display:flex><span>    <span style=color:#66d9ef>for</span> (Square s <span style=color:#f92672>=</span> sq <span style=color:#f92672>-</span> <span style=color:#ae81ff>8</span>; s <span style=color:#f92672>&gt;=</span> SQ_A1; s <span style=color:#f92672>-=</span> <span style=color:#ae81ff>8</span>) {
+</span></span><span style=display:flex><span>        attacks <span style=color:#f92672>|=</span> s;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (occupied <span style=color:#f92672>&amp;</span> s) <span style=color:#66d9ef>break</span>;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// East, West (similar)
+</span></span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> attacks;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Cost: 4 loops, up to 7 iterations each = ~20-30 cycles
+Called: Millions of times per second
+Too slow!</p><h3 id=solution-2-pre-compute-everything>Solution 2: Pre-compute Everything<a hidden class=anchor aria-hidden=true href=#solution-2-pre-compute-everything>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#75715e>// For EACH square (64) and EACH possible occupancy pattern
+</span></span></span><span style=display:flex><span>Bitboard RookAttacks[<span style=color:#ae81ff>64</span>][<span style=color:#ae81ff>2</span><span style=color:#f92672>^</span><span style=color:#ae81ff>64</span>];  <span style=color:#75715e>// Store all possibilities
+</span></span></span></code></pre></div><p><strong>Problem:</strong></p><ul><li>64 squares × 2^64 occupancies = impossibly large (10^19 entries!)</li><li>Would need exabytes of RAM</li></ul><h2 id=the-insight-most-bits-dont-matter>The Insight: Most Bits Don&rsquo;t Matter<a hidden class=anchor aria-hidden=true href=#the-insight-most-bits-dont-matter>#</a></h2><h3 id=relevant-occupancy>Relevant Occupancy<a hidden class=anchor aria-hidden=true href=#relevant-occupancy>#</a></h3><p>For a rook on e4, <strong>only these squares matter</strong>:</p><pre tabindex=0><code>  8  . . . . . . . .
+  7  . . . . X . . .  ← Only e7 matters (not e8 - edge)
+  6  . . . . X . . .
+  5  . . . . X . . .
+  4  . X X X R X X .  ← Only b4-d4 and f4-g4 (not a4, h4 - edges)
+  3  . . . . X . . .
+  2  . . . . X . . .
+  1  . . . . . . . .  ← Only e2 matters (not e1 - edge)
+     a b c d e f g h
+</code></pre><p>Relevant squares: {b4, c4, d4, f4, g4, e2, e3, e5, e6, e7}
+= 10 squares</p><p>Similarly for a rook in a1</p><p>For a rook on e4, <strong>only these squares matter</strong>:</p><pre tabindex=0><code>  8  . . . . . . . .
+  7  X . . . . . . . 
+  6  X . . . . . . .
+  5  X . . . . . . .
+  4  X . . . . . . .  
+  3  X . . . . . . .
+  2  X . . . . . . .
+  1  R X X X X X X .  
+     a b c d e f g h
+</code></pre><p>Relevant squares: {a2, a3, a4, a5, a6, a7, b1, c1, d1, e1, f1, g1}
+= 12 squares</p><p><strong>Why ignore edges?</strong></p><ul><li>Attacks always <strong>stop at</strong> or <strong>go past</strong> the edge</li><li>Occupancy of edge squares doesn&rsquo;t change the attack pattern</li></ul><p>This is the maximum number of squares we would ever need for a rook.</p><h2 id=the-next-idea-perfect-hashing>The Next Idea: Perfect Hashing<a hidden class=anchor aria-hidden=true href=#the-next-idea-perfect-hashing>#</a></h2><h3 id=the-problem-we-still-have>The Problem We Still Have<a hidden class=anchor aria-hidden=true href=#the-problem-we-still-have>#</a></h3><p>Even with only relevant squares, we still need efficient lookup:</p><ul><li>Rook on e4: 10 relevant squares → 2^10 = 1,024 possible occupancy patterns</li><li>Rook on a1: 12 relevant squares → 2^12 = 4,096 possible occupancy patterns</li></ul><p>We could create a table like:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>Bitboard RookAttacks[<span style=color:#ae81ff>64</span>][<span style=color:#ae81ff>4096</span>];  <span style=color:#75715e>// Much better than 2^64!
+</span></span></span></code></pre></div><p>Let&rsquo;s take a step back and understand what is the 4096 here, its 2^12. At worst, we might need to represent 12 squares whose occupancy affects rook reachability. Since each square can be occupied or empty, we take 2^12.</p><p>This means the second index is an encoded way to tell which of these relevant squares are occupied by any piece (blockers),</p><p><strong>Concrete Example: Rook on a1 (12 relevant squares)</strong></p><pre tabindex=0><code>  8  . . . . . . . .
+  7  X . . . . . . . ← a7 (relevant)
+  6  X . . . . . . . ← a6 (relevant)
+  5  X . . . . . . . ← a5 (relevant)
+  4  X . . . . . . . ← a4 (relevant)
+  3  X . . . . . . . ← a3 (relevant)
+  2  X . . . . . . . ← a2 (relevant)
+  1  R X X X X X X . ← b1,c1,d1,e1,f1,g1 (relevant)
+     a b c d e f g h
+</code></pre><p>Relevant squares: {a2, a3, a4, a5, a6, a7, b1, c1, d1, e1, f1, g1} = 12 squares</p><h4 id=all-possible-occupancy-patterns>All Possible Occupancy Patterns<a hidden class=anchor aria-hidden=true href=#all-possible-occupancy-patterns>#</a></h4><ul><li><strong>Pattern 0:</strong> All 12 squares empty</li></ul><pre tabindex=0><code>Occupancy: [0,0,0,0,0,0,0,0,0,0,0,0] → Attacks go to edges
+</code></pre><ul><li><strong>Pattern 1:</strong> Only a2 occupied</li></ul><pre tabindex=0><code>Occupancy: [1,0,0,0,0,0,0,0,0,0,0,0] → Attacks blocked at a2 vertically
+</code></pre><ul><li><strong>Pattern 2:</strong> Only a3 occupied</li></ul><pre tabindex=0><code>Occupancy: [0,1,0,0,0,0,0,0,0,0,0,0] → Attacks blocked at a3 vertically
+</code></pre><ul><li><strong>Pattern 3:</strong> Both a2 and a3 occupied</li></ul><pre tabindex=0><code>Occupancy: [1,1,0,0,0,0,0,0,0,0,0,0] → Attacks blocked at a2 (closer blocker)
+</code></pre><p>&mldr; continuing through &mldr;</p><ul><li><strong>Pattern 4095:</strong> All 12 squares occupied</li></ul><pre tabindex=0><code>Occupancy: [1,1,1,1,1,1,1,1,1,1,1,1] → Attacks only to a2 and b1
+</code></pre><h4 id=why-we-need-all-combinations>Why We Need All Combinations<a hidden class=anchor aria-hidden=true href=#why-we-need-all-combinations>#</a></h4><p>Each combination produces a different attack pattern:</p><pre tabindex=0><code>// Example: Different occupancies → Different attacks
+
+// Empty board
+Occupancy: 000000000000 → Attacks: a2-a7, b1-g1
+
+// Piece at a4 only  
+Occupancy: 000100000000 → Attacks: a2-a4, b1-g1
+
+// Piece at c1 only
+Occupancy: 000000010000 → Attacks: a2-a7, b1-c1
+
+// Pieces at both a4 AND c1
+Occupancy: 000100010000 → Attacks: a2-a4, b1-c1 (different from either alone!)
+</code></pre><h4 id=the-table-structure>The Table Structure<a hidden class=anchor aria-hidden=true href=#the-table-structure>#</a></h4><p>So we build:</p><pre tabindex=0><code>// For rook on a1 with 12 relevant squares:
+Bitboard RookAttacks_a1[4096];  // One entry for each occupancy pattern
+
+RookAttacks_a1[0]    = attacks when all relevant squares empty
+RookAttacks_a1[1]    = attacks when only a2 occupied
+RookAttacks_a1[2]    = attacks when only a3 occupied
+RookAttacks_a1[3]    = attacks when a2 and a3 occupied
+...
+RookAttacks_a1[4095] = attacks when all 12 squares occupied
+</code></pre><p>But in order to generate the second index, we must encode the information of pieces present on same rank and file into a integer.</p><h3 id=naive-approach>Naive Approach<a hidden class=anchor aria-hidden=true href=#naive-approach>#</a></h3><p>A naive way of building the second index would be to loop through the corresponding file and column and set the bits, but loops defeat the whole purpose here.</p><p>For a rook on a1</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#75715e>// Extract relevant bits manually
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>int</span> index <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> (occupied <span style=color:#f92672>&amp;</span> (<span style=color:#ae81ff>1ULL</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>1</span>))  index <span style=color:#f92672>|=</span> (<span style=color:#ae81ff>1</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>0</span>);   <span style=color:#75715e>// Check a2
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> (occupied <span style=color:#f92672>&amp;</span> (<span style=color:#ae81ff>1ULL</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>2</span>))  index <span style=color:#f92672>|=</span> (<span style=color:#ae81ff>1</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>1</span>);   <span style=color:#75715e>// Check b1
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> (occupied <span style=color:#f92672>&amp;</span> (<span style=color:#ae81ff>1ULL</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>3</span>))  index <span style=color:#f92672>|=</span> (<span style=color:#ae81ff>1</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>2</span>);   <span style=color:#75715e>// Check c1
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> (occupied <span style=color:#f92672>&amp;</span> (<span style=color:#ae81ff>1ULL</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>4</span>))  index <span style=color:#f92672>|=</span> (<span style=color:#ae81ff>1</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>3</span>);   <span style=color:#75715e>// Check d1
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> (occupied <span style=color:#f92672>&amp;</span> (<span style=color:#ae81ff>1ULL</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>5</span>))  index <span style=color:#f92672>|=</span> (<span style=color:#ae81ff>1</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>4</span>);   <span style=color:#75715e>// Check e1
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> (occupied <span style=color:#f92672>&amp;</span> (<span style=color:#ae81ff>1ULL</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>6</span>))  index <span style=color:#f92672>|=</span> (<span style=color:#ae81ff>1</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>5</span>);   <span style=color:#75715e>// Check f1
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> (occupied <span style=color:#f92672>&amp;</span> (<span style=color:#ae81ff>1ULL</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>8</span>))  index <span style=color:#f92672>|=</span> (<span style=color:#ae81ff>1</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>6</span>);   <span style=color:#75715e>// Check a3
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> (occupied <span style=color:#f92672>&amp;</span> (<span style=color:#ae81ff>1ULL</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>16</span>)) index <span style=color:#f92672>|=</span> (<span style=color:#ae81ff>1</span> <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>7</span>);   <span style=color:#75715e>// Check a4
+</span></span></span><span style=display:flex><span><span style=color:#75715e>// ... 12 checks total!
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// Finally lookup:
+</span></span></span><span style=display:flex><span>Bitboard attacks <span style=color:#f92672>=</span> RookAttacks_a1[index];
+</span></span></code></pre></div><p><strong>Cost:</strong> 12 conditional checks, 12 bit operations = <strong>~30-40 CPU cycles</strong></p><h2 id=the-magic-bitboard-solution>The Magic Bitboard Solution<a hidden class=anchor aria-hidden=true href=#the-magic-bitboard-solution>#</a></h2><h3 id=the-mask>The Mask<a hidden class=anchor aria-hidden=true href=#the-mask>#</a></h3><p>In order to quickly extract only the pieces on relevant rank and file, we can use pre-computed masks.</p><p>For eg: for a rook on a1, the mask will be</p><pre tabindex=0><code>  8  . . . . . . . .
+  7  1 . . . . . . . ← a7 (relevant)
+  6  1 . . . . . . . ← a6 (relevant)
+  5  1 . . . . . . . ← a5 (relevant)
+  4  1 . . . . . . . ← a4 (relevant)
+  3  1 . . . . . . . ← a3 (relevant)
+  2  1 . . . . . . . ← a2 (relevant)
+  1  0 1 1 1 1 1 1 . ← b1,c1,d1,e1,f1,g1 (relevant)
+     a b c d e f g h
+</code></pre><p>In hex it can be written as</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>Bitboard mask   <span style=color:#f92672>=</span> <span style=color:#ae81ff>0x0001010101010126</span>;  <span style=color:#75715e>// Relevant squares
+</span></span></span></code></pre></div><p>Similarly there are 64 squares, each square will have a mask for each type of sliding piece.</p><h3 id=the-mapping-problem>The Mapping Problem<a hidden class=anchor aria-hidden=true href=#the-mapping-problem>#</a></h3><p>Once we have the mask, we can extract only the pieces on relevant rank/file/diagonal by using pre-computed mask.</p><p><code>occupied & mask</code> will give us the bitboard of only relevant pieces.</p><p>Now for rook on a1, there can be 4096 such bitboards, we need a way to map each of them uniquely to a number between 0 and 4095.</p><p>It doesn&rsquo;t matter which scenario corresponds to what number.</p><p>For eg: for rook on a1 scenario:</p><ul><li>index 0 could be the case where there are no blockers</li><li>index 1 could be the case where there is a blocker on c1</li><li>index 2 could be the case where there is a blocker on a6, a3.</li><li>&mldr;</li><li>index 4095 could be the case where are blockers on d1, g1, a4, a6</li></ul><p>We need a function which consumes <code>occupied & mask</code> and outputs a unique index between 0 and 4095. Since the input space is finite and bounded, ensuring collision free output space is possible.</p><h3 id=how-multiplication-helps>How multiplication helps<a hidden class=anchor aria-hidden=true href=#how-multiplication-helps>#</a></h3><p>The key insight: <strong>A single multiplication can rearrange bits!</strong></p><p>When you multiply two numbers, bits from the multiplicand appear at different positions in the result:</p><pre tabindex=0><code>Example:
+  x = 0b00001010  (bits at positions 1 and 3)
+  m = 0b00000011  (magic multiplier)
+  
+  x * m = ?
+  
+In binary multiplication:
+      00001010
+    × 00000011
+    ──────────
+      00001010  (x × 1)
+     00001010   (x × 2, shifted left 1)
+    ──────────
+     000011110
+</code></pre><p>Notice: The bits from <code>x</code> appeared at new positions in the result!</p><p>Multiplication causes the relevant occupancy bits to interact and spread into the upper bits. With the right magic constant, every different occupancy produces a unique high-bit pattern.</p><h3 id=the-magic-bitboard>The Magic Bitboard<a hidden class=anchor aria-hidden=true href=#the-magic-bitboard>#</a></h3><p>For each scenario, eg: rook on a1, we choose a seemingly random magic bitboard</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>Bitboard magic  <span style=color:#f92672>=</span> <span style=color:#ae81ff>0x0080001020400080</span>;
+</span></span></code></pre></div><p>Magic bitboards work like a hash function:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>hash(occupancy_pattern) <span style=color:#f92672>=</span> ((occupancy <span style=color:#f92672>&amp;</span> mask) <span style=color:#f92672>*</span> magic) <span style=color:#f92672>&gt;&gt;</span> shift
+</span></span></code></pre></div><p>Requirements:</p><ul><li>Different patterns → Different indices (no collisions)</li><li>Same pattern → Same index (deterministic)</li><li>Index range: 0 to 2^N - 1 (where N = number of relevant squares)</li></ul><p>For our case of rook on a1, N = 12</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>Bitboard magic  <span style=color:#f92672>=</span> <span style=color:#ae81ff>0x0080001020400080</span>;
+</span></span><span style=display:flex><span>hash(occupancy_pattern) <span style=color:#f92672>=</span> ((occupancy <span style=color:#f92672>&amp;</span> mask) <span style=color:#f92672>*</span> magic) <span style=color:#f92672>&gt;&gt;</span> <span style=color:#ae81ff>52</span>
+</span></span></code></pre></div><p>Reason for right shifting by 52 is:</p><ul><li>Right shifting by 52 ensures the range is within 0 to 4095 because 2^64 / 2^52 = 2^12.</li><li>After multiplication, the useful information ends up in the top bits</li><li>We discard the lower noisy bits</li></ul><p>The magic mask is not randomly selected, it is carefully found via search such that it scatters the patterns so that there is no collision in the end result of 0 to 4095.</p><p>Each square will have its own unique magic mask for each type of sliding piece.</p></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/magic-bitboards/>Magic Bitboards</a></li><li><a href=https://sankethbk.github.io/blog/tags/pext/>Pext</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>

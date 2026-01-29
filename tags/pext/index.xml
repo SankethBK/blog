@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Pext on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/pext/</link><description>Recent content in Pext on Sanketh's Blog</description><generator>Hugo -- 0.155.0</generator><language>en-us</language><lastBuildDate>Thu, 29 Jan 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/pext/index.xml" rel="self" type="application/rss+xml"/><item><title>Magic Bitboards and PEXT</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-29-magic-bitboards-and-pext/</link><pubDate>Thu, 29 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-29-magic-bitboards-and-pext/</guid><description>&lt;h1 id="magic-bitboards-and-pext"&gt;Magic Bitboards and PEXT&lt;/h1&gt;
+&lt;h2 id="the-problem-sliding-piece-attacks"&gt;The Problem: Sliding Piece Attacks&lt;/h2&gt;
+&lt;h3 id="why-sliding-pieces-are-hard"&gt;Why Sliding Pieces Are Hard&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Non-sliding pieces (knight, king, pawn):&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Fixed attack pattern regardless of board state&lt;/li&gt;
+&lt;li&gt;Can pre-compute all attacks at startup&lt;/li&gt;
+&lt;li&gt;Simple lookup: &lt;code&gt;StepAttacksBB[piece][square]&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Sliding pieces (rook, bishop, queen):&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Attack pattern depends on blocking pieces&lt;/li&gt;
+&lt;li&gt;Can&amp;rsquo;t pre-compute all possibilities (too many combinations)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="the-challenge"&gt;The Challenge&lt;/h3&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;Rook on e4 - different scenarios:
+Scenario 1: Empty board
+8 . . . . X . . .
+7 . . . . X . . .
+6 . . . . X . . .
+5 . . . . X . . .
+4 X X X X R X X X ← Attacks entire rank and file
+3 . . . . X . . .
+2 . . . . X . . .
+1 . . . . X . . .
+a b c d e f g h
+Scenario 2: Blocked by pieces
+8 . . . . . . . .
+7 . . . . . . . .
+6 . . . . X . . .
+5 . . . . X . . .
+4 . . X X R X . . ← Blocked at c4 and f4
+3 . . . . X . . .
+2 . . . . . . . .
+1 . . . . . . . .
+a b c d e f g h
+(Pieces at: c4, e2, e6, f4)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The question: How do we efficiently compute attacks for ANY occupancy pattern?&lt;/p&gt;</description></item></channel></rss>
