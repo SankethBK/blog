@@ -5,6 +5,9 @@ draft: false
 categories: ["chess engines"]
 tags: ["magic bitboards", "pext"]
 author: Sanketh
+references: 
+    - title: Carry Rippler
+      url: https://www.chessprogramming.org/Traversing_Subsets_of_a_Set
 ---
 
 # Magic Bitboards and PEXT
@@ -904,6 +907,63 @@ do {
 } while (b);
 ```
 
+For this square s, generate every possible blocker configuration on the relevant squares.
+
+For a rook square, you may have:
+- 12 relevant squares
+- so 2¹² = 4096 possible occupancies
+
+Stockfish must generate all of them at startup:
+- blocker pattern → correct attack bitboard
+
+So we need:
+
+```cpp
+for every subset b of mask:
+    attacks[b] = sliding_attack(...)
+```
+
+**Carry-Rippler Trick: Enumerating all subsets**
+
+The trick is:
+
+```cpp
+b = (b - mask) & mask;
+```
+
+This generates all subsets of mask in a cycle.
+
+What does “subset” mean?
+
+If:
+
+```cpp
+mask = 0b10110
+```
+
+The subset bitboards are:
+
+```cpp
+00000
+00010
+00100
+00110
+10000
+10010
+10100
+10110
+```
+
+Note: how 1st and 4th bit remain 0 in all subsets. Every subset contains only bits that exist in mask.
+
+
+**Why is this called Carry-Rippler?**
+
+Because subtraction causes a binary carry ripple through bits.
+
+When you subtract mask, the borrow propagates through the bit pattern, flipping bits in exactly the right way to produce the next subset.
+
+
 The Carry-Rippler Trick: Enumerates all subsets of masks[s]
 
 How it works:
@@ -930,3 +990,104 @@ Why `b = (b - masks[s]) & masks[s]` works:
 - Subtracting flips bits in a clever way
 - AND with mask keeps only relevant bits
 - Magically iterates through all 2^N subsets!
+
+If PEXT available: Fill table immediately
+
+```cpp
+if (HasPext)
+    attacks[s][pext(b, masks[s])] = reference[size];
+// PEXT gives us the index directly, so populate table now
+```
+
+##### Part 5: Find Magic Numbers (The Hard Part!)
+
+```cpp
+if (HasPext)
+    continue;  // Skip magic finding if we have PEXT
+
+PRNG rng(seeds[Is64Bit][rank_of(s)]);
+
+do {
+    // Generate random magic candidate
+    do
+        magics[s] = rng.sparse_rand<Bitboard>();
+    while (popcount((magics[s] * masks[s]) >> 56) < 6);
+    
+    // Test if this magic works
+    for (++current, i = 0; i < size; ++i) {
+        unsigned idx = index(s, occupancy[i]);
+        
+        if (age[idx] < current) {
+            age[idx] = current;
+            attacks[s][idx] = reference[i];
+        }
+        else if (attacks[s][idx] != reference[i])
+            break;  // Collision! Try next magic
+    }
+} while (i < size);
+```
+
+**Step 5a: Generate Magic Candidate**
+
+
+```cpp
+do
+    magics[s] = rng.sparse_rand<Bitboard>();
+while (popcount((magics[s] * masks[s]) >> 56) < 6);
+```
+
+`sparse_rand()`: Generates numbers with few bits set (sparse bitboards)
+
+- Magic numbers work better when sparse
+- Fewer bits = less chance of unwanted carries
+
+Filter: `popcount((magics[s] * masks[s]) >> 56) < 6`
+
+- Quick rejection test
+- Multiplying magic by mask should produce at least 6 bits in top byte
+- If not enough bits at top, magic won't spread occupancy well
+
+**Step 5b: Test the Magic**
+
+```cpp
+for (++current, i = 0; i < size; ++i) {
+    unsigned idx = index(s, occupancy[i]);
+    
+    if (age[idx] < current) {
+        age[idx] = current;
+        attacks[s][idx] = reference[i];
+    }
+    else if (attacks[s][idx] != reference[i])
+        break;  // Collision!
+}
+```
+
+**The age[]** array trick: Detects collisions efficiently
+
+```cpp
+int age[4096] = {0};  // Tracks which "attempt" last wrote to each index
+int current = 0;       // Current attempt number
+
+// For each new magic candidate:
+++current;  // New attempt number
+
+for each occupancy pattern i:
+    idx = hash(occupancy[i]) using candidate magic
+    
+    if (age[idx] < current):
+        // This index hasn't been used in this attempt yet
+        age[idx] = current;
+        attacks[s][idx] = reference[i];  // Store the correct attacks
+    else:
+        // This index was already used in this attempt!
+        if (attacks[s][idx] != reference[i]):
+            // COLLISION! Different occupancies map to same index
+            // but have different attacks
+            break;  // Reject this magic
+```
+
+Why this works:
+
+- If two occupancies hash to the same index but have the same attacks, it's OK (constructive collision)
+- If they have different attacks, the magic is invalid (destructive collision)
+- age[] lets us detect this without clearing the array each attempt
