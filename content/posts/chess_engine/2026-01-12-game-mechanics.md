@@ -2000,5 +2000,28 @@ inline Bitboard Position::attacks_from(Square s) const {
 
 For knight also its just `StepAttacksBB[Pt][s]` after stripping all the polymorphic code
 
-#### 3. Rook Attacks (Sliding, Occupancy-Dependent)
+#### 3. Sliding Attacks (Rook/Bishop/Queen, Occupancy-Dependent)
+
+```cpp
+template<PieceType Pt>
+inline Bitboard attacks_bb(Square s, Bitboard occupied) {
+
+  extern Bitboard* RookAttacks[SQUARE_NB];
+  extern Bitboard* BishopAttacks[SQUARE_NB];
+
+  return (Pt == ROOK ? RookAttacks : BishopAttacks)[s][magic_index<Pt>(s, occupied)];
+}
+```
+
+It uses the precomputed magic bitboards to get the attack bitboard, logic is similar for rook and bishop, but they have different precomputed tables. 
+
+For queen, the attack bitboard is just bitwise OR of rook and bishop
+
+```cpp
+Pt == QUEEN  ? attacks_from<ROOK>(s) | attacks_from<BISHOP>(s)
+```
+
+
+
+
 
