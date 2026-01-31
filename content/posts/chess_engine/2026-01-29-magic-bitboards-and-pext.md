@@ -1115,4 +1115,51 @@ b = 4, (4 - 0b001) = (0b100 + 0b011) = (0b111 & 0b101) = 0b101
 b = 5, (5 - 0b001) = (0b101 + 0b011) = (0b000 & 0b101) = 0b000 <- wrap back, cycle ends
 ```
 
+## Calculating the Actual Attacks
+
+```cpp
+/// Position::attackers_to() computes a bitboard of all pieces which attack a
+/// given square. Slider attacks use the occupied bitboard to indicate occupancy.
+
+Bitboard Position::attackers_to(Square s, Bitboard occupied) const {
+
+  return  (attacks_from<PAWN>(s, BLACK)    & pieces(WHITE, PAWN))
+        | (attacks_from<PAWN>(s, WHITE)    & pieces(BLACK, PAWN))
+        | (attacks_from<KNIGHT>(s)         & pieces(KNIGHT))
+        | (attacks_bb<ROOK  >(s, occupied) & pieces(ROOK,   QUEEN))
+        | (attacks_bb<BISHOP>(s, occupied) & pieces(BISHOP, QUEEN))
+        | (attacks_from<KING>(s)           & pieces(KING));
+}
+
+template<PieceType Pt>
+inline Bitboard attacks_bb(Square s, Bitboard occupied) {
+
+  extern Bitboard* RookAttacks[SQUARE_NB];
+  extern Bitboard* BishopAttacks[SQUARE_NB];
+
+  return (Pt == ROOK ? RookAttacks : BishopAttacks)[s][magic_index<Pt>(s, occupied)];
+}
+```
+
+If we notice a`ttacks_bb()` computes rook attacks… but it never checks if there is actually a rook there? It only takes occupied. How does this make sense?
+
+Because` attacks_bb()` does NOT mean “which rooks attack”.
+
+It means:
+“If a rook were placed on square s, what squares would it attack, given the current blockers (occupied)?”
+
+So how do we check if an actual rook can attack these squares?
+
+```cpp
+Bitboard rookAttackers =
+    attacks_bb<ROOK>(sq, occupied) & pieces(color, ROOK);
+```
+
+the `&` condition takes care of whether actual pieces are present on those attack rays. 
+
+Queen is considered for both rook and bishop, because if a rook can attack in an attack ray, queen can do the same. Same goes with bishop as well. 
+
+To conclude `attacks_bb<ROOK>(sq, occupied)` returns a bitboard where a rook on `sq` could attack considering all the blockers, when we do bitwise  `&` with actual rooks and queens, we are checking if any rook/queen present in any of those squares, then this piece can be a attacker to the square `sq`. 
+
+
 
