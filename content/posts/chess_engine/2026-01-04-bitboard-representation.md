@@ -729,3 +729,143 @@ Means you must do either
 BetweenBB is precomputed for speed
 
 
+## SquareBB
+
+```cpp
+Bitboard SquareBB[SQUARE_NB];
+```
+
+This is an array of 64 bitboards:
+- SquareBB[SQ_A1] → bitboard with only A1 set
+- SquareBB[SQ_E4] → bitboard with only E4 set
+
+Example
+
+```cpp
+SquareBB[E4] = 1ULL << E4
+```
+
+```cpp
+SquareBB[E4] = 00000000
+               00000000
+               00000000
+               00010000   ← only e4 bit is 1
+               00000000
+               00000000
+               00000000
+               00000000
+```
+
+Used for:
+- Adding/removing pieces quickly
+- XOR toggling squares
+- Building masks
+
+```cpp
+byTypeBB[PAWN] |= SquareBB[s];
+```
+
+So instead of computing (1ULL << s) every time, Stockfish just does:
+
+```cpp
+SquareBB[s]
+```
+
+## FileBB
+
+Meaning: Bitboard for an entire file
+
+```cpp
+Bitboard FileBB[FILE_NB];
+```
+
+There are 8 files:
+- File A
+- File B
+- …
+- File H
+
+So:
+- FileBB[FILE_A] = all squares on file A set
+- FileBB[FILE_E] = all squares on file E set
+
+Example: File A
+
+```cpp
+FileBB[A] =
+  8  1 . . . . . . .
+  7  1 . . . . . . .
+  6  1 . . . . . . .
+  5  1 . . . . . . .
+  4  1 . . . . . . .
+  3  1 . . . . . . .
+  2  1 . . . . . . .
+  1  1 . . . . . . .
+     a b c d e f g h
+```
+
+Hex:
+
+```cpp
+FileBB[A] = 0x0101010101010101
+```
+
+Used for:
+- Pawn structure evaluation
+- Open/semi-open files
+- Rook file attacks
+
+```cpp
+if (!(pieces(PAWN) & FileBB[file]))
+    // file is open
+```
+
+## RankBB
+
+Meaning: Bitboard for an entire rank
+
+```cpp
+Bitboard RankBB[RANK_NB];
+```
+
+There are 8 ranks:
+- Rank 1
+- Rank 2
+- …
+- Rank 8
+
+So:
+- RankBB[RANK_1] = all squares on rank 1 set
+- RankBB[RANK_4] = all squares on rank 4 set
+
+Example: Rank 4
+
+```cpp
+RankBB[4] =
+  8  . . . . . . . .
+  7  . . . . . . . .
+  6  . . . . . . . .
+  5  . . . . . . . .
+  4  1 1 1 1 1 1 1 1
+  3  . . . . . . . .
+  2  . . . . . . . .
+  1  . . . . . . . .
+     a b c d e f g h
+```
+
+Hex:
+
+```cpp
+RankBB[4] = 0x00000000FF000000
+```
+
+Used for:
+- Passed pawn detection
+- Back rank weakness
+- Rank-based attack masks
+
+```cpp
+Bitboard rank4Pieces = pieces() & RankBB[RANK_4];
+```
+
+
