@@ -1,4 +1,95 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Chess Engines on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/categories/chess-engines/</link><description>Recent content in Chess Engines on Sanketh's Blog</description><generator>Hugo -- 0.155.1</generator><language>en-us</language><lastBuildDate>Thu, 29 Jan 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/categories/chess-engines/index.xml" rel="self" type="application/rss+xml"/><item><title>Magic Bitboards and PEXT</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-29-magic-bitboards-and-pext/</link><pubDate>Thu, 29 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-29-magic-bitboards-and-pext/</guid><description>&lt;h1 id="magic-bitboards-and-pext"&gt;Magic Bitboards and PEXT&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Chess Engines on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/categories/chess-engines/</link><description>Recent content in Chess Engines on Sanketh's Blog</description><generator>Hugo -- 0.155.1</generator><language>en-us</language><lastBuildDate>Sat, 31 Jan 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/categories/chess-engines/index.xml" rel="self" type="application/rss+xml"/><item><title>Static Exchange Evaluation (SEE)</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-31-see/</link><pubDate>Sat, 31 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-31-see/</guid><description>&lt;h1 id="static-exchange-evaluation-see"&gt;Static Exchange Evaluation (SEE)&lt;/h1&gt;
+&lt;p&gt;SEE simulates a capture sequence on a square to calculate the net material gain/loss. It asks: &amp;ldquo;If I make this move and we trade pieces on this square, will I gain at least &lt;code&gt;v&lt;/code&gt; centipawns?&amp;rdquo;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;/// Position::see_ge (Static Exchange Evaluation Greater or Equal) tests if the
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;/// SEE value of move is greater or equal to the given value. We&amp;#39;ll use an
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;/// algorithm similar to alpha-beta pruning with a null window.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; Position&lt;span style="color:#f92672"&gt;::&lt;/span&gt;see_ge(Move m, Value v) &lt;span style="color:#66d9ef"&gt;const&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; assert(is_ok(m));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Castling moves are implemented as king capturing the rook so cannot be
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// handled correctly. Simply assume the SEE value is VALUE_ZERO that is always
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// correct unless in the rare case the rook ends up under attack.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (type_of(m) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; CASTLING)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;return&lt;/span&gt; VALUE_ZERO &lt;span style="color:#f92672"&gt;&amp;gt;=&lt;/span&gt; v;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Square from &lt;span style="color:#f92672"&gt;=&lt;/span&gt; from_sq(m), to &lt;span style="color:#f92672"&gt;=&lt;/span&gt; to_sq(m);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; PieceType nextVictim &lt;span style="color:#f92672"&gt;=&lt;/span&gt; type_of(piece_on(from));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Color stm &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;~&lt;/span&gt;color_of(piece_on(from)); &lt;span style="color:#75715e"&gt;// First consider opponent&amp;#39;s move
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Value balance; &lt;span style="color:#75715e"&gt;// Values of the pieces taken by us minus opponent&amp;#39;s ones
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard occupied, stmAttackers;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (type_of(m) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; ENPASSANT)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; occupied &lt;span style="color:#f92672"&gt;=&lt;/span&gt; SquareBB[to &lt;span style="color:#f92672"&gt;-&lt;/span&gt; pawn_push(&lt;span style="color:#f92672"&gt;~&lt;/span&gt;stm)]; &lt;span style="color:#75715e"&gt;// Remove the captured pawn
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; balance &lt;span style="color:#f92672"&gt;=&lt;/span&gt; PieceValue[MG][PAWN];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;else&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; balance &lt;span style="color:#f92672"&gt;=&lt;/span&gt; PieceValue[MG][piece_on(to)];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; occupied &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;0&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (balance &lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt; v)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;return&lt;/span&gt; false;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (nextVictim &lt;span style="color:#f92672"&gt;==&lt;/span&gt; KING)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;return&lt;/span&gt; true;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; balance &lt;span style="color:#f92672"&gt;-=&lt;/span&gt; PieceValue[MG][nextVictim];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (balance &lt;span style="color:#f92672"&gt;&amp;gt;=&lt;/span&gt; v)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;return&lt;/span&gt; true;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; relativeStm &lt;span style="color:#f92672"&gt;=&lt;/span&gt; true; &lt;span style="color:#75715e"&gt;// True if the opponent is to move
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; occupied &lt;span style="color:#f92672"&gt;^=&lt;/span&gt; pieces() &lt;span style="color:#f92672"&gt;^&lt;/span&gt; from &lt;span style="color:#f92672"&gt;^&lt;/span&gt; to;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Find all attackers to the destination square, with the moving piece removed,
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// but possibly an X-ray attacker added behind it.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Bitboard attackers &lt;span style="color:#f92672"&gt;=&lt;/span&gt; attackers_to(to, occupied) &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; occupied;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;while&lt;/span&gt; (true)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; stmAttackers &lt;span style="color:#f92672"&gt;=&lt;/span&gt; attackers &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; pieces(stm);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Don&amp;#39;t allow pinned pieces to attack pieces except the king as long all
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// pinners are on their original square.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (&lt;span style="color:#f92672"&gt;!&lt;/span&gt;(st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;pinnersForKing[stm] &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; &lt;span style="color:#f92672"&gt;~&lt;/span&gt;occupied))
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; stmAttackers &lt;span style="color:#f92672"&gt;&amp;amp;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;~&lt;/span&gt;st&lt;span style="color:#f92672"&gt;-&amp;gt;&lt;/span&gt;blockersForKing[stm];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (&lt;span style="color:#f92672"&gt;!&lt;/span&gt;stmAttackers)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;return&lt;/span&gt; relativeStm;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Locate and remove the next least valuable attacker
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; nextVictim &lt;span style="color:#f92672"&gt;=&lt;/span&gt; min_attacker&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;PAWN&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt;(byTypeBB, to, stmAttackers, occupied, attackers);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (nextVictim &lt;span style="color:#f92672"&gt;==&lt;/span&gt; KING)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;return&lt;/span&gt; relativeStm &lt;span style="color:#f92672"&gt;==&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt;(attackers &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt; pieces(&lt;span style="color:#f92672"&gt;~&lt;/span&gt;stm));
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; balance &lt;span style="color:#f92672"&gt;+=&lt;/span&gt; relativeStm &lt;span style="color:#f92672"&gt;?&lt;/span&gt; PieceValue[MG][nextVictim]
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;:&lt;/span&gt; &lt;span style="color:#f92672"&gt;-&lt;/span&gt;PieceValue[MG][nextVictim];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; relativeStm &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;!&lt;/span&gt;relativeStm;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (relativeStm &lt;span style="color:#f92672"&gt;==&lt;/span&gt; (balance &lt;span style="color:#f92672"&gt;&amp;gt;=&lt;/span&gt; v))
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;return&lt;/span&gt; relativeStm;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; stm &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;~&lt;/span&gt;stm;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id="the-algorithm"&gt;The Algorithm&lt;/h2&gt;
+&lt;h3 id="1-setup-phase"&gt;1. Setup Phase:&lt;/h3&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;assert(is_ok(m));
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Debug check: Verify the move is legal/valid before proceeding.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Castling moves are implemented as king capturing the rook so cannot be
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// handled correctly. Simply assume the SEE value is VALUE_ZERO that is always
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// correct unless in the rare case the rook ends up under attack.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; (type_of(m) &lt;span style="color:#f92672"&gt;==&lt;/span&gt; CASTLING)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;return&lt;/span&gt; VALUE_ZERO &lt;span style="color:#f92672"&gt;&amp;gt;=&lt;/span&gt; v;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Castling special case: Internally, castling is coded as &amp;ldquo;king captures own rook,&amp;rdquo; which would confuse the SEE algorithm. Just assume SEE = 0 for castling moves (safe assumption since you&amp;rsquo;re not actually capturing anything).&lt;/p&gt;</description></item><item><title>Magic Bitboards and PEXT</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-29-magic-bitboards-and-pext/</link><pubDate>Thu, 29 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-29-magic-bitboards-and-pext/</guid><description>&lt;h1 id="magic-bitboards-and-pext"&gt;Magic Bitboards and PEXT&lt;/h1&gt;
 &lt;h2 id="the-problem-sliding-piece-attacks"&gt;The Problem: Sliding Piece Attacks&lt;/h2&gt;
 &lt;h3 id="why-sliding-pieces-are-hard"&gt;Why Sliding Pieces Are Hard&lt;/h3&gt;
 &lt;p&gt;&lt;strong&gt;Non-sliding pieces (knight, king, pawn):&lt;/strong&gt;&lt;/p&gt;

@@ -1,0 +1,333 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Static Exchange Evaluation (SEE) | Sanketh's Blog</title><meta name=keywords content="sse"><meta name=description content="Static Exchange Evaluation (SEE)
+SEE simulates a capture sequence on a square to calculate the net material gain/loss. It asks: &ldquo;If I make this move and we trade pieces on this square, will I gain at least v centipawns?&rdquo;
+/// Position::see_ge (Static Exchange Evaluation Greater or Equal) tests if the
+/// SEE value of move is greater or equal to the given value. We'll use an
+/// algorithm similar to alpha-beta pruning with a null window.
+
+bool Position::see_ge(Move m, Value v) const {
+
+  assert(is_ok(m));
+
+  // Castling moves are implemented as king capturing the rook so cannot be
+  // handled correctly. Simply assume the SEE value is VALUE_ZERO that is always
+  // correct unless in the rare case the rook ends up under attack.
+  if (type_of(m) == CASTLING)
+      return VALUE_ZERO >= v;
+
+  Square from = from_sq(m), to = to_sq(m);
+  PieceType nextVictim = type_of(piece_on(from));
+  Color stm = ~color_of(piece_on(from)); // First consider opponent's move
+  Value balance; // Values of the pieces taken by us minus opponent's ones
+  Bitboard occupied, stmAttackers;
+
+  if (type_of(m) == ENPASSANT)
+  {
+      occupied = SquareBB[to - pawn_push(~stm)]; // Remove the captured pawn
+      balance = PieceValue[MG][PAWN];
+  }
+  else
+  {
+      balance = PieceValue[MG][piece_on(to)];
+      occupied = 0;
+  }
+
+  if (balance < v)
+      return false;
+
+  if (nextVictim == KING)
+      return true;
+
+  balance -= PieceValue[MG][nextVictim];
+
+  if (balance >= v)
+      return true;
+
+  bool relativeStm = true; // True if the opponent is to move
+  occupied ^= pieces() ^ from ^ to;
+
+  // Find all attackers to the destination square, with the moving piece removed,
+  // but possibly an X-ray attacker added behind it.
+  Bitboard attackers = attackers_to(to, occupied) & occupied;
+
+  while (true)
+  {
+      stmAttackers = attackers & pieces(stm);
+
+      // Don't allow pinned pieces to attack pieces except the king as long all
+      // pinners are on their original square.
+      if (!(st->pinnersForKing[stm] & ~occupied))
+          stmAttackers &= ~st->blockersForKing[stm];
+
+      if (!stmAttackers)
+          return relativeStm;
+
+      // Locate and remove the next least valuable attacker
+      nextVictim = min_attacker<PAWN>(byTypeBB, to, stmAttackers, occupied, attackers);
+
+      if (nextVictim == KING)
+          return relativeStm == bool(attackers & pieces(~stm));
+
+      balance += relativeStm ?  PieceValue[MG][nextVictim]
+                             : -PieceValue[MG][nextVictim];
+
+      relativeStm = !relativeStm;
+
+      if (relativeStm == (balance >= v))
+          return relativeStm;
+
+      stm = ~stm;
+  }
+}
+The Algorithm
+1. Setup Phase:
+assert(is_ok(m));
+
+Debug check: Verify the move is legal/valid before proceeding.
+
+  // Castling moves are implemented as king capturing the rook so cannot be
+  // handled correctly. Simply assume the SEE value is VALUE_ZERO that is always
+  // correct unless in the rare case the rook ends up under attack.
+if (type_of(m) == CASTLING)
+    return VALUE_ZERO >= v;
+Castling special case: Internally, castling is coded as &ldquo;king captures own rook,&rdquo; which would confuse the SEE algorithm. Just assume SEE = 0 for castling moves (safe assumption since you&rsquo;re not actually capturing anything)."><meta name=author content="Sanketh"><link rel=canonical href=https://sankethbk.github.io/blog/posts/chess_engine/2026-01-31-see/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.deee627d8b8d9065acc54b2c9d901e601e142335047d242a93ba7bce86f41f19.css integrity="sha256-3u5ifYuNkGWsxUssnZAeYB4UIzUEfSQqk7p7zob0Hxk=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/chess_engine/2026-01-31-see/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/chess_engine/2026-01-31-see/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="Static Exchange Evaluation (SEE)"><meta property="og:description" content="Static Exchange Evaluation (SEE) SEE simulates a capture sequence on a square to calculate the net material gain/loss. It asks: “If I make this move and we trade pieces on this square, will I gain at least v centipawns?”
+/// Position::see_ge (Static Exchange Evaluation Greater or Equal) tests if the /// SEE value of move is greater or equal to the given value. We'll use an /// algorithm similar to alpha-beta pruning with a null window. bool Position::see_ge(Move m, Value v) const { assert(is_ok(m)); // Castling moves are implemented as king capturing the rook so cannot be // handled correctly. Simply assume the SEE value is VALUE_ZERO that is always // correct unless in the rare case the rook ends up under attack. if (type_of(m) == CASTLING) return VALUE_ZERO >= v; Square from = from_sq(m), to = to_sq(m); PieceType nextVictim = type_of(piece_on(from)); Color stm = ~color_of(piece_on(from)); // First consider opponent's move Value balance; // Values of the pieces taken by us minus opponent's ones Bitboard occupied, stmAttackers; if (type_of(m) == ENPASSANT) { occupied = SquareBB[to - pawn_push(~stm)]; // Remove the captured pawn balance = PieceValue[MG][PAWN]; } else { balance = PieceValue[MG][piece_on(to)]; occupied = 0; } if (balance < v) return false; if (nextVictim == KING) return true; balance -= PieceValue[MG][nextVictim]; if (balance >= v) return true; bool relativeStm = true; // True if the opponent is to move occupied ^= pieces() ^ from ^ to; // Find all attackers to the destination square, with the moving piece removed, // but possibly an X-ray attacker added behind it. Bitboard attackers = attackers_to(to, occupied) & occupied; while (true) { stmAttackers = attackers & pieces(stm); // Don't allow pinned pieces to attack pieces except the king as long all // pinners are on their original square. if (!(st->pinnersForKing[stm] & ~occupied)) stmAttackers &= ~st->blockersForKing[stm]; if (!stmAttackers) return relativeStm; // Locate and remove the next least valuable attacker nextVictim = min_attacker<PAWN>(byTypeBB, to, stmAttackers, occupied, attackers); if (nextVictim == KING) return relativeStm == bool(attackers & pieces(~stm)); balance += relativeStm ? PieceValue[MG][nextVictim] : -PieceValue[MG][nextVictim]; relativeStm = !relativeStm; if (relativeStm == (balance >= v)) return relativeStm; stm = ~stm; } } The Algorithm 1. Setup Phase: assert(is_ok(m)); Debug check: Verify the move is legal/valid before proceeding. // Castling moves are implemented as king capturing the rook so cannot be // handled correctly. Simply assume the SEE value is VALUE_ZERO that is always // correct unless in the rare case the rook ends up under attack. if (type_of(m) == CASTLING) return VALUE_ZERO >= v; Castling special case: Internally, castling is coded as “king captures own rook,” which would confuse the SEE algorithm. Just assume SEE = 0 for castling moves (safe assumption since you’re not actually capturing anything)."><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2026-01-31T00:00:00+00:00"><meta property="article:modified_time" content="2026-01-31T00:00:00+00:00"><meta property="article:tag" content="Sse"><meta name=twitter:card content="summary"><meta name=twitter:title content="Static Exchange Evaluation (SEE)"><meta name=twitter:description content="Static Exchange Evaluation (SEE)
+SEE simulates a capture sequence on a square to calculate the net material gain/loss. It asks: &ldquo;If I make this move and we trade pieces on this square, will I gain at least v centipawns?&rdquo;
+/// Position::see_ge (Static Exchange Evaluation Greater or Equal) tests if the
+/// SEE value of move is greater or equal to the given value. We'll use an
+/// algorithm similar to alpha-beta pruning with a null window.
+
+bool Position::see_ge(Move m, Value v) const {
+
+  assert(is_ok(m));
+
+  // Castling moves are implemented as king capturing the rook so cannot be
+  // handled correctly. Simply assume the SEE value is VALUE_ZERO that is always
+  // correct unless in the rare case the rook ends up under attack.
+  if (type_of(m) == CASTLING)
+      return VALUE_ZERO >= v;
+
+  Square from = from_sq(m), to = to_sq(m);
+  PieceType nextVictim = type_of(piece_on(from));
+  Color stm = ~color_of(piece_on(from)); // First consider opponent's move
+  Value balance; // Values of the pieces taken by us minus opponent's ones
+  Bitboard occupied, stmAttackers;
+
+  if (type_of(m) == ENPASSANT)
+  {
+      occupied = SquareBB[to - pawn_push(~stm)]; // Remove the captured pawn
+      balance = PieceValue[MG][PAWN];
+  }
+  else
+  {
+      balance = PieceValue[MG][piece_on(to)];
+      occupied = 0;
+  }
+
+  if (balance < v)
+      return false;
+
+  if (nextVictim == KING)
+      return true;
+
+  balance -= PieceValue[MG][nextVictim];
+
+  if (balance >= v)
+      return true;
+
+  bool relativeStm = true; // True if the opponent is to move
+  occupied ^= pieces() ^ from ^ to;
+
+  // Find all attackers to the destination square, with the moving piece removed,
+  // but possibly an X-ray attacker added behind it.
+  Bitboard attackers = attackers_to(to, occupied) & occupied;
+
+  while (true)
+  {
+      stmAttackers = attackers & pieces(stm);
+
+      // Don't allow pinned pieces to attack pieces except the king as long all
+      // pinners are on their original square.
+      if (!(st->pinnersForKing[stm] & ~occupied))
+          stmAttackers &= ~st->blockersForKing[stm];
+
+      if (!stmAttackers)
+          return relativeStm;
+
+      // Locate and remove the next least valuable attacker
+      nextVictim = min_attacker<PAWN>(byTypeBB, to, stmAttackers, occupied, attackers);
+
+      if (nextVictim == KING)
+          return relativeStm == bool(attackers & pieces(~stm));
+
+      balance += relativeStm ?  PieceValue[MG][nextVictim]
+                             : -PieceValue[MG][nextVictim];
+
+      relativeStm = !relativeStm;
+
+      if (relativeStm == (balance >= v))
+          return relativeStm;
+
+      stm = ~stm;
+  }
+}
+The Algorithm
+1. Setup Phase:
+assert(is_ok(m));
+
+Debug check: Verify the move is legal/valid before proceeding.
+
+  // Castling moves are implemented as king capturing the rook so cannot be
+  // handled correctly. Simply assume the SEE value is VALUE_ZERO that is always
+  // correct unless in the rare case the rook ends up under attack.
+if (type_of(m) == CASTLING)
+    return VALUE_ZERO >= v;
+Castling special case: Internally, castling is coded as &ldquo;king captures own rook,&rdquo; which would confuse the SEE algorithm. Just assume SEE = 0 for castling moves (safe assumption since you&rsquo;re not actually capturing anything)."><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"Static Exchange Evaluation (SEE)","item":"https://sankethbk.github.io/blog/posts/chess_engine/2026-01-31-see/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Static Exchange Evaluation (SEE)","name":"Static Exchange Evaluation (SEE)","description":"Static Exchange Evaluation (SEE) SEE simulates a capture sequence on a square to calculate the net material gain/loss. It asks: \u0026ldquo;If I make this move and we trade pieces on this square, will I gain at least v centipawns?\u0026rdquo;\n/// Position::see_ge (Static Exchange Evaluation Greater or Equal) tests if the /// SEE value of move is greater or equal to the given value. We\u0026#39;ll use an /// algorithm similar to alpha-beta pruning with a null window. bool Position::see_ge(Move m, Value v) const { assert(is_ok(m)); // Castling moves are implemented as king capturing the rook so cannot be // handled correctly. Simply assume the SEE value is VALUE_ZERO that is always // correct unless in the rare case the rook ends up under attack. if (type_of(m) == CASTLING) return VALUE_ZERO \u0026gt;= v; Square from = from_sq(m), to = to_sq(m); PieceType nextVictim = type_of(piece_on(from)); Color stm = ~color_of(piece_on(from)); // First consider opponent\u0026#39;s move Value balance; // Values of the pieces taken by us minus opponent\u0026#39;s ones Bitboard occupied, stmAttackers; if (type_of(m) == ENPASSANT) { occupied = SquareBB[to - pawn_push(~stm)]; // Remove the captured pawn balance = PieceValue[MG][PAWN]; } else { balance = PieceValue[MG][piece_on(to)]; occupied = 0; } if (balance \u0026lt; v) return false; if (nextVictim == KING) return true; balance -= PieceValue[MG][nextVictim]; if (balance \u0026gt;= v) return true; bool relativeStm = true; // True if the opponent is to move occupied ^= pieces() ^ from ^ to; // Find all attackers to the destination square, with the moving piece removed, // but possibly an X-ray attacker added behind it. Bitboard attackers = attackers_to(to, occupied) \u0026amp; occupied; while (true) { stmAttackers = attackers \u0026amp; pieces(stm); // Don\u0026#39;t allow pinned pieces to attack pieces except the king as long all // pinners are on their original square. if (!(st-\u0026gt;pinnersForKing[stm] \u0026amp; ~occupied)) stmAttackers \u0026amp;= ~st-\u0026gt;blockersForKing[stm]; if (!stmAttackers) return relativeStm; // Locate and remove the next least valuable attacker nextVictim = min_attacker\u0026lt;PAWN\u0026gt;(byTypeBB, to, stmAttackers, occupied, attackers); if (nextVictim == KING) return relativeStm == bool(attackers \u0026amp; pieces(~stm)); balance += relativeStm ? PieceValue[MG][nextVictim] : -PieceValue[MG][nextVictim]; relativeStm = !relativeStm; if (relativeStm == (balance \u0026gt;= v)) return relativeStm; stm = ~stm; } } The Algorithm 1. Setup Phase: assert(is_ok(m)); Debug check: Verify the move is legal/valid before proceeding. // Castling moves are implemented as king capturing the rook so cannot be // handled correctly. Simply assume the SEE value is VALUE_ZERO that is always // correct unless in the rare case the rook ends up under attack. if (type_of(m) == CASTLING) return VALUE_ZERO \u0026gt;= v; Castling special case: Internally, castling is coded as \u0026ldquo;king captures own rook,\u0026rdquo; which would confuse the SEE algorithm. Just assume SEE = 0 for castling moves (safe assumption since you\u0026rsquo;re not actually capturing anything).\n","keywords":["sse"],"articleBody":"Static Exchange Evaluation (SEE) SEE simulates a capture sequence on a square to calculate the net material gain/loss. It asks: “If I make this move and we trade pieces on this square, will I gain at least v centipawns?”\n/// Position::see_ge (Static Exchange Evaluation Greater or Equal) tests if the /// SEE value of move is greater or equal to the given value. We'll use an /// algorithm similar to alpha-beta pruning with a null window. bool Position::see_ge(Move m, Value v) const { assert(is_ok(m)); // Castling moves are implemented as king capturing the rook so cannot be // handled correctly. Simply assume the SEE value is VALUE_ZERO that is always // correct unless in the rare case the rook ends up under attack. if (type_of(m) == CASTLING) return VALUE_ZERO \u003e= v; Square from = from_sq(m), to = to_sq(m); PieceType nextVictim = type_of(piece_on(from)); Color stm = ~color_of(piece_on(from)); // First consider opponent's move Value balance; // Values of the pieces taken by us minus opponent's ones Bitboard occupied, stmAttackers; if (type_of(m) == ENPASSANT) { occupied = SquareBB[to - pawn_push(~stm)]; // Remove the captured pawn balance = PieceValue[MG][PAWN]; } else { balance = PieceValue[MG][piece_on(to)]; occupied = 0; } if (balance \u003c v) return false; if (nextVictim == KING) return true; balance -= PieceValue[MG][nextVictim]; if (balance \u003e= v) return true; bool relativeStm = true; // True if the opponent is to move occupied ^= pieces() ^ from ^ to; // Find all attackers to the destination square, with the moving piece removed, // but possibly an X-ray attacker added behind it. Bitboard attackers = attackers_to(to, occupied) \u0026 occupied; while (true) { stmAttackers = attackers \u0026 pieces(stm); // Don't allow pinned pieces to attack pieces except the king as long all // pinners are on their original square. if (!(st-\u003epinnersForKing[stm] \u0026 ~occupied)) stmAttackers \u0026= ~st-\u003eblockersForKing[stm]; if (!stmAttackers) return relativeStm; // Locate and remove the next least valuable attacker nextVictim = min_attacker\u003cPAWN\u003e(byTypeBB, to, stmAttackers, occupied, attackers); if (nextVictim == KING) return relativeStm == bool(attackers \u0026 pieces(~stm)); balance += relativeStm ? PieceValue[MG][nextVictim] : -PieceValue[MG][nextVictim]; relativeStm = !relativeStm; if (relativeStm == (balance \u003e= v)) return relativeStm; stm = ~stm; } } The Algorithm 1. Setup Phase: assert(is_ok(m)); Debug check: Verify the move is legal/valid before proceeding. // Castling moves are implemented as king capturing the rook so cannot be // handled correctly. Simply assume the SEE value is VALUE_ZERO that is always // correct unless in the rare case the rook ends up under attack. if (type_of(m) == CASTLING) return VALUE_ZERO \u003e= v; Castling special case: Internally, castling is coded as “king captures own rook,” which would confuse the SEE algorithm. Just assume SEE = 0 for castling moves (safe assumption since you’re not actually capturing anything).\nSquare from = from_sq(m), to = to_sq(m); PieceType nextVictim = type_of(piece_on(from)); Color stm = ~color_of(piece_on(from)); // Opponent moves next We assume Move m has already happened Track which piece we’re moving and where The opponent responds first (they decide whether to recapture) nextVictim refers to the piece that’s about to be captured next in the exchange sequence. Value balance; // Values of the pieces taken by us minus opponent's ones Bitboard occupied, stmAttackers; Declare variables:\nbalance: Running total of material gained/lost occupied: Bitboard tracking which squares have pieces stmAttackers: Bitboard of attackers belonging to the side to move if (type_of(m) == ENPASSANT) { occupied = SquareBB[to - pawn_push(~stm)]; // Remove the captured pawn balance = PieceValue[MG][PAWN]; } En passant special case: En passant captures are weird because the captured pawn isn’t on the destination square. occupied is the bitboard marking the actual square of the pawn to be captured balance is the value PSQ value of pawn captured else { balance = PieceValue[MG][piece_on(to)]; occupied = 0; } Normal capture: Start balance with the value of whatever piece was on the destination square. No special occupied handling: For normal moves, we don’t need to mark any special squares (the en passant case set this earlier). if (balance \u003c v) return false; Early cutoff #1: If even after capturing their piece, the balance is still less than our threshold v, we can’t possibly reach it (since we’re about to lose our piece next). Fail immediately.\nif (nextVictim == KING) return true; King capture is always good: If we’re capturing with our king, we can’t lose the king in the exchange (kings can’t be captured). So it’s always at least break-even. Of course, it assumes the caller has already validated the king won’t end up in check after capturing.\nbalance -= PieceValue[MG][nextVictim]; Assume opponent recaptures: Subtract the value of OUR piece (the one we just moved). This is the material we’ll lose if the opponent recaptures.\nExample: We captured a Rook (500) with a Knight (300)\nbalance = 500 (captured rook) balance = 500 - 300 = 200 (after opponent takes our knight) if (balance \u003e= v) return true; Early cutoff #2: If even after losing our piece, we’re still at or above the threshold v, we can return true immediately. No need to simulate further trades.\nbool relativeStm = true; // True if the opponent is to move Track whose perspective: This boolean tracks whether we’re adding (opponent captures) or subtracting (we capture) from balance. Starts true because opponent moves first.\noccupied ^= pieces() ^ from ^ to; Update occupied squares:\npieces(): All pieces on the board ^ from: Remove piece from origin square ^ to: Remove piece from destination square (if there was one) ^ occupied: Handle the en passant pawn removal (if applicable) Result: Bitboard showing all pieces after our move has been made.\n// Find all attackers to the destination square, with the moving piece removed, // but possibly an X-ray attacker added behind it. Bitboard attackers = attackers_to(to, occupied) \u0026 occupied; Find all attackers: Get all pieces (from both sides) that can attack square to, considering the updated board position. X-ray attacks (bishops/rooks/queens revealed when the moving piece left) are automatically included.\nBitwise \u0026 with occupied is required here because we’re passing a modified occupied bitboard to attackers_to(), but the pieces() bitboards inside attackers_to() still refer to the original board position. They use occupied as reference only for blockers.\nThis will end up revealing the x-ray attacks because we have moved our piece on from and removed their piece on to.\n2. Main exchange loop Simulate the capture sequence. Each iteration represents one recapture.\nwhile (true) { stmAttackers = attackers \u0026 pieces(stm); Filter to current side’s attackers: From all attackers, get only the ones belonging to the side that’s about to move.\np// Don't allow pinned pieces to attack pieces except the king as long all // pinners are on their original square. if (!(st-\u003epinnersForKing[stm] \u0026 ~occupied)) stmAttackers \u0026= ~st-\u003eblockersForKing[stm]; Handle pinned pieces: If all pinning pieces are still on their original squares (haven’t moved), then pinned pieces can’t participate in the exchange (except when capturing the king, which would be illegal anyway). Remove them from stmAttackers.\nIt just means if opponent hasn’t moved any of their pieces which pins our king, then none of our pieces blocking the attack to king can be considered for recaptures.\nif (!stmAttackers) return relativeStm; No recapture available: If the current side has no attackers, the exchange ends. Return based on whose turn it was:\nIf opponent’s turn (relativeStm = true): They can’t recapture, so we keep the material. Return true. If our turn (relativeStm = false): We can’t recapture, so they keep the material. Return false. // Locate and remove the next least valuable attacker nextVictim = min_attacker\u003cPAWN\u003e(byTypeBB, to, stmAttackers, occupied, attackers); Find cheapest attacker: Use the least valuable piece to recapture (pawn \u003c knight \u003c bishop \u003c rook \u003c queen \u003c king). This minimizes the potential loss. Also updates occupied and attackers bitboards to reflect this piece moving.\nif (nextVictim == KING) return relativeStm == bool(attackers \u0026 pieces(~stm)); King recapture check: If the only way to recapture is with the king, check if the opponent has any attackers left:\nIf opponent can attack back: King would be captured → illegal → exchange ends → return based on relativeStm If opponent can’t attack: King safely captures → exchange continues balance += relativeStm ? PieceValue[MG][nextVictim] : -PieceValue[MG][nextVictim]; Update balance:\nIf relativeStm = true (opponent’s turn): Opponent captures, we LOSE material → ADD their piece value (makes balance worse for us) If relativeStm = false (our turn): We capture, we GAIN material → SUBTRACT their piece value (makes balance better for us) (This seems backwards, but remember: balance is “our gains minus our losses”, so when opponent gains, our balance gets worse)\nrelativeStm = !relativeStm; Switch turns: Toggle between opponent’s turn and our turn.\nif (relativeStm == (balance \u003e= v)) return relativeStm; Alpha-beta pruning cutoff:\nSEE is not trying to compute an exact score.\nIt answers a question like:\n“If I play this capture sequence, can I end up at least as good as value v?”\nSo the function is typically called as:\nsee_ge(move, v) Meaning:\nreturn true if SEE(move) ≥ v\nbalance\nThis is the current material balance during the simulated exchange.\nPositive = good for side to move Negative = bad for side to move It gets updated as pieces capture each other.\nrelativeStm\nThis is a boolean meaning:\nrelativeStm = true → opponent is to move relativeStm = false → side to move is to move So it flips each ply during the exchange simulation.\nThink:\nFirst capture: us Reply capture: them Next capture: us (balance \u003e= v)\nThis is the evaluation test:\nHave we reached the threshold?\nif (relativeStm == (balance \u003e= v)) return relativeStm; It is checking whether the current player has already “won” or “lost” the threshold battle.\nCase 1: Opponent to move (relativeStm = true)\nThen condition becomes:\nif (true == (balance \u003e= v)) So if balance is already ≥ v even though opponent is about to move, then:\nWe (the original side) are already safe Opponent cannot avoid us reaching threshold So: return true. Case 2: Side to move (relativeStm = false)\nCondition becomes:\nif (false == (balance \u003e= v)) Which means:\nbalance \u003c v So if balance is below threshold when it is our turn, then:\nWe cannot force it back above v The exchange fails the threshold return false; SEE cutoffs are asymmetric. When it is our turn and the balance is already below the threshold, we cannot recover because any further capture requires sacrificing another piece, decreasing balance further. However, when it is the opponent’s turn, a low balance does not guarantee failure, because the opponent may be forced to recapture with an expensive piece, swinging the balance back upward. Therefore pruning is only safe on the maximizing side’s turn.\nstm = ~stm; } } Switch side to move: Flip to the other color for the next iteration of the loop.\n","wordCount":"1788","inLanguage":"en","datePublished":"2026-01-31T00:00:00Z","dateModified":"2026-01-31T00:00:00Z","author":{"@type":"Person","name":"Sanketh"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/chess_engine/2026-01-31-see/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload=renderMathInElement(document.body)></script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">Static Exchange Evaluation (SEE)</h1><div class=post-meta><span title='2026-01-31 00:00:00 +0000 UTC'>January 31, 2026</span>&nbsp;·&nbsp;9 min&nbsp;·&nbsp;Sanketh&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/chess_engine/2026-01-31-see.md rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#static-exchange-evaluation-see aria-label="Static Exchange Evaluation (SEE)">Static Exchange Evaluation (SEE)</a><ul><li><a href=#the-algorithm aria-label="The Algorithm">The Algorithm</a><ul><li><a href=#1-setup-phase aria-label="1. Setup Phase:">1. Setup Phase:</a></li><li><a href=#2-main-exchange-loop aria-label="2. Main exchange loop">2. Main exchange loop</a></li></ul></li></ul></li></ul></div></details></div><div class=post-content><h1 id=static-exchange-evaluation-see>Static Exchange Evaluation (SEE)<a hidden class=anchor aria-hidden=true href=#static-exchange-evaluation-see>#</a></h1><p>SEE simulates a capture sequence on a square to calculate the net material gain/loss. It asks: &ldquo;If I make this move and we trade pieces on this square, will I gain at least <code>v</code> centipawns?&rdquo;</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#75715e>/// Position::see_ge (Static Exchange Evaluation Greater or Equal) tests if the
+</span></span></span><span style=display:flex><span><span style=color:#75715e>/// SEE value of move is greater or equal to the given value. We&#39;ll use an
+</span></span></span><span style=display:flex><span><span style=color:#75715e>/// algorithm similar to alpha-beta pruning with a null window.
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>bool</span> Position<span style=color:#f92672>::</span>see_ge(Move m, Value v) <span style=color:#66d9ef>const</span> {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  assert(is_ok(m));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Castling moves are implemented as king capturing the rook so cannot be
+</span></span></span><span style=display:flex><span>  <span style=color:#75715e>// handled correctly. Simply assume the SEE value is VALUE_ZERO that is always
+</span></span></span><span style=display:flex><span>  <span style=color:#75715e>// correct unless in the rare case the rook ends up under attack.
+</span></span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (type_of(m) <span style=color:#f92672>==</span> CASTLING)
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>return</span> VALUE_ZERO <span style=color:#f92672>&gt;=</span> v;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  Square from <span style=color:#f92672>=</span> from_sq(m), to <span style=color:#f92672>=</span> to_sq(m);
+</span></span><span style=display:flex><span>  PieceType nextVictim <span style=color:#f92672>=</span> type_of(piece_on(from));
+</span></span><span style=display:flex><span>  Color stm <span style=color:#f92672>=</span> <span style=color:#f92672>~</span>color_of(piece_on(from)); <span style=color:#75715e>// First consider opponent&#39;s move
+</span></span></span><span style=display:flex><span>  Value balance; <span style=color:#75715e>// Values of the pieces taken by us minus opponent&#39;s ones
+</span></span></span><span style=display:flex><span>  Bitboard occupied, stmAttackers;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (type_of(m) <span style=color:#f92672>==</span> ENPASSANT)
+</span></span><span style=display:flex><span>  {
+</span></span><span style=display:flex><span>      occupied <span style=color:#f92672>=</span> SquareBB[to <span style=color:#f92672>-</span> pawn_push(<span style=color:#f92672>~</span>stm)]; <span style=color:#75715e>// Remove the captured pawn
+</span></span></span><span style=display:flex><span>      balance <span style=color:#f92672>=</span> PieceValue[MG][PAWN];
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>else</span>
+</span></span><span style=display:flex><span>  {
+</span></span><span style=display:flex><span>      balance <span style=color:#f92672>=</span> PieceValue[MG][piece_on(to)];
+</span></span><span style=display:flex><span>      occupied <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (balance <span style=color:#f92672>&lt;</span> v)
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>return</span> false;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (nextVictim <span style=color:#f92672>==</span> KING)
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>return</span> true;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  balance <span style=color:#f92672>-=</span> PieceValue[MG][nextVictim];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (balance <span style=color:#f92672>&gt;=</span> v)
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>return</span> true;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>bool</span> relativeStm <span style=color:#f92672>=</span> true; <span style=color:#75715e>// True if the opponent is to move
+</span></span></span><span style=display:flex><span>  occupied <span style=color:#f92672>^=</span> pieces() <span style=color:#f92672>^</span> from <span style=color:#f92672>^</span> to;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e>// Find all attackers to the destination square, with the moving piece removed,
+</span></span></span><span style=display:flex><span>  <span style=color:#75715e>// but possibly an X-ray attacker added behind it.
+</span></span></span><span style=display:flex><span>  Bitboard attackers <span style=color:#f92672>=</span> attackers_to(to, occupied) <span style=color:#f92672>&amp;</span> occupied;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>while</span> (true)
+</span></span><span style=display:flex><span>  {
+</span></span><span style=display:flex><span>      stmAttackers <span style=color:#f92672>=</span> attackers <span style=color:#f92672>&amp;</span> pieces(stm);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// Don&#39;t allow pinned pieces to attack pieces except the king as long all
+</span></span></span><span style=display:flex><span>      <span style=color:#75715e>// pinners are on their original square.
+</span></span></span><span style=display:flex><span>      <span style=color:#66d9ef>if</span> (<span style=color:#f92672>!</span>(st<span style=color:#f92672>-&gt;</span>pinnersForKing[stm] <span style=color:#f92672>&amp;</span> <span style=color:#f92672>~</span>occupied))
+</span></span><span style=display:flex><span>          stmAttackers <span style=color:#f92672>&amp;=</span> <span style=color:#f92672>~</span>st<span style=color:#f92672>-&gt;</span>blockersForKing[stm];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>if</span> (<span style=color:#f92672>!</span>stmAttackers)
+</span></span><span style=display:flex><span>          <span style=color:#66d9ef>return</span> relativeStm;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>// Locate and remove the next least valuable attacker
+</span></span></span><span style=display:flex><span>      nextVictim <span style=color:#f92672>=</span> min_attacker<span style=color:#f92672>&lt;</span>PAWN<span style=color:#f92672>&gt;</span>(byTypeBB, to, stmAttackers, occupied, attackers);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>if</span> (nextVictim <span style=color:#f92672>==</span> KING)
+</span></span><span style=display:flex><span>          <span style=color:#66d9ef>return</span> relativeStm <span style=color:#f92672>==</span> <span style=color:#66d9ef>bool</span>(attackers <span style=color:#f92672>&amp;</span> pieces(<span style=color:#f92672>~</span>stm));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      balance <span style=color:#f92672>+=</span> relativeStm <span style=color:#f92672>?</span>  PieceValue[MG][nextVictim]
+</span></span><span style=display:flex><span>                             <span style=color:#f92672>:</span> <span style=color:#f92672>-</span>PieceValue[MG][nextVictim];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      relativeStm <span style=color:#f92672>=</span> <span style=color:#f92672>!</span>relativeStm;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#66d9ef>if</span> (relativeStm <span style=color:#f92672>==</span> (balance <span style=color:#f92672>&gt;=</span> v))
+</span></span><span style=display:flex><span>          <span style=color:#66d9ef>return</span> relativeStm;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      stm <span style=color:#f92672>=</span> <span style=color:#f92672>~</span>stm;
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 id=the-algorithm>The Algorithm<a hidden class=anchor aria-hidden=true href=#the-algorithm>#</a></h2><h3 id=1-setup-phase>1. Setup Phase:<a hidden class=anchor aria-hidden=true href=#1-setup-phase>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>assert(is_ok(m));
+</span></span></code></pre></div><ul><li>Debug check: Verify the move is legal/valid before proceeding.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>  <span style=color:#75715e>// Castling moves are implemented as king capturing the rook so cannot be
+</span></span></span><span style=display:flex><span>  <span style=color:#75715e>// handled correctly. Simply assume the SEE value is VALUE_ZERO that is always
+</span></span></span><span style=display:flex><span>  <span style=color:#75715e>// correct unless in the rare case the rook ends up under attack.
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> (type_of(m) <span style=color:#f92672>==</span> CASTLING)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> VALUE_ZERO <span style=color:#f92672>&gt;=</span> v;
+</span></span></code></pre></div><p>Castling special case: Internally, castling is coded as &ldquo;king captures own rook,&rdquo; which would confuse the SEE algorithm. Just assume SEE = 0 for castling moves (safe assumption since you&rsquo;re not actually capturing anything).</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>Square from <span style=color:#f92672>=</span> from_sq(m), to <span style=color:#f92672>=</span> to_sq(m);
+</span></span><span style=display:flex><span>PieceType nextVictim <span style=color:#f92672>=</span> type_of(piece_on(from));
+</span></span><span style=display:flex><span>Color stm <span style=color:#f92672>=</span> <span style=color:#f92672>~</span>color_of(piece_on(from)); <span style=color:#75715e>// Opponent moves next
+</span></span></span></code></pre></div><ul><li>We assume Move <code>m</code> has already happened</li><li>Track which piece we&rsquo;re moving and where</li><li>The opponent responds first (they decide whether to recapture)</li><li><code>nextVictim</code> refers to the piece that&rsquo;s about to be captured next in the exchange sequence.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>Value balance; <span style=color:#75715e>// Values of the pieces taken by us minus opponent&#39;s ones
+</span></span></span><span style=display:flex><span>Bitboard occupied, stmAttackers;
+</span></span></code></pre></div><p>Declare variables:</p><ul><li><code>balance</code>: Running total of material gained/lost</li><li><code>occupied</code>: Bitboard tracking which squares have pieces</li><li><code>stmAttackers</code>: Bitboard of attackers belonging to the side to move</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (type_of(m) <span style=color:#f92672>==</span> ENPASSANT)
+</span></span><span style=display:flex><span>  {
+</span></span><span style=display:flex><span>      occupied <span style=color:#f92672>=</span> SquareBB[to <span style=color:#f92672>-</span> pawn_push(<span style=color:#f92672>~</span>stm)]; <span style=color:#75715e>// Remove the captured pawn
+</span></span></span><span style=display:flex><span>      balance <span style=color:#f92672>=</span> PieceValue[MG][PAWN];
+</span></span><span style=display:flex><span>  }
+</span></span></code></pre></div><ul><li>En passant special case: En passant captures are weird because the captured pawn isn&rsquo;t on the destination square.</li><li><code>occupied</code> is the bitboard marking the actual square of the pawn to be captured</li><li><code>balance</code> is the value PSQ value of pawn captured</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>  <span style=color:#66d9ef>else</span>
+</span></span><span style=display:flex><span>  {
+</span></span><span style=display:flex><span>      balance <span style=color:#f92672>=</span> PieceValue[MG][piece_on(to)];
+</span></span><span style=display:flex><span>      occupied <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>  }
+</span></span></code></pre></div><ul><li>Normal capture: Start balance with the value of whatever piece was on the destination square.</li><li>No special occupied handling: For normal moves, we don&rsquo;t need to mark any special squares (the en passant case set this earlier).</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (balance <span style=color:#f92672>&lt;</span> v)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> false;
+</span></span></code></pre></div><p><strong>Early cutoff #1:</strong> If even after capturing their piece, the balance is still less than our threshold v, we can&rsquo;t possibly reach it (since we&rsquo;re about to lose our piece next). Fail immediately.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (nextVictim <span style=color:#f92672>==</span> KING)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> true;
+</span></span></code></pre></div><p><strong>King capture is always good:</strong> If we&rsquo;re capturing with our king, we can&rsquo;t lose the king in the exchange (kings can&rsquo;t be captured). So it&rsquo;s always at least break-even. Of course, it assumes the caller has already validated the king won&rsquo;t end up in check after capturing.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>balance <span style=color:#f92672>-=</span> PieceValue[MG][nextVictim];
+</span></span></code></pre></div><p><strong>Assume opponent recaptures:</strong> Subtract the value of OUR piece (the one we just moved). This is the material we&rsquo;ll lose if the opponent recaptures.</p><p>Example: We captured a Rook (500) with a Knight (300)</p><ul><li>balance = 500 (captured rook)</li><li>balance = 500 - 300 = 200 (after opponent takes our knight)</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (balance <span style=color:#f92672>&gt;=</span> v)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> true;
+</span></span></code></pre></div><p><strong>Early cutoff #2:</strong> If even after losing our piece, we&rsquo;re still at or above the threshold v, we can return true immediately. No need to simulate further trades.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>bool</span> relativeStm <span style=color:#f92672>=</span> true; <span style=color:#75715e>// True if the opponent is to move
+</span></span></span></code></pre></div><p><strong>Track whose perspective:</strong> This boolean tracks whether we&rsquo;re adding (opponent captures) or subtracting (we capture) from balance. Starts true because opponent moves first.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>occupied <span style=color:#f92672>^=</span> pieces() <span style=color:#f92672>^</span> from <span style=color:#f92672>^</span> to;
+</span></span></code></pre></div><p>Update occupied squares:</p><ul><li><code>pieces()</code>: All pieces on the board</li><li><code>^ from:</code> Remove piece from origin square</li><li><code>^ to</code>: Remove piece from destination square (if there was one)</li><li><code>^ occupied</code>: Handle the en passant pawn removal (if applicable)</li></ul><p>Result: Bitboard showing all pieces after our move has been made.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#75715e>// Find all attackers to the destination square, with the moving piece removed,
+</span></span></span><span style=display:flex><span>  <span style=color:#75715e>// but possibly an X-ray attacker added behind it.
+</span></span></span><span style=display:flex><span>Bitboard attackers <span style=color:#f92672>=</span> attackers_to(to, occupied) <span style=color:#f92672>&amp;</span> occupied;
+</span></span></code></pre></div><p><strong>Find all attackers:</strong> Get all pieces (from both sides) that can attack square to, considering the updated board position. X-ray attacks (bishops/rooks/queens revealed when the moving piece left) are automatically included.</p><p>Bitwise <code>&</code> with <code>occupied</code> is required here because we&rsquo;re passing a modified <code>occupied</code> bitboard to <code>attackers_to()</code>, but the <code>pieces()</code> bitboards inside <code>attackers_to()</code> still refer to the original board position. They use <code>occupied</code> as reference only for blockers.</p><p>This will end up revealing the x-ray attacks because we have moved our piece on <code>from</code> and removed their piece on <code>to</code>.</p><h3 id=2-main-exchange-loop>2. Main exchange loop<a hidden class=anchor aria-hidden=true href=#2-main-exchange-loop>#</a></h3><p>Simulate the capture sequence. Each iteration represents one recapture.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>  <span style=color:#66d9ef>while</span> (true)
+</span></span><span style=display:flex><span>  {
+</span></span><span style=display:flex><span>      stmAttackers <span style=color:#f92672>=</span> attackers <span style=color:#f92672>&amp;</span> pieces(stm);
+</span></span></code></pre></div><p><strong>Filter to current side&rsquo;s attackers:</strong> From all attackers, get only the ones belonging to the side that&rsquo;s about to move.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>     p<span style=color:#75715e>// Don&#39;t allow pinned pieces to attack pieces except the king as long all
+</span></span></span><span style=display:flex><span>      <span style=color:#75715e>// pinners are on their original square.
+</span></span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> (<span style=color:#f92672>!</span>(st<span style=color:#f92672>-&gt;</span>pinnersForKing[stm] <span style=color:#f92672>&amp;</span> <span style=color:#f92672>~</span>occupied))
+</span></span><span style=display:flex><span>        stmAttackers <span style=color:#f92672>&amp;=</span> <span style=color:#f92672>~</span>st<span style=color:#f92672>-&gt;</span>blockersForKing[stm];
+</span></span></code></pre></div><p><strong>Handle pinned pieces:</strong> If all pinning pieces are still on their original squares (haven&rsquo;t moved), then pinned pieces can&rsquo;t participate in the exchange (except when capturing the king, which would be illegal anyway). Remove them from stmAttackers.</p><p>It just means if opponent hasn&rsquo;t moved any of their pieces which pins our king, then none of our pieces blocking the attack to king can be considered for recaptures.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>    <span style=color:#66d9ef>if</span> (<span style=color:#f92672>!</span>stmAttackers)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> relativeStm;
+</span></span></code></pre></div><p><strong>No recapture available:</strong> If the current side has no attackers, the exchange ends. Return based on whose turn it was:</p><ul><li>If opponent&rsquo;s turn (<code>relativeStm = true</code>): They can&rsquo;t recapture, so we keep the material. Return true.</li><li>If our turn (<code>relativeStm = false</code>): We can&rsquo;t recapture, so they keep the material. Return false.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>    <span style=color:#75715e>// Locate and remove the next least valuable attacker
+</span></span></span><span style=display:flex><span>    nextVictim <span style=color:#f92672>=</span> min_attacker<span style=color:#f92672>&lt;</span>PAWN<span style=color:#f92672>&gt;</span>(byTypeBB, to, stmAttackers, occupied, attackers);
+</span></span></code></pre></div><p><strong>Find cheapest attacker:</strong> Use the least valuable piece to recapture (pawn &lt; knight &lt; bishop &lt; rook &lt; queen &lt; king). This minimizes the potential loss. Also updates <code>occupied</code> and <code>attackers</code> bitboards to reflect this piece moving.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>    <span style=color:#66d9ef>if</span> (nextVictim <span style=color:#f92672>==</span> KING)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> relativeStm <span style=color:#f92672>==</span> <span style=color:#66d9ef>bool</span>(attackers <span style=color:#f92672>&amp;</span> pieces(<span style=color:#f92672>~</span>stm));
+</span></span></code></pre></div><p><strong>King recapture check:</strong> If the only way to recapture is with the king, check if the opponent has any attackers left:</p><ul><li>If opponent can attack back: King would be captured → illegal → exchange ends → return based on relativeStm</li><li>If opponent can&rsquo;t attack: King safely captures → exchange continues</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>    balance <span style=color:#f92672>+=</span> relativeStm <span style=color:#f92672>?</span>  PieceValue[MG][nextVictim]
+</span></span><span style=display:flex><span>                            <span style=color:#f92672>:</span> <span style=color:#f92672>-</span>PieceValue[MG][nextVictim];
+</span></span></code></pre></div><p><strong>Update balance:</strong></p><ul><li>If <code>relativeStm = true</code> (opponent&rsquo;s turn): Opponent captures, we LOSE material → ADD their piece value (makes balance worse for us)</li><li>If <code>relativeStm = false</code> (our turn): We capture, we GAIN material → SUBTRACT their piece value (makes balance better for us)</li></ul><p>(This seems backwards, but remember: <code>balance</code> is &ldquo;our gains minus our losses&rdquo;, so when opponent gains, our balance gets worse)</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>    relativeStm <span style=color:#f92672>=</span> <span style=color:#f92672>!</span>relativeStm;
+</span></span></code></pre></div><p><strong>Switch turns:</strong> Toggle between opponent&rsquo;s turn and our turn.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (relativeStm <span style=color:#f92672>==</span> (balance <span style=color:#f92672>&gt;=</span> v))
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> relativeStm;
+</span></span></code></pre></div><p><strong>Alpha-beta pruning cutoff:</strong></p><p>SEE is not trying to compute an exact score.</p><p>It answers a question like:</p><blockquote><p>“If I play this capture sequence, can I end up at least as good as value v?”</p></blockquote><p>So the function is typically called as:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>see_ge(move, v)
+</span></span></code></pre></div><p>Meaning:</p><blockquote><p>return true if SEE(move) ≥ v</p></blockquote><p><strong>balance</strong></p><p>This is the current material balance during the simulated exchange.</p><ul><li>Positive = good for side to move</li><li>Negative = bad for side to move</li></ul><p>It gets updated as pieces capture each other.</p><p><strong>relativeStm</strong></p><p>This is a boolean meaning:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>relativeStm <span style=color:#f92672>=</span> true  <span style=color:#960050;background-color:#1e0010>→</span> opponent is to move
+</span></span><span style=display:flex><span>relativeStm <span style=color:#f92672>=</span> false <span style=color:#960050;background-color:#1e0010>→</span> side to move is to move
+</span></span></code></pre></div><p>So it flips each ply during the exchange simulation.</p><p>Think:</p><ul><li>First capture: us</li><li>Reply capture: them</li><li>Next capture: us</li></ul><p><strong>(balance >= v)</strong></p><p>This is the evaluation test:</p><blockquote><p>Have we reached the threshold?</p></blockquote><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (relativeStm <span style=color:#f92672>==</span> (balance <span style=color:#f92672>&gt;=</span> v))
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> relativeStm;
+</span></span></code></pre></div><p>It is checking whether the current player has already “won” or “lost” the threshold battle.</p><p><strong>Case 1: Opponent to move (relativeStm = true)</strong></p><p>Then condition becomes:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (true <span style=color:#f92672>==</span> (balance <span style=color:#f92672>&gt;=</span> v))
+</span></span></code></pre></div><p>So if balance is already ≥ v even though opponent is about to move, then:</p><ul><li>We (the original side) are already safe</li><li>Opponent cannot avoid us reaching threshold</li><li>So: return <code>true</code>.</li></ul><p><strong>Case 2: Side to move (relativeStm = false)</strong></p><p>Condition becomes:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>if</span> (false <span style=color:#f92672>==</span> (balance <span style=color:#f92672>&gt;=</span> v))
+</span></span></code></pre></div><p>Which means:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>balance <span style=color:#f92672>&lt;</span> v
+</span></span></code></pre></div><p>So if balance is below threshold when it is our turn, then:</p><ul><li>We cannot force it back above v</li><li>The exchange fails the threshold</li><li>return false;</li></ul><p>SEE cutoffs are asymmetric.
+When it is our turn and the balance is already below the threshold, we cannot recover because any further capture requires sacrificing another piece, decreasing balance further.
+However, when it is the opponent’s turn, a low balance does not guarantee failure, because the opponent may be forced to recapture with an expensive piece, swinging the balance back upward.
+Therefore pruning is only safe on the maximizing side’s turn.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>        stm <span style=color:#f92672>=</span> <span style=color:#f92672>~</span>stm;
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>    }
+</span></span></code></pre></div><p><strong>Switch side to move:</strong> Flip to the other color for the next iteration of the loop.</p></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/sse/>Sse</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
