@@ -1091,3 +1091,28 @@ Why this works:
 - If two occupancies hash to the same index but have the same attacks, it's OK (constructive collision)
 - If they have different attacks, the magic is invalid (destructive collision)
 - age[] lets us detect this without clearing the array each attempt
+
+A simple way to make sense of carry rippler is to think of subtraction as 2's complement addition. 
+
+If we take `0b111` as mask. Cycle goes like this
+
+```
+b = 0, (0 - 0b111) = (0 + 0b001) = 0b0001 = 1
+b = 1, (1 - 0b111) = (1 + 0b001) = 0b0010 =  2
+b = 2, (0b010 - 0b111) = (0b010 + 0b001) = 0b0011 = 3
+b = 2, (0b011 - 0b111) = (0b011 + 0b001) = 0b0100 = 4
+...
+```
+
+We can see how it goes on generating all possible bit combinations. 
+
+Similarly for a partial mask like `0b101`
+
+```
+b = 0, (0 - 0b101) = (0 + 0b011) = (0b011 & 0b101) = 0b001
+b = 1, (1 - 0b001) = (0b001 + 0b011) = (0b100 & 0b101) = 0b100
+b = 4, (4 - 0b001) = (0b100 + 0b011) = (0b111 & 0b101) = 0b101
+b = 5, (5 - 0b001) = (0b101 + 0b011) = (0b000 & 0b101) = 0b000 <- wrap back, cycle ends
+```
+
+
