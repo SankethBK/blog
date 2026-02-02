@@ -702,3 +702,118 @@ shift<NORTH_WEST>(b) -> (b & ~FileABB) << 7
 
 Same logic for south-east / south-west.
 
+## make_promotions
+
+```cpp
+  template<GenType Type, Square D>
+  ExtMove* make_promotions(ExtMove* moveList, Square to, Square ksq) {
+
+    if (Type == CAPTURES || Type == EVASIONS || Type == NON_EVASIONS)
+        *moveList++ = make<PROMOTION>(to - D, to, QUEEN);
+
+    if (Type == QUIETS || Type == EVASIONS || Type == NON_EVASIONS)
+    {
+        *moveList++ = make<PROMOTION>(to - D, to, ROOK);
+        *moveList++ = make<PROMOTION>(to - D, to, BISHOP);
+        *moveList++ = make<PROMOTION>(to - D, to, KNIGHT);
+    }
+
+    // Knight promotion is the only promotion that can give a direct check
+    // that's not already included in the queen promotion.
+    if (Type == QUIET_CHECKS && (StepAttacksBB[W_KNIGHT][to] & ksq))
+        *moveList++ = make<PROMOTION>(to - D, to, KNIGHT);
+    else
+        (void)ksq; // Silence a warning under MSVC
+
+    return moveList;
+  }
+```
+
+This function generates all promotion moves for a single pawn that's promoting. A pawn can promote to 4 different pieces (Queen, Rook, Bishop, Knight), and this function decides which promotions to generate based on the `Type` parameter.
+
+The `D` template parameter indicates the direction the pawn moved to promote (Up, Right, or Left - i.e., push forward, capture right diagonal, or capture left diagonal).
+
+### Function template:
+
+```cpp
+template<GenType Type, Square D>
+ExtMove* make_promotions(ExtMove* moveList, Square to, Square ksq) {
+```
+
+- `Type`: What kind of moves to generate (CAPTURES, QUIETS, etc.)
+- `D`: Direction of promotion (Up = push, Right/Left = capture)
+- `to`: Destination square (the promotion square on rank 8/1)
+- `ksq`: Enemy king square (needed to check if knight promotion gives check)
+- Returns: Updated moveList pointer
+
+```cpp
+if (Type == CAPTURES || Type == EVASIONS || Type == NON_EVASIONS)
+    *moveList++ = make<PROMOTION>(to - D, to, QUEEN);
+```
+
+**Queen promotion (when capturing or all moves):**
+
+- Generate queen promotion if we're generating captures, evasions, or all moves
+- `to - D`: Origin square (one square back in direction D)
+  - If` D = Up`: to - Up (one square behind)
+  - If `D = Right`: to - Right (one square down-left from promotion square)
+  - If` D = Left`: to - Left (one square down-right from promotion square)
+- Queen promotion is included for captures because:
+  - If promotion was by capture (`D = Right` or `Left`), it's a capturing move
+  - Queen is the most valuable piece, so always relevant for captures
+
+### Underpromotions section
+
+```cpp
+if (Type == QUIETS || Type == EVASIONS || Type == NON_EVASIONS)
+    {
+```
+
+Generate promotions to pieces other than Queen.
+
+These are considered "quiet" in the sense that:
+
+- They're usually not tactically forcing (Queen is almost always better)
+- But they might be needed in special positions (avoiding stalemate, giving check, etc.)
+
+```cpp
+    *moveList++ = make<PROMOTION>(to - D, to, ROOK);
+    *moveList++ = make<PROMOTION>(to - D, to, BISHOP);
+    *moveList++ = make<PROMOTION>(to - D, to, KNIGHT);
+    }
+```
+
+**Generate Rook, Bishop, Knight promotions**: Create all three underpromotions.
+These are included when:
+- `QUIETS`: Generating all quiet moves
+- `EVASIONS`: In check, might need specific piece to block/capture
+- `NON_EVASIONS`: Generating all legal moves (not in check)
+
+```cpp
+    // Knight promotion is the only promotion that can give a direct check
+    // that's not already included in the queen promotion.
+if (Type == QUIET_CHECKS && (StepAttacksBB[W_KNIGHT][to] & ksq))
+    *moveList++ = make<PROMOTION>(to - D, to, KNIGHT);
+```
+
+**Special case: Knight promotion giving check**:
+
+When generating only quiet checks (`QUIET_CHECKS`):
+- Queen promotions are NOT generated (already handled in capture promotions)
+- But knight can give check in ways a queen cannot!
+
+**Why knight is special:**
+- Queen attacks all squares a rook and bishop attack
+- But Queen does NOT attack all squares a knight attacks (knight moves in L-shape)
+- So knight promotion might give check when queen promotion wouldn't
+
+```cpp
+else
+    (void)ksq; // Silence a warning under MSVC
+```
+
+### Compiler warning suppression:
+
+- If we're not generating `QUIET_CHECKS`, the `ksq` parameter is unused
+- Microsoft Visual C++ compiler warns about unused parameters
+- `(void)ksq` tells the compiler "I know this is unused, it's intentional"
