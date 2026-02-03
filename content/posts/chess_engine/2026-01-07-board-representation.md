@@ -682,3 +682,33 @@ Bitboard pinnersForKing[COLOR_NB]
 
 - Enemy sliding pieces pinning our pieces
 - The "other side" of `blockersForKing`
+
+### checkSquares
+
+```cpp
+Bitboard checkSquares[PIECE_TYPE_NB];
+```
+
+checkSquares is a precomputed helper table stored inside StateInfo:
+
+It answers:
+
+> “If I move a piece of type Pt to some square s, would that give check to the opponent king?”
+
+```cpp
+checkSquares[Pt]
+```
+
+is a bitboard of destination squares that would produce an immediate check.
+
+**Key idea**
+
+Instead of recomputing:
+- “Does this move give check?”
+- “Does this square attack the enemy king?”
+
+Stockfish precomputes, once per position:
+
+> All squares that would check the enemy king for each piece type.
+
+Its set in `set_check_info` which is set in `do_move`.
