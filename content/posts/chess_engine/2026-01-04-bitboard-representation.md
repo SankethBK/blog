@@ -868,4 +868,31 @@ Used for:
 Bitboard rank4Pieces = pieces() & RankBB[RANK_4];
 ```
 
+## PseudoAttacks
 
+```cpp
+Bitboard PseudoAttacks[PIECE_TYPE_NB][SQUARE_NB];
+```
+
+PseudoAttacks is a precomputed attack lookup table:
+
+> For every piece type and every square, it stores the squares that piece could attack on an empty board (or ignoring blockers).
+
+```cpp
+PseudoAttacks[pt][sq]
+```
+
+answers:
+
+> “If a piece of type pt sits on square sq, what squares are in its attack pattern?”
+
+
+Why “Pseudo”?
+
+Because these are not always real attacks in an actual position.
+
+For sliding pieces (rook/bishop/queen):
+- The direction is correct
+- But blockers are ignored
+
+So it’s a pseudo-attack, not the final legal attack set.
