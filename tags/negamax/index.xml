@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Negamax on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/negamax/</link><description>Recent content in Negamax on Sanketh's Blog</description><generator>Hugo -- 0.155.3</generator><language>en-us</language><lastBuildDate>Sat, 07 Feb 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/negamax/index.xml" rel="self" type="application/rss+xml"/><item><title>Minmax with Alpha Beta Pruning</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-02-07-minmax-and-alpha-beta-pruning/</link><pubDate>Sat, 07 Feb 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-02-07-minmax-and-alpha-beta-pruning/</guid><description>&lt;h1 id="minmax-with-alpha-beta-pruning"&gt;Minmax with Alpha Beta Pruning&lt;/h1&gt;
+&lt;h2 id="game-tree-search"&gt;Game Tree Search&lt;/h2&gt;
+&lt;h3 id="the-goal-of-a-chess-engine"&gt;The Goal of a Chess Engine&lt;/h3&gt;
+&lt;p&gt;A chess engine is solving:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“Given a position, what move leads to the best possible future?”&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;But the engine cannot know the future, so it simulates it.&lt;/p&gt;
+&lt;p&gt;This simulation is called search.&lt;/p&gt;
+&lt;h3 id="the-game-tree"&gt;The Game Tree&lt;/h3&gt;
+&lt;p&gt;Every legal move creates a new position.
+From that position, the opponent also has moves.&lt;/p&gt;
+&lt;p&gt;This forms a tree:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;Position
+├── Move A
+│ ├── Opp Move A1
+│ │ ├── Move A1a
+│ │ └── Move A1b
+│ └── Opp Move A2
+│ └── ...
+└── Move B
+└── ...
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This is called the game tree.&lt;/p&gt;</description></item></channel></rss>

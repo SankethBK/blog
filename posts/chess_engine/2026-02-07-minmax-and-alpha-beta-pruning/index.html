@@ -1,0 +1,369 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Minmax with Alpha Beta Pruning | Sanketh's Blog</title><meta name=keywords content="minmax,alpha-beta pruning,negamax"><meta name=description content="Minmax with Alpha Beta Pruning
+Game Tree Search
+The Goal of a Chess Engine
+A chess engine is solving:
+
+“Given a position, what move leads to the best possible future?”
+
+But the engine cannot know the future, so it simulates it.
+This simulation is called search.
+The Game Tree
+Every legal move creates a new position.
+From that position, the opponent also has moves.
+This forms a tree:
+Position
+ ├── Move A
+ │    ├── Opp Move A1
+ │    │     ├── Move A1a
+ │    │     └── Move A1b
+ │    └── Opp Move A2
+ │          └── ...
+ └── Move B
+      └── ...
+This is called the game tree."><meta name=author content="Sanketh"><link rel=canonical href=https://sankethbk.github.io/blog/posts/chess_engine/2026-02-07-minmax-and-alpha-beta-pruning/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.deee627d8b8d9065acc54b2c9d901e601e142335047d242a93ba7bce86f41f19.css integrity="sha256-3u5ifYuNkGWsxUssnZAeYB4UIzUEfSQqk7p7zob0Hxk=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/chess_engine/2026-02-07-minmax-and-alpha-beta-pruning/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/chess_engine/2026-02-07-minmax-and-alpha-beta-pruning/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="Minmax with Alpha Beta Pruning"><meta property="og:description" content="Minmax with Alpha Beta Pruning Game Tree Search The Goal of a Chess Engine A chess engine is solving:
+“Given a position, what move leads to the best possible future?”
+But the engine cannot know the future, so it simulates it.
+This simulation is called search.
+The Game Tree Every legal move creates a new position. From that position, the opponent also has moves.
+This forms a tree:
+Position ├── Move A │ ├── Opp Move A1 │ │ ├── Move A1a │ │ └── Move A1b │ └── Opp Move A2 │ └── ... └── Move B └── ... This is called the game tree."><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2026-02-07T00:00:00+00:00"><meta property="article:modified_time" content="2026-02-07T00:00:00+00:00"><meta property="article:tag" content="Minmax"><meta property="article:tag" content="Alpha-Beta Pruning"><meta property="article:tag" content="Negamax"><meta name=twitter:card content="summary"><meta name=twitter:title content="Minmax with Alpha Beta Pruning"><meta name=twitter:description content="Minmax with Alpha Beta Pruning
+Game Tree Search
+The Goal of a Chess Engine
+A chess engine is solving:
+
+“Given a position, what move leads to the best possible future?”
+
+But the engine cannot know the future, so it simulates it.
+This simulation is called search.
+The Game Tree
+Every legal move creates a new position.
+From that position, the opponent also has moves.
+This forms a tree:
+Position
+ ├── Move A
+ │    ├── Opp Move A1
+ │    │     ├── Move A1a
+ │    │     └── Move A1b
+ │    └── Opp Move A2
+ │          └── ...
+ └── Move B
+      └── ...
+This is called the game tree."><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"Minmax with Alpha Beta Pruning","item":"https://sankethbk.github.io/blog/posts/chess_engine/2026-02-07-minmax-and-alpha-beta-pruning/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Minmax with Alpha Beta Pruning","name":"Minmax with Alpha Beta Pruning","description":"Minmax with Alpha Beta Pruning Game Tree Search The Goal of a Chess Engine A chess engine is solving:\n“Given a position, what move leads to the best possible future?”\nBut the engine cannot know the future, so it simulates it.\nThis simulation is called search.\nThe Game Tree Every legal move creates a new position. From that position, the opponent also has moves.\nThis forms a tree:\nPosition ├── Move A │ ├── Opp Move A1 │ │ ├── Move A1a │ │ └── Move A1b │ └── Opp Move A2 │ └── ... └── Move B └── ... This is called the game tree.\n","keywords":["minmax","alpha-beta pruning","negamax"],"articleBody":"Minmax with Alpha Beta Pruning Game Tree Search The Goal of a Chess Engine A chess engine is solving:\n“Given a position, what move leads to the best possible future?”\nBut the engine cannot know the future, so it simulates it.\nThis simulation is called search.\nThe Game Tree Every legal move creates a new position. From that position, the opponent also has moves.\nThis forms a tree:\nPosition ├── Move A │ ├── Opp Move A1 │ │ ├── Move A1a │ │ └── Move A1b │ └── Opp Move A2 │ └── ... └── Move B └── ... This is called the game tree.\nEvaluation Function We cannot search until checkmate (too big). So at some depth we stop and estimate who is better\nevaluate(position) → score + positive = good for white + negative = good for black We can also think of it as static evaluation function, because it generates a score just by looking at the current board with no look ahead.\nExample:\n+1.20 → White is winning -0.50 → Black slightly better 0.00 → Equal The Minimax Principle Max player (White): tries to maximize the score Min player (Black): tries to minimize the score Each player assumes the opponent plays optimally At each ply, we alternate between max and min function minimax(position, depth, isMaximizingPlayer): if depth == 0 or position.isGameOver(): return evaluate(position) if isMaximizingPlayer: maxEval = -INFINITY for each move in position.getLegalMoves(): newPosition = position.makeMove(move) eval = minimax(newPosition, depth - 1, false) maxEval = max(maxEval, eval) return maxEval else: minEval = +INFINITY for each move in position.getLegalMoves(): newPosition = position.makeMove(move) eval = minimax(newPosition, depth - 1, true) minEval = min(minEval, eval) return minEval Example\nRoot Position (White to move, MAX, depth=2) Score: ? │ ├── Move A: Nf3 │ │ │ ├── Black Move A1: d5 (MIN, depth=1) │ │ Score: ? │ │ │ │ │ ├── White Move A1a: d4 (MAX, depth=0) │ │ │ └── [EVAL: +0.3] ← Static evaluation here! │ │ │ │ │ └── White Move A1b: e3 (MAX, depth=0) │ │ └── [EVAL: +0.1] ← Static evaluation here! │ │ │ │ → MIN picks lowest: min(+0.3, +0.1) = +0.1 │ │ │ └── Black Move A2: e5 (MIN, depth=1) │ Score: ? │ │ │ ├── White Move A2a: d4 (MAX, depth=0) │ │ └── [EVAL: +0.5] ← Static evaluation here! │ │ │ └── White Move A2b: Nc3 (MAX, depth=0) │ └── [EVAL: +0.2] ← Static evaluation here! │ │ → MIN picks lowest: min(+0.5, +0.2) = +0.2 │ │ → MAX at Move A picks highest: max(+0.1, +0.2) = +0.2 │ ├── Move B: e4 │ │ │ ├── Black Move B1: c5 (MIN, depth=1) │ │ Score: ? │ │ │ │ │ ├── White Move B1a: Nf3 (MAX, depth=0) │ │ │ └── [EVAL: +0.4] ← Static evaluation here! │ │ │ │ │ └── White Move B1b: d4 (MAX, depth=0) │ │ └── [EVAL: +0.6] ← Static evaluation here! │ │ │ │ → MIN picks lowest: min(+0.4, +0.6) = +0.4 │ │ │ └── Black Move B2: e5 (MIN, depth=1) │ Score: ? │ │ │ ├── White Move B2a: Nf3 (MAX, depth=0) │ │ └── [EVAL: +0.3] ← Static evaluation here! │ │ │ └── White Move B2b: Bc4 (MAX, depth=0) │ └── [EVAL: +0.5] ← Static evaluation here! │ │ → MIN picks lowest: min(+0.3, +0.5) = +0.3 │ │ → MAX at Move B picks highest: max(+0.4, +0.3) = +0.4 │ └── Move C: d4 │ ├── Black Move C1: d5 (MIN, depth=1) │ Score: ? │ │ │ ├── White Move C1a: c4 (MAX, depth=0) │ │ └── [EVAL: +0.2] ← Static evaluation here! │ │ │ └── White Move C1b: Nf3 (MAX, depth=0) │ └── [EVAL: +0.1] ← Static evaluation here! │ │ → MIN picks lowest: min(+0.2, +0.1) = +0.1 │ └── Black Move C2: Nf6 (MIN, depth=1) Score: ? │ ├── White Move C2a: c4 (MAX, depth=0) │ └── [EVAL: +0.3] ← Static evaluation here! │ └── White Move C2b: Nc3 (MAX, depth=0) └── [EVAL: +0.4] ← Static evaluation here! → MIN picks lowest: min(+0.3, +0.4) = +0.3 → MAX at Move C picks highest: max(+0.1, +0.3) = +0.3 FINAL DECISION at Root: White chooses: max(+0.2, +0.4, +0.3) = +0.4 → Best move: e4 (Move B) Alpha-Beta Pruning The Problem with Plain Minimax Plain minimax explores every node in the tree, even when we already know some branches won’t affect the final decision.\nExample: You’re looking at move options. You found one that guarantees you a score of +5. Then you start looking at another move, and the opponent’s first response gives you -3. Do you need to check the opponent’s other responses? NO! You already have +5, so you won’t opponent to play this move in the first place.\nThis optimization is called Alpha-Beta Pruning.\nThe Two Parameters Alpha (α): The best score MAX can guarantee so far\nBest score the maximizing side (us) is GUARANTEED so far Starts at -∞ Only MAX updates it (increases it) Represents MAX’s “floor” - the worst MAX will accept **Beta (β): **The best score MIN can guarantee so far\nBest score the minimizing side (opponent) is GUARANTEED so far Starts at +∞ Only MIN updates it (decreases it) Represents MIN’s “ceiling” - the worst MIN will accept So at any node:\nThe true value of the position must lie inside [α, β]\nIf we ever prove it lies outside this window → stop searching because parent will never choose it.\nThe Two Types of Pruning There are two different situations where we prune, depending on which player discovers the cutoff:\n1. Beta Cutoff Occurs at a node where opponent is choosing (minimizing node).\nMeaning\nWe found a move so good for us that opponent will NEVER allow reaching this position.\nExample\nWe are evaluating Move A at root.\nWe already have:\nalpha = +2 (we can get +2 elsewhere) Now inside this branch opponent analyzes a reply:\nposition score = +5 for us Opponent says:\n“Nope. I will never play a move that gives you +5 when I can choose another line giving you +2.”\nSo this branch is irrelevant.\nTherefore:\nscore \u003e= beta → BETA CUTOFF 2. Alpha Cutoff Occurs at a node where we are choosing (maximizing node).\nMeaning\nWe found a move so bad that we will never play this line.\nExample\nOpponent already has a line giving us:\nbeta = -4 Now we analyze another continuation and find:\nscore = -7 Pseudocode function alphaBeta(position, depth, alpha, beta, isMaximizingPlayer): if depth == 0 or position.isGameOver(): return evaluate(position) if isMaximizingPlayer: maxEval = -INFINITY for each move in position.getLegalMoves(): newPosition = position.makeMove(move) eval = alphaBeta(newPosition, depth - 1, alpha, beta, false) maxEval = max(maxEval, eval) alpha = max(alpha, eval) // ← MAX updates alpha if beta \u003c= alpha: // ← Pruning condition break // Beta cutoff: MIN won't allow this path return maxEval else: // Minimizing player minEval = +INFINITY for each move in position.getLegalMoves(): newPosition = position.makeMove(move) eval = alphaBeta(newPosition, depth - 1, alpha, beta, true) minEval = min(minEval, eval) beta = min(beta, eval) // ← MIN updates beta if beta \u003c= alpha: // ← Pruning condition break // Alpha cutoff: MAX won't allow this path return minEval // Initial call from root bestMove = alphaBeta(position, MAX_DEPTH, -INFINITY, +INFINITY, true) Negamax - A Simpler Way to Write Minimax Negamax is not a different algorithm - it’s just a cleaner way to write minimax.\nInstead of having separate logic for MAX and MIN players, negamax exploits a mathematical symmetry:\n“Your best move is my worst move (negated)”\nThe Key Insight In chess (and most zero-sum games):\nWhat’s good for White (+5) is equally bad for Black (-5) White maximizes the score Black minimizes the score But we can flip the perspective:\nFrom White’s view: position scores +5 From Black’s view: same position scores -5 So instead of:\nWhite (MAX): pick maximum Black (MIN): pick minimum We can do:\nCurrent player: pick maximum FROM THEIR PERSPECTIVE Opponent: negate the score to flip perspective Minimax vs Negamax - Side by Side Regular Minimax\nfunction minimax(position, depth, isMaximizingPlayer): if depth == 0: return evaluate(position) if isMaximizingPlayer: // White's turn maxEval = -INFINITY for each move in position.getLegalMoves(): eval = minimax(makeMove(move), depth - 1, false) maxEval = max(maxEval, eval) return maxEval else: // Black's turn minEval = +INFINITY for each move in position.getLegalMoves(): eval = minimax(makeMove(move), depth - 1, true) minEval = min(minEval, eval) return minEval Negamax - Simplified!\nfunction negamax(position, depth, color): if depth == 0: return color * evaluate(position) # ← Flip perspective! maxEval = -INFINITY for each move in position.getLegalMoves(): eval = -negamax(makeMove(move), depth - 1, -color) // ← Negate! maxEval = max(maxEval, eval) return maxEval // Initial call // color = +1 for White (maximizing) // color = -1 for Black (minimizing) bestScore = negamax(position, depth, +1) Why Negate the Recursive Call?\neval = -negamax(...) Think of it as switching perspective:\nChild node returns score from their perspective We want score from our perspective Our best = opponent’s worst So we negate! Example:\nBlack finds a position worth -5 from White’s view → From Black’s view, that’s +5 (good for Black!) → Negamax returns +5 to Black → White receives -5 (bad for White, correctly)\nLet’s trace a simple tree:\nPosition (White to move, color=+1, depth=2) │ ├── Move A │ │ │ └── Position after A (Black to move, color=-1, depth=1) │ │ │ ├── Move A1 │ │ └── [EVAL from White's view: +3] │ │ color=-1, so return: -1 * (+3) = -3 │ │ To White (parent): -(-3) = +3 │ │ │ └── Move A2 │ └── [EVAL from White's view: +1] │ color=-1, so return: -1 * (+1) = -1 │ To White (parent): -(-1) = +1 │ │ Black picks max(-3, -1) = -1 (best for Black) │ Return to White: -(-1) = +1 │ └── Move B │ └── Position after B (Black to move, color=-1, depth=1) │ ├── Move B1 │ └── [EVAL: +5] │ Returns to Black: -1 * (+5) = -5 │ To White: -(-5) = +5 │ └── Move B2 └── [EVAL: +2] Returns to Black: -1 * (+2) = -2 To White: -(-2) = +2 Black picks max(-5, -2) = -2 Return to White: -(-2) = +2 White picks max(+1, +2) = +2 Best move: B Negamax with Alpha-Beta Pruning function negamax(position, depth, alpha, beta, color): if depth == 0: return color * evaluate(position) maxEval = -INFINITY for each move in position.getLegalMoves(): eval = -negamax(makeMove(move), depth - 1, -beta, -alpha, -color) maxEval = max(maxEval, eval) alpha = max(alpha, eval) if alpha \u003e= beta: break # Prune return maxEval # Initial call bestScore = negamax(position, MAX_DEPTH, -INFINITY, +INFINITY, +1) Why swap alpha and beta?\nAlpha/beta represent a window from current player’s perspective When we flip perspective (negate), we must also flip the window Your alpha becomes opponent’s negative beta, and vice versa Alpha and Beta in Negamax In negamax, alpha and beta always represent the window from the CURRENT player’s perspective.\nAlpha: \"I'm guaranteed at least this score\" Beta: \"My opponent won't let me get more than this\" Both players use the same logic, but when we recurse, we negate and swap the window.\nWhy We Swap Alpha and Beta\nYour alpha = “best I can guarantee”\nFor opponent, this becomes their beta = “worst they’ll allow you” But negated: -alpha Your beta = “best opponent will allow”\nFor opponent, this becomes their alpha = “best they can guarantee” But negated: -beta Step-by-Step Example\nRoot: White's turn (color = +1) alpha = -∞, beta = +∞ \"I want at least -∞, opponent won't give me more than +∞\" ├── Exploring Move A │ │ Call: negamax(positionA, depth-1, -∞, +∞, -1) │ ↓ │ After negation: negamax(..., -beta, -alpha, -color) │ -(+∞) -(-∞) │ -∞ +∞ │ │ Black's turn (color = -1) │ alpha = -∞, beta = +∞ (from Black's perspective) │ \"I (Black) want at least -∞, White won't give me more than +∞\" │ │ ├── Move A1: returns +3 (from Black's view) │ │ alpha = max(-∞, +3) = +3 │ │ \"I now have at least +3 (from my Black perspective)\" │ │ │ ├── Move A2: returns +1 │ │ alpha = max(+3, +1) = +3 (no change) │ │ Black returns: +3 │ │ Back to White: -(+3) = -3 │ White's alpha = max(-∞, -3) = -3 │ \"I (White) now have at least -3\" │ ├── Exploring Move B │ │ White now has alpha = -3, beta = +∞ │ │ Call: negamax(positionB, depth-1, -beta, -alpha, -color) │ -(+∞) -(-3) │ -∞ +3 ← Swapped! │ │ Black's turn │ alpha = -∞, beta = +3 (from Black's perspective) │ \"I want at least -∞, but White won't let me get more than +3\" │ ↑ │ This came from White's alpha = -3 │ │ ├── Move B1: returns +5 (from Black's view) │ │ alpha = max(-∞, +5) = +5 │ │ Check: alpha \u003e= beta? → +5 \u003e= +3? YES! ✂️ │ │ PRUNE! (Beta cutoff) │ │ │ │ Why prune? │ │ Black found +5 for themselves │ │ But White (parent) already has -3 guaranteed │ │ From White's view, +5 for Black = -5 for White │ │ White won't choose this branch (-5 \u003c -3) │ │ └── Move B2: ✂️ Not explored ","wordCount":"2249","inLanguage":"en","datePublished":"2026-02-07T00:00:00Z","dateModified":"2026-02-07T00:00:00Z","author":{"@type":"Person","name":"Sanketh"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/chess_engine/2026-02-07-minmax-and-alpha-beta-pruning/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload=renderMathInElement(document.body)></script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">Minmax with Alpha Beta Pruning</h1><div class=post-meta><span title='2026-02-07 00:00:00 +0000 UTC'>February 7, 2026</span>&nbsp;·&nbsp;11 min&nbsp;·&nbsp;Sanketh&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/chess_engine/2026-02-07-minmax-and-alpha-beta-pruning.md rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#minmax-with-alpha-beta-pruning aria-label="Minmax with Alpha Beta Pruning">Minmax with Alpha Beta Pruning</a><ul><li><a href=#game-tree-search aria-label="Game Tree Search">Game Tree Search</a><ul><li><a href=#the-goal-of-a-chess-engine aria-label="The Goal of a Chess Engine">The Goal of a Chess Engine</a></li><li><a href=#the-game-tree aria-label="The Game Tree">The Game Tree</a></li><li><a href=#evaluation-function aria-label="Evaluation Function">Evaluation Function</a></li></ul></li><li><a href=#the-minimax-principle aria-label="The Minimax Principle">The Minimax Principle</a></li><li><a href=#alpha-beta-pruning aria-label="Alpha-Beta Pruning">Alpha-Beta Pruning</a><ul><li><a href=#the-problem-with-plain-minimax aria-label="The Problem with Plain Minimax">The Problem with Plain Minimax</a></li><li><a href=#the-two-parameters aria-label="The Two Parameters">The Two Parameters</a></li><li><a href=#the-two-types-of-pruning aria-label="The Two Types of Pruning">The Two Types of Pruning</a><ul><li><a href=#1-beta-cutoff aria-label="1. Beta Cutoff">1. Beta Cutoff</a></li><li><a href=#2-alpha-cutoff aria-label="2. Alpha Cutoff">2. Alpha Cutoff</a></li><li><a href=#pseudocode aria-label=Pseudocode>Pseudocode</a></li></ul></li></ul></li><li><a href=#negamax---a-simpler-way-to-write-minimax aria-label="Negamax - A Simpler Way to Write Minimax">Negamax - A Simpler Way to Write Minimax</a><ul><li><a href=#the-key-insight aria-label="The Key Insight">The Key Insight</a></li><li><a href=#minimax-vs-negamax---side-by-side aria-label="Minimax vs Negamax - Side by Side">Minimax vs Negamax - Side by Side</a></li><li><a href=#negamax-with-alpha-beta-pruning aria-label="Negamax with Alpha-Beta Pruning">Negamax with Alpha-Beta Pruning</a><ul><li><a href=#alpha-and-beta-in-negamax aria-label="Alpha and Beta in Negamax">Alpha and Beta in Negamax</a></li></ul></li></ul></li></ul></li></ul></div></details></div><div class=post-content><h1 id=minmax-with-alpha-beta-pruning>Minmax with Alpha Beta Pruning<a hidden class=anchor aria-hidden=true href=#minmax-with-alpha-beta-pruning>#</a></h1><h2 id=game-tree-search>Game Tree Search<a hidden class=anchor aria-hidden=true href=#game-tree-search>#</a></h2><h3 id=the-goal-of-a-chess-engine>The Goal of a Chess Engine<a hidden class=anchor aria-hidden=true href=#the-goal-of-a-chess-engine>#</a></h3><p>A chess engine is solving:</p><blockquote><p>“Given a position, what move leads to the best possible future?”</p></blockquote><p>But the engine cannot know the future, so it simulates it.</p><p>This simulation is called search.</p><h3 id=the-game-tree>The Game Tree<a hidden class=anchor aria-hidden=true href=#the-game-tree>#</a></h3><p>Every legal move creates a new position.
+From that position, the opponent also has moves.</p><p>This forms a tree:</p><pre tabindex=0><code>Position
+ ├── Move A
+ │    ├── Opp Move A1
+ │    │     ├── Move A1a
+ │    │     └── Move A1b
+ │    └── Opp Move A2
+ │          └── ...
+ └── Move B
+      └── ...
+</code></pre><p>This is called the game tree.</p><h3 id=evaluation-function>Evaluation Function<a hidden class=anchor aria-hidden=true href=#evaluation-function>#</a></h3><p>We cannot search until checkmate (too big).
+So at some depth we stop and estimate who is better</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>evaluate(position) <span style=color:#960050;background-color:#1e0010>→</span> score
+</span></span><span style=display:flex><span><span style=color:#f92672>+</span> positive <span style=color:#f92672>=</span> good <span style=color:#66d9ef>for</span> white
+</span></span><span style=display:flex><span><span style=color:#f92672>+</span> negative <span style=color:#f92672>=</span> good <span style=color:#66d9ef>for</span> black
+</span></span></code></pre></div><p>We can also think of it as static evaluation function, because it generates a score just by looking at the current board with no look ahead.</p><p>Example:</p><pre tabindex=0><code>+1.20  → White is winning
+-0.50  → Black slightly better
+0.00   → Equal
+</code></pre><h2 id=the-minimax-principle>The Minimax Principle<a hidden class=anchor aria-hidden=true href=#the-minimax-principle>#</a></h2><ul><li>Max player (White): tries to maximize the score</li><li>Min player (Black): tries to minimize the score</li><li>Each player assumes the opponent plays optimally</li><li>At each ply, we alternate between max and min</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-js data-lang=js><span style=display:flex><span><span style=color:#66d9ef>function</span> <span style=color:#a6e22e>minimax</span>(<span style=color:#a6e22e>position</span>, <span style=color:#a6e22e>depth</span>, <span style=color:#a6e22e>isMaximizingPlayer</span>)<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>depth</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span> <span style=color:#a6e22e>or</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>isGameOver</span>()<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>evaluate</span>(<span style=color:#a6e22e>position</span>)
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>isMaximizingPlayer</span><span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>maxEval</span> <span style=color:#f92672>=</span> <span style=color:#f92672>-</span><span style=color:#a6e22e>INFINITY</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>for</span> <span style=color:#a6e22e>each</span> <span style=color:#a6e22e>move</span> <span style=color:#66d9ef>in</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>getLegalMoves</span>()<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>newPosition</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>makeMove</span>(<span style=color:#a6e22e>move</span>)
+</span></span><span style=display:flex><span>            eval <span style=color:#f92672>=</span> <span style=color:#a6e22e>minimax</span>(<span style=color:#a6e22e>newPosition</span>, <span style=color:#a6e22e>depth</span> <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>, <span style=color:#66d9ef>false</span>)
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>maxEval</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>max</span>(<span style=color:#a6e22e>maxEval</span>, eval)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>maxEval</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>else</span><span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>minEval</span> <span style=color:#f92672>=</span> <span style=color:#f92672>+</span><span style=color:#a6e22e>INFINITY</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>for</span> <span style=color:#a6e22e>each</span> <span style=color:#a6e22e>move</span> <span style=color:#66d9ef>in</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>getLegalMoves</span>()<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>newPosition</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>makeMove</span>(<span style=color:#a6e22e>move</span>)
+</span></span><span style=display:flex><span>            eval <span style=color:#f92672>=</span> <span style=color:#a6e22e>minimax</span>(<span style=color:#a6e22e>newPosition</span>, <span style=color:#a6e22e>depth</span> <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>, <span style=color:#66d9ef>true</span>)
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>minEval</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>min</span>(<span style=color:#a6e22e>minEval</span>, eval)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>minEval</span>
+</span></span></code></pre></div><p>Example</p><pre tabindex=0><code>Root Position (White to move, MAX, depth=2)
+Score: ?
+│
+├── Move A: Nf3
+│   │
+│   ├── Black Move A1: d5 (MIN, depth=1)
+│   │   Score: ?
+│   │   │
+│   │   ├── White Move A1a: d4 (MAX, depth=0) 
+│   │   │   └── [EVAL: +0.3] ← Static evaluation here!
+│   │   │
+│   │   └── White Move A1b: e3 (MAX, depth=0)
+│   │       └── [EVAL: +0.1] ← Static evaluation here!
+│   │   
+│   │   → MIN picks lowest: min(+0.3, +0.1) = +0.1
+│   │
+│   └── Black Move A2: e5 (MIN, depth=1)
+│       Score: ?
+│       │
+│       ├── White Move A2a: d4 (MAX, depth=0)
+│       │   └── [EVAL: +0.5] ← Static evaluation here!
+│       │
+│       └── White Move A2b: Nc3 (MAX, depth=0)
+│           └── [EVAL: +0.2] ← Static evaluation here!
+│       
+│       → MIN picks lowest: min(+0.5, +0.2) = +0.2
+│   
+│   → MAX at Move A picks highest: max(+0.1, +0.2) = +0.2
+│
+├── Move B: e4
+│   │
+│   ├── Black Move B1: c5 (MIN, depth=1)
+│   │   Score: ?
+│   │   │
+│   │   ├── White Move B1a: Nf3 (MAX, depth=0)
+│   │   │   └── [EVAL: +0.4] ← Static evaluation here!
+│   │   │
+│   │   └── White Move B1b: d4 (MAX, depth=0)
+│   │       └── [EVAL: +0.6] ← Static evaluation here!
+│   │   
+│   │   → MIN picks lowest: min(+0.4, +0.6) = +0.4
+│   │
+│   └── Black Move B2: e5 (MIN, depth=1)
+│       Score: ?
+│       │
+│       ├── White Move B2a: Nf3 (MAX, depth=0)
+│       │   └── [EVAL: +0.3] ← Static evaluation here!
+│       │
+│       └── White Move B2b: Bc4 (MAX, depth=0)
+│           └── [EVAL: +0.5] ← Static evaluation here!
+│       
+│       → MIN picks lowest: min(+0.3, +0.5) = +0.3
+│   
+│   → MAX at Move B picks highest: max(+0.4, +0.3) = +0.4
+│
+└── Move C: d4
+    │
+    ├── Black Move C1: d5 (MIN, depth=1)
+    │   Score: ?
+    │   │
+    │   ├── White Move C1a: c4 (MAX, depth=0)
+    │   │   └── [EVAL: +0.2] ← Static evaluation here!
+    │   │
+    │   └── White Move C1b: Nf3 (MAX, depth=0)
+    │       └── [EVAL: +0.1] ← Static evaluation here!
+    │   
+    │   → MIN picks lowest: min(+0.2, +0.1) = +0.1
+    │
+    └── Black Move C2: Nf6 (MIN, depth=1)
+        Score: ?
+        │
+        ├── White Move C2a: c4 (MAX, depth=0)
+        │   └── [EVAL: +0.3] ← Static evaluation here!
+        │
+        └── White Move C2b: Nc3 (MAX, depth=0)
+            └── [EVAL: +0.4] ← Static evaluation here!
+        
+        → MIN picks lowest: min(+0.3, +0.4) = +0.3
+    
+    → MAX at Move C picks highest: max(+0.1, +0.3) = +0.3
+
+FINAL DECISION at Root:
+White chooses: max(+0.2, +0.4, +0.3) = +0.4
+→ Best move: e4 (Move B)
+</code></pre><h2 id=alpha-beta-pruning>Alpha-Beta Pruning<a hidden class=anchor aria-hidden=true href=#alpha-beta-pruning>#</a></h2><h3 id=the-problem-with-plain-minimax>The Problem with Plain Minimax<a hidden class=anchor aria-hidden=true href=#the-problem-with-plain-minimax>#</a></h3><p>Plain minimax explores every node in the tree, even when we already know some branches won&rsquo;t affect the final decision.</p><p><strong>Example:</strong> You&rsquo;re looking at move options. You found one that guarantees you a score of +5. Then you start looking at another move, and the opponent&rsquo;s first response gives you -3. Do you need to check the opponent&rsquo;s other responses? NO! You already have +5, so you won&rsquo;t opponent to play this move in the first place.</p><p>This optimization is called Alpha-Beta Pruning.</p><h3 id=the-two-parameters>The Two Parameters<a hidden class=anchor aria-hidden=true href=#the-two-parameters>#</a></h3><p><strong>Alpha (α):</strong> The best score MAX can guarantee so far</p><ul><li>Best score the maximizing side (us) is GUARANTEED so far</li><li>Starts at -∞</li><li>Only MAX updates it (increases it)</li><li>Represents MAX&rsquo;s &ldquo;floor&rdquo; - the worst MAX will accept</li></ul><p>**Beta (β): **The best score MIN can guarantee so far</p><ul><li>Best score the minimizing side (opponent) is GUARANTEED so far</li><li>Starts at +∞</li><li>Only MIN updates it (decreases it)</li><li>Represents MIN&rsquo;s &ldquo;ceiling&rdquo; - the worst MIN will accept</li></ul><p>So at any node:</p><blockquote><p>The true value of the position must lie inside [α, β]</p></blockquote><p>If we ever prove it lies outside this window → stop searching
+because parent will never choose it.</p><h3 id=the-two-types-of-pruning>The Two Types of Pruning<a hidden class=anchor aria-hidden=true href=#the-two-types-of-pruning>#</a></h3><p>There are two different situations where we prune, depending on which player discovers the cutoff:</p><h4 id=1-beta-cutoff>1. Beta Cutoff<a hidden class=anchor aria-hidden=true href=#1-beta-cutoff>#</a></h4><p>Occurs at a node where opponent is choosing (minimizing node).</p><p><strong>Meaning</strong></p><p>We found a move so good for us
+that opponent will NEVER allow reaching this position.</p><p><strong>Example</strong></p><p>We are evaluating Move A at root.</p><p>We already have:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>alpha <span style=color:#f92672>=</span> <span style=color:#f92672>+</span><span style=color:#ae81ff>2</span>   (we can get <span style=color:#f92672>+</span><span style=color:#ae81ff>2</span> elsewhere)
+</span></span></code></pre></div><p>Now inside this branch opponent analyzes a reply:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>position score <span style=color:#f92672>=</span> <span style=color:#f92672>+</span><span style=color:#ae81ff>5</span> <span style=color:#66d9ef>for</span> us
+</span></span></code></pre></div><p>Opponent says:</p><blockquote><p>“Nope. I will never play a move that gives you +5 when I can choose another line giving you +2.”</p></blockquote><p>So this branch is irrelevant.</p><p>Therefore:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>score <span style=color:#f92672>&gt;=</span> beta  <span style=color:#960050;background-color:#1e0010>→</span>  BETA CUTOFF
+</span></span></code></pre></div><h4 id=2-alpha-cutoff>2. Alpha Cutoff<a hidden class=anchor aria-hidden=true href=#2-alpha-cutoff>#</a></h4><p>Occurs at a node where we are choosing (maximizing node).</p><p><strong>Meaning</strong></p><p>We found a move so bad
+that we will never play this line.</p><p><strong>Example</strong></p><p>Opponent already has a line giving us:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>beta <span style=color:#f92672>=</span> <span style=color:#f92672>-</span><span style=color:#ae81ff>4</span>
+</span></span></code></pre></div><p>Now we analyze another continuation and find:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>score <span style=color:#f92672>=</span> <span style=color:#f92672>-</span><span style=color:#ae81ff>7</span>
+</span></span></code></pre></div><h4 id=pseudocode>Pseudocode<a hidden class=anchor aria-hidden=true href=#pseudocode>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-js data-lang=js><span style=display:flex><span><span style=color:#66d9ef>function</span> <span style=color:#a6e22e>alphaBeta</span>(<span style=color:#a6e22e>position</span>, <span style=color:#a6e22e>depth</span>, <span style=color:#a6e22e>alpha</span>, <span style=color:#a6e22e>beta</span>, <span style=color:#a6e22e>isMaximizingPlayer</span>)<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>depth</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span> <span style=color:#a6e22e>or</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>isGameOver</span>()<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>evaluate</span>(<span style=color:#a6e22e>position</span>)
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>isMaximizingPlayer</span><span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>maxEval</span> <span style=color:#f92672>=</span> <span style=color:#f92672>-</span><span style=color:#a6e22e>INFINITY</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>for</span> <span style=color:#a6e22e>each</span> <span style=color:#a6e22e>move</span> <span style=color:#66d9ef>in</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>getLegalMoves</span>()<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>newPosition</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>makeMove</span>(<span style=color:#a6e22e>move</span>)
+</span></span><span style=display:flex><span>            eval <span style=color:#f92672>=</span> <span style=color:#a6e22e>alphaBeta</span>(<span style=color:#a6e22e>newPosition</span>, <span style=color:#a6e22e>depth</span> <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>, <span style=color:#a6e22e>alpha</span>, <span style=color:#a6e22e>beta</span>, <span style=color:#66d9ef>false</span>)
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>maxEval</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>max</span>(<span style=color:#a6e22e>maxEval</span>, eval)
+</span></span><span style=display:flex><span>            
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>alpha</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>max</span>(<span style=color:#a6e22e>alpha</span>, eval)          <span style=color:#75715e>// ← MAX updates alpha
+</span></span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>beta</span> <span style=color:#f92672>&lt;=</span> <span style=color:#a6e22e>alpha</span><span style=color:#f92672>:</span>                 <span style=color:#75715e>// ← Pruning condition
+</span></span></span><span style=display:flex><span>                <span style=color:#66d9ef>break</span>  <span style=color:#75715e>// Beta cutoff: MIN won&#39;t allow this path
+</span></span></span><span style=display:flex><span>                
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>maxEval</span>
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>else</span><span style=color:#f92672>:</span>  <span style=color:#75715e>// Minimizing player
+</span></span></span><span style=display:flex><span>        <span style=color:#a6e22e>minEval</span> <span style=color:#f92672>=</span> <span style=color:#f92672>+</span><span style=color:#a6e22e>INFINITY</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>for</span> <span style=color:#a6e22e>each</span> <span style=color:#a6e22e>move</span> <span style=color:#66d9ef>in</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>getLegalMoves</span>()<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>newPosition</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>makeMove</span>(<span style=color:#a6e22e>move</span>)
+</span></span><span style=display:flex><span>            eval <span style=color:#f92672>=</span> <span style=color:#a6e22e>alphaBeta</span>(<span style=color:#a6e22e>newPosition</span>, <span style=color:#a6e22e>depth</span> <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>, <span style=color:#a6e22e>alpha</span>, <span style=color:#a6e22e>beta</span>, <span style=color:#66d9ef>true</span>)
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>minEval</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>min</span>(<span style=color:#a6e22e>minEval</span>, eval)
+</span></span><span style=display:flex><span>            
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>beta</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>min</span>(<span style=color:#a6e22e>beta</span>, eval)            <span style=color:#75715e>// ← MIN updates beta
+</span></span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>beta</span> <span style=color:#f92672>&lt;=</span> <span style=color:#a6e22e>alpha</span><span style=color:#f92672>:</span>                 <span style=color:#75715e>// ← Pruning condition
+</span></span></span><span style=display:flex><span>                <span style=color:#66d9ef>break</span>  <span style=color:#75715e>// Alpha cutoff: MAX won&#39;t allow this path
+</span></span></span><span style=display:flex><span>                
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>minEval</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// Initial call from root
+</span></span></span><span style=display:flex><span><span style=color:#a6e22e>bestMove</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>alphaBeta</span>(<span style=color:#a6e22e>position</span>, <span style=color:#a6e22e>MAX_DEPTH</span>, <span style=color:#f92672>-</span><span style=color:#a6e22e>INFINITY</span>, <span style=color:#f92672>+</span><span style=color:#a6e22e>INFINITY</span>, <span style=color:#66d9ef>true</span>)
+</span></span></code></pre></div><h2 id=negamax---a-simpler-way-to-write-minimax>Negamax - A Simpler Way to Write Minimax<a hidden class=anchor aria-hidden=true href=#negamax---a-simpler-way-to-write-minimax>#</a></h2><p>Negamax is not a different algorithm - it&rsquo;s just a cleaner way to write minimax.</p><p>Instead of having separate logic for MAX and MIN players, negamax exploits a mathematical symmetry:</p><blockquote><p>&ldquo;Your best move is my worst move (negated)&rdquo;</p></blockquote><h3 id=the-key-insight>The Key Insight<a hidden class=anchor aria-hidden=true href=#the-key-insight>#</a></h3><p>In chess (and most zero-sum games):</p><ul><li>What&rsquo;s good for White (+5) is equally bad for Black (-5)</li><li>White maximizes the score</li><li>Black minimizes the score</li></ul><p>But we can flip the perspective:</p><ul><li><strong>From White&rsquo;s view:</strong> position scores +5</li><li><strong>From Black&rsquo;s view:</strong> same position scores -5</li></ul><p>So instead of:</p><pre tabindex=0><code>White (MAX): pick maximum
+Black (MIN): pick minimum
+</code></pre><p>We can do:</p><pre tabindex=0><code>Current player: pick maximum FROM THEIR PERSPECTIVE
+Opponent: negate the score to flip perspective
+</code></pre><h3 id=minimax-vs-negamax---side-by-side>Minimax vs Negamax - Side by Side<a hidden class=anchor aria-hidden=true href=#minimax-vs-negamax---side-by-side>#</a></h3><p><strong>Regular Minimax</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-js data-lang=js><span style=display:flex><span><span style=color:#66d9ef>function</span> <span style=color:#a6e22e>minimax</span>(<span style=color:#a6e22e>position</span>, <span style=color:#a6e22e>depth</span>, <span style=color:#a6e22e>isMaximizingPlayer</span>)<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>depth</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span><span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>evaluate</span>(<span style=color:#a6e22e>position</span>)
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>isMaximizingPlayer</span><span style=color:#f92672>:</span>  <span style=color:#75715e>// White&#39;s turn
+</span></span></span><span style=display:flex><span>        <span style=color:#a6e22e>maxEval</span> <span style=color:#f92672>=</span> <span style=color:#f92672>-</span><span style=color:#a6e22e>INFINITY</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>for</span> <span style=color:#a6e22e>each</span> <span style=color:#a6e22e>move</span> <span style=color:#66d9ef>in</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>getLegalMoves</span>()<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>            eval <span style=color:#f92672>=</span> <span style=color:#a6e22e>minimax</span>(<span style=color:#a6e22e>makeMove</span>(<span style=color:#a6e22e>move</span>), <span style=color:#a6e22e>depth</span> <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>, <span style=color:#66d9ef>false</span>)
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>maxEval</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>max</span>(<span style=color:#a6e22e>maxEval</span>, eval)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>maxEval</span>
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>else</span><span style=color:#f92672>:</span>  <span style=color:#75715e>// Black&#39;s turn
+</span></span></span><span style=display:flex><span>        <span style=color:#a6e22e>minEval</span> <span style=color:#f92672>=</span> <span style=color:#f92672>+</span><span style=color:#a6e22e>INFINITY</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>for</span> <span style=color:#a6e22e>each</span> <span style=color:#a6e22e>move</span> <span style=color:#66d9ef>in</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>getLegalMoves</span>()<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>            eval <span style=color:#f92672>=</span> <span style=color:#a6e22e>minimax</span>(<span style=color:#a6e22e>makeMove</span>(<span style=color:#a6e22e>move</span>), <span style=color:#a6e22e>depth</span> <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>, <span style=color:#66d9ef>true</span>)
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>minEval</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>min</span>(<span style=color:#a6e22e>minEval</span>, eval)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>minEval</span>
+</span></span></code></pre></div><p><strong>Negamax - Simplified!</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-js data-lang=js><span style=display:flex><span><span style=color:#66d9ef>function</span> <span style=color:#a6e22e>negamax</span>(<span style=color:#a6e22e>position</span>, <span style=color:#a6e22e>depth</span>, <span style=color:#a6e22e>color</span>)<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>depth</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span><span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>color</span> <span style=color:#f92672>*</span> <span style=color:#a6e22e>evaluate</span>(<span style=color:#a6e22e>position</span>)  <span style=color:#960050;background-color:#1e0010>#</span> <span style=color:#960050;background-color:#1e0010>←</span> <span style=color:#a6e22e>Flip</span> <span style=color:#a6e22e>perspective</span><span style=color:#f92672>!</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>maxEval</span> <span style=color:#f92672>=</span> <span style=color:#f92672>-</span><span style=color:#a6e22e>INFINITY</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>for</span> <span style=color:#a6e22e>each</span> <span style=color:#a6e22e>move</span> <span style=color:#66d9ef>in</span> <span style=color:#a6e22e>position</span>.<span style=color:#a6e22e>getLegalMoves</span>()<span style=color:#f92672>:</span>
+</span></span><span style=display:flex><span>        eval <span style=color:#f92672>=</span> <span style=color:#f92672>-</span><span style=color:#a6e22e>negamax</span>(<span style=color:#a6e22e>makeMove</span>(<span style=color:#a6e22e>move</span>), <span style=color:#a6e22e>depth</span> <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>, <span style=color:#f92672>-</span><span style=color:#a6e22e>color</span>)  <span style=color:#75715e>// ← Negate!
+</span></span></span><span style=display:flex><span>        <span style=color:#a6e22e>maxEval</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>max</span>(<span style=color:#a6e22e>maxEval</span>, eval)
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>maxEval</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// Initial call
+</span></span></span><span style=display:flex><span><span style=color:#75715e>// color = +1 for White (maximizing)
+</span></span></span><span style=display:flex><span><span style=color:#75715e>// color = -1 for Black (minimizing)
+</span></span></span><span style=display:flex><span><span style=color:#a6e22e>bestScore</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>negamax</span>(<span style=color:#a6e22e>position</span>, <span style=color:#a6e22e>depth</span>, <span style=color:#f92672>+</span><span style=color:#ae81ff>1</span>)
+</span></span></code></pre></div><p><strong>Why Negate the Recursive Call?</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-cpp data-lang=cpp><span style=display:flex><span>eval <span style=color:#f92672>=</span> <span style=color:#f92672>-</span>negamax(...)
+</span></span></code></pre></div><p>Think of it as <strong>switching perspective</strong>:</p><ul><li>Child node returns score from their perspective</li><li>We want score from our perspective</li><li>Our best = opponent&rsquo;s worst</li><li>So we negate!</li></ul><p><strong>Example:</strong></p><p>Black finds a position worth -5 from White&rsquo;s view
+→ From Black&rsquo;s view, that&rsquo;s +5 (good for Black!)
+→ Negamax returns +5 to Black
+→ White receives -5 (bad for White, correctly)</p><p>Let&rsquo;s trace a simple tree:</p><pre tabindex=0><code>Position (White to move, color=+1, depth=2)
+│
+├── Move A
+│   │
+│   └── Position after A (Black to move, color=-1, depth=1)
+│       │
+│       ├── Move A1
+│       │   └── [EVAL from White&#39;s view: +3]
+│       │       color=-1, so return: -1 * (+3) = -3
+│       │       To White (parent): -(-3) = +3
+│       │
+│       └── Move A2
+│           └── [EVAL from White&#39;s view: +1]
+│               color=-1, so return: -1 * (+1) = -1
+│               To White (parent): -(-1) = +1
+│       
+│       Black picks max(-3, -1) = -1 (best for Black)
+│       Return to White: -(-1) = +1
+│
+└── Move B
+    │
+    └── Position after B (Black to move, color=-1, depth=1)
+        │
+        ├── Move B1
+        │   └── [EVAL: +5]
+        │       Returns to Black: -1 * (+5) = -5
+        │       To White: -(-5) = +5
+        │
+        └── Move B2
+            └── [EVAL: +2]
+                Returns to Black: -1 * (+2) = -2
+                To White: -(-2) = +2
+        
+        Black picks max(-5, -2) = -2
+        Return to White: -(-2) = +2
+
+White picks max(+1, +2) = +2
+Best move: B
+</code></pre><h3 id=negamax-with-alpha-beta-pruning>Negamax with Alpha-Beta Pruning<a hidden class=anchor aria-hidden=true href=#negamax-with-alpha-beta-pruning>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-py data-lang=py><span style=display:flex><span>function negamax(position, depth, alpha, beta, color):
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> depth <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>:
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> color <span style=color:#f92672>*</span> evaluate(position)
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    maxEval <span style=color:#f92672>=</span> <span style=color:#f92672>-</span>INFINITY
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>for</span> each move <span style=color:#f92672>in</span> position<span style=color:#f92672>.</span>getLegalMoves():
+</span></span><span style=display:flex><span>        eval <span style=color:#f92672>=</span> <span style=color:#f92672>-</span>negamax(makeMove(move), depth <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>, <span style=color:#f92672>-</span>beta, <span style=color:#f92672>-</span>alpha, <span style=color:#f92672>-</span>color)
+</span></span><span style=display:flex><span>        maxEval <span style=color:#f92672>=</span> max(maxEval, eval)
+</span></span><span style=display:flex><span>        alpha <span style=color:#f92672>=</span> max(alpha, eval)
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> alpha <span style=color:#f92672>&gt;=</span> beta:
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>break</span>  <span style=color:#75715e># Prune</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> maxEval
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Initial call</span>
+</span></span><span style=display:flex><span>bestScore <span style=color:#f92672>=</span> negamax(position, MAX_DEPTH, <span style=color:#f92672>-</span>INFINITY, <span style=color:#f92672>+</span>INFINITY, <span style=color:#f92672>+</span><span style=color:#ae81ff>1</span>)
+</span></span></code></pre></div><p><strong>Why swap alpha and beta?</strong></p><ul><li>Alpha/beta represent a window from current player&rsquo;s perspective</li><li>When we flip perspective (negate), we must also flip the window</li><li>Your alpha becomes opponent&rsquo;s negative beta, and vice versa</li></ul><h4 id=alpha-and-beta-in-negamax>Alpha and Beta in Negamax<a hidden class=anchor aria-hidden=true href=#alpha-and-beta-in-negamax>#</a></h4><p>In negamax, alpha and beta always represent the window from the CURRENT player&rsquo;s perspective.</p><pre tabindex=0><code>Alpha: &#34;I&#39;m guaranteed at least this score&#34;
+Beta:  &#34;My opponent won&#39;t let me get more than this&#34;
+</code></pre><p>Both players use the same logic, but when we recurse, we negate and swap the window.</p><p><strong>Why We Swap Alpha and Beta</strong></p><ol><li><p><strong>Your alpha</strong> = &ldquo;best I can guarantee&rdquo;</p><ul><li>For opponent, this becomes <strong>their beta</strong> = &ldquo;worst they&rsquo;ll allow you&rdquo;</li><li>But negated: <code>-alpha</code></li></ul></li><li><p><strong>Your beta</strong> = &ldquo;best opponent will allow&rdquo;</p><ul><li>For opponent, this becomes <strong>their alpha</strong> = &ldquo;best they can guarantee&rdquo;</li><li>But negated: <code>-beta</code></li></ul></li></ol><p><strong>Step-by-Step Example</strong></p><pre tabindex=0><code>Root: White&#39;s turn (color = +1)
+      alpha = -∞, beta = +∞
+      &#34;I want at least -∞, opponent won&#39;t give me more than +∞&#34;
+      
+├── Exploring Move A
+│   
+│   Call: negamax(positionA, depth-1, -∞, +∞, -1)
+│                                      ↓
+│         After negation: negamax(..., -beta, -alpha, -color)
+│                                      -(+∞)  -(-∞)
+│                                       -∞     +∞
+│   
+│   Black&#39;s turn (color = -1)
+│   alpha = -∞, beta = +∞  (from Black&#39;s perspective)
+│   &#34;I (Black) want at least -∞, White won&#39;t give me more than +∞&#34;
+│   
+│   ├── Move A1: returns +3 (from Black&#39;s view)
+│   │   alpha = max(-∞, +3) = +3
+│   │   &#34;I now have at least +3 (from my Black perspective)&#34;
+│   │
+│   ├── Move A2: returns +1
+│   │   alpha = max(+3, +1) = +3 (no change)
+│   
+│   Black returns: +3
+│   
+│   Back to White: -(+3) = -3
+│   White&#39;s alpha = max(-∞, -3) = -3
+│   &#34;I (White) now have at least -3&#34;
+│
+├── Exploring Move B
+│   
+│   White now has alpha = -3, beta = +∞
+│   
+│   Call: negamax(positionB, depth-1, -beta, -alpha, -color)
+│                                      -(+∞)  -(-3)
+│                                       -∞     +3    ← Swapped!
+│   
+│   Black&#39;s turn
+│   alpha = -∞, beta = +3  (from Black&#39;s perspective)
+│   &#34;I want at least -∞, but White won&#39;t let me get more than +3&#34;
+│                                                              ↑
+│                               This came from White&#39;s alpha = -3
+│   
+│   ├── Move B1: returns +5 (from Black&#39;s view)
+│   │   alpha = max(-∞, +5) = +5
+│   │   Check: alpha &gt;= beta? → +5 &gt;= +3? YES! ✂️
+│   │   PRUNE! (Beta cutoff)
+│   │
+│   │   Why prune?
+│   │   Black found +5 for themselves
+│   │   But White (parent) already has -3 guaranteed
+│   │   From White&#39;s view, +5 for Black = -5 for White
+│   │   White won&#39;t choose this branch (-5 &lt; -3)
+│   
+│   └── Move B2: ✂️ Not explored
+</code></pre></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/minmax/>Minmax</a></li><li><a href=https://sankethbk.github.io/blog/tags/alpha-beta-pruning/>Alpha-Beta Pruning</a></li><li><a href=https://sankethbk.github.io/blog/tags/negamax/>Negamax</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>

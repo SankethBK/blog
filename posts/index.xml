@@ -1,4 +1,26 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/posts/</link><description>Recent content in Posts on Sanketh's Blog</description><generator>Hugo -- 0.155.2</generator><language>en-us</language><lastBuildDate>Sun, 01 Feb 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Move Generation</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-02-01-move-generation/</link><pubDate>Sun, 01 Feb 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-02-01-move-generation/</guid><description>&lt;h1 id="move-generation"&gt;Move Generation&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/posts/</link><description>Recent content in Posts on Sanketh's Blog</description><generator>Hugo -- 0.155.3</generator><language>en-us</language><lastBuildDate>Sat, 07 Feb 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Minmax with Alpha Beta Pruning</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-02-07-minmax-and-alpha-beta-pruning/</link><pubDate>Sat, 07 Feb 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-02-07-minmax-and-alpha-beta-pruning/</guid><description>&lt;h1 id="minmax-with-alpha-beta-pruning"&gt;Minmax with Alpha Beta Pruning&lt;/h1&gt;
+&lt;h2 id="game-tree-search"&gt;Game Tree Search&lt;/h2&gt;
+&lt;h3 id="the-goal-of-a-chess-engine"&gt;The Goal of a Chess Engine&lt;/h3&gt;
+&lt;p&gt;A chess engine is solving:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“Given a position, what move leads to the best possible future?”&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;But the engine cannot know the future, so it simulates it.&lt;/p&gt;
+&lt;p&gt;This simulation is called search.&lt;/p&gt;
+&lt;h3 id="the-game-tree"&gt;The Game Tree&lt;/h3&gt;
+&lt;p&gt;Every legal move creates a new position.
+From that position, the opponent also has moves.&lt;/p&gt;
+&lt;p&gt;This forms a tree:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;Position
+├── Move A
+│ ├── Opp Move A1
+│ │ ├── Move A1a
+│ │ └── Move A1b
+│ └── Opp Move A2
+│ └── ...
+└── Move B
+└── ...
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This is called the game tree.&lt;/p&gt;</description></item><item><title>Move Generation</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-02-01-move-generation/</link><pubDate>Sun, 01 Feb 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-02-01-move-generation/</guid><description>&lt;h1 id="move-generation"&gt;Move Generation&lt;/h1&gt;
 &lt;p&gt;Move generation is one of the core responsibilities of a chess engine: given a &lt;code&gt;Position&lt;/code&gt;, the engine must efficiently produce all possible moves available to the side to move.&lt;/p&gt;
 &lt;p&gt;In Stockfish, move generation is designed to be extremely fast because it is executed millions of times during search. Instead of always generating every legal move, Stockfish generates different categories of moves depending on the search phase (captures only, quiet moves, evasions under check, etc.).&lt;/p&gt;</description></item><item><title>Static Exchange Evaluation (SEE)</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-31-see/</link><pubDate>Sat, 31 Jan 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-01-31-see/</guid><description>&lt;h1 id="static-exchange-evaluation-see"&gt;Static Exchange Evaluation (SEE)&lt;/h1&gt;
 &lt;p&gt;SEE simulates a capture sequence on a square to calculate the net material gain/loss. It asks: &amp;ldquo;If I make this move and we trade pieces on this square, will I gain at least &lt;code&gt;v&lt;/code&gt; centipawns?&amp;rdquo;&lt;/p&gt;
