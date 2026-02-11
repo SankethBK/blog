@@ -201,7 +201,7 @@ This optimization is called Alpha-Beta Pruning.
 - Only MAX updates it (increases it)
 - Represents MAX's "floor" - the worst MAX will accept
 
-**Beta (β): **The best score MIN can guarantee so far
+**Beta (β):** The best score MIN can guarantee so far
 
 - Best score the minimizing side (opponent) is GUARANTEED so far
 - Starts at +∞
@@ -563,3 +563,331 @@ Root: White's turn (color = +1)
 │   
 │   └── Move B2: ✂️ Not explored
 ```
+
+## Iterative Deepening
+
+Imagine you're writing a chess engine and give it 10 seconds to find a move.
+
+**Naive approach:**
+
+```
+"Let me search to depth 6... oh wait, this is taking 15 seconds!"
+→ Time's up, no move found yet!
+```
+
+**Better approach (Iterative Deepening):**
+
+```
+Depth 1: 0.001s → Found move: e4 (score: +0.2)
+Depth 2: 0.01s  → Found move: e4 (score: +0.3)
+Depth 3: 0.1s   → Found move: Nf3 (score: +0.4)
+Depth 4: 1s     → Found move: Nf3 (score: +0.5)
+Depth 5: 8s     → Found move: d4 (score: +0.6)
+[Time's up!]
+→ Return d4 (best move found at depth 5)
+```
+
+**Iterative Deepening:** Search depth 1, then depth 2, then depth 3... until time runs out. Always have a move ready!
+
+### Pseudocode
+
+#### Basic Iterative Deepening
+
+```py
+function iterativeDeepeningSearch(position, maxTime):
+    startTime = currentTime()
+    bestMove = null
+    bestScore = -INFINITY
+    
+    for depth = 1 to INFINITY:
+        # Check if we have time for this depth
+        if currentTime() - startTime >= maxTime:
+            break
+        
+        # Search at current depth
+        score, move = negamax(position, depth, -INF, +INF, +1)
+        
+        # Update best move found so far
+        bestMove = move
+        bestScore = score
+        
+        # Optional: print info
+        print("Depth:", depth, "Move:", move, "Score:", score)
+    
+    return bestMove
+```
+
+#### With Time Management
+
+```py
+function iterativeDeepeningSearch(position, maxTime):
+    startTime = currentTime()
+    bestMove = null
+    timeForDepth = []  # Track time per depth
+    
+    for depth = 1 to MAX_DEPTH:
+        depthStartTime = currentTime()
+        
+        # Estimate if we have time for this depth
+        if depth > 2:
+            estimatedTime = predictTimeForDepth(depth, timeForDepth)
+            if currentTime() - startTime + estimatedTime > maxTime:
+                break  # Not enough time, use previous result
+        
+        # Search at current depth
+        score, move = alphaBeta(position, depth, -INF, +INF, +1)
+        
+        # Record how long this depth took
+        timeForDepth.append(currentTime() - depthStartTime)
+        
+        # Update best move
+        bestMove = move
+        bestScore = score
+        
+        # Check if time is up
+        if currentTime() - startTime >= maxTime:
+            break
+    
+    return bestMove
+```
+
+### Why Does This Work?
+
+Isn't searching depth 1, 2, 3... wasteful?"
+
+**Intuition says:** Yes! You're re-searching the same positions multiple times.
+
+**Reality says:** No! The time is dominated by the deepest search.
+
+#### The Math Behind It
+
+Chess has a **branching factor** of ~35 (average legal moves per position).
+
+#### Time for each depth:
+```
+Depth 1:  35^1  =           35 nodes
+Depth 2:  35^2  =        1,225 nodes
+Depth 3:  35^3  =       42,875 nodes
+Depth 4:  35^4  =    1,500,625 nodes
+Depth 5:  35^5  =   52,521,875 nodes
+Depth 6:  35^6  = 1,838,265,625 nodes
+```
+
+
+#### Total work with Iterative Deepening to depth 6:
+
+```
+Total = 35 + 1,225 + 42,875 + ... + 1,838,265,625
+      ≈ 1,838,310,235 nodes
+
+Just depth 6 alone: 1,838,265,625 nodes
+Overhead from earlier depths: 44,610 nodes (0.002%!)
+```
+
+**The overhead is negligible!** The deepest search dominates everything.
+
+### General Formula
+
+For branching factor `b` and depth `d`:
+
+**Time for depth d:** `b^d`
+
+**Total time with ID:**
+```
+b^1 + b^2 + b^3 + ... + b^d = (b^(d+1) - b) / (b - 1)
+                              ≈ b^d * (b / (b-1))
+
+For b=35:
+
+Overhead factor = 35 / 34 = 1.029
+```
+
+### Benefits of Iterative Deepening
+
+#### 1. Time Management
+
+```py
+# Always have a move ready
+for depth in 1..∞:
+    if timeUp():
+        return bestMoveFoundSoFar  # ← Always valid!
+    search(depth)
+```
+
+#### 2. Better Move Ordering
+
+Results from shallower searches help order moves in deeper searches:
+
+```py
+# Depth 3 found: d4 is best, Nf3 second, e4 third
+# At depth 4, search in this order first:
+moves = [d4, Nf3, e4, ...]  # ← Previous best first!
+                            # → More alpha-beta pruning!
+```
+
+This is called **Principal Variation (PV) move ordering**.
+
+Principal Variation = the line of moves the engine currently believes is best.
+
+
+Example after depth 4:
+
+```
+PV: 1. Nf3 d5 2. d4 Nf6
+```
+
+This dramatically speeds up alpha-beta pruning because
+
+> Alpha-beta is only fast if you search the BEST move first.
+
+If the best move is searched late → pruning almost disappears.
+
+#### 3. Progressive Information
+
+```
+Depth 1: e4 (+0.2)   [0.001s]
+Depth 2: e4 (+0.3)   [0.01s]
+Depth 3: Nf3 (+0.4)  [0.1s]
+Depth 4: Nf3 (+0.5)  [1s]
+```
+You see the engine "thinking deeper" in real-time!
+
+#### 4. Handles Unknown Time Limits
+
+Don't know how long to search? Just keep going deeper until interrupted!
+
+**Psuedocode (Time Limit and PV move Ordering)**
+
+```py
+function findBestMove(position, maxTime):
+    startTime = now()
+    bestMove = null
+    pvMoves = []  # Principal variation from previous depth
+    
+    for depth = 1 to 100:  # Practically infinite
+        # Check time before starting new depth
+        elapsed = now() - startTime
+        if elapsed > maxTime * 0.9:  # Leave 10% buffer
+            break
+        
+        # Search at current depth with move ordering
+        result = search(position, depth, pvMoves)
+        
+        # Update best move and PV
+        bestMove = result.move
+        bestScore = result.score
+        pvMoves = result.principalVariation
+        
+        # Log progress
+        print(f"Depth {depth}: {bestMove} (score: {bestScore}, time: {elapsed}s)")
+        
+        # Check for forced mate
+        if abs(bestScore) > MATE_THRESHOLD:
+            print(f"Mate found in {depth} plies!")
+            break
+    
+    return bestMove
+
+
+function search(position, depth, pvMoves):
+    # Order moves: PV move first, then others
+    moves = orderMoves(position.getLegalMoves(), pvMoves)
+    
+    bestMove = null
+    bestScore = -INFINITY
+    alpha = -INFINITY
+    beta = +INFINITY
+    pv = []
+    
+    for move in moves:
+        newPos = position.makeMove(move)
+        score = -negamax(newPos, depth - 1, -beta, -alpha, -1)
+        
+        if score > bestScore:
+            bestScore = score
+            bestMove = move
+            pv = [move] + childPV
+        
+        alpha = max(alpha, score)
+    
+    return {move: bestMove, score: bestScore, principalVariation: pv}
+```
+
+#### 5. Iterative Deepening with Aspiration Windows
+
+Advanced engines narrow the alpha-beta window using previous depth's score:
+
+Normally search starts with:
+```
+alpha = -∞
+beta  = +∞
+```
+
+Meaning:
+> “I have no idea what the position score is — search everything.”
+
+This is slow because pruning is weak.
+
+**Key Observation**
+
+From iterative deepening, you already know the score from previous depth.
+
+Example:
+```
+Depth 6 → score = +0.32
+Depth 7 → score ≈ probably near +0.32
+```
+Chess positions are stable.
+Score rarely jumps from +0.3 → -5.0 in one extra ply.
+
+So instead of searching full range…
+
+we search only near the expected value.
+
+**Aspiration Window Idea**
+
+Instead of:
+
+```
+alpha = -∞
+beta  = +∞
+```
+
+we search:
+
+```cpp
+alpha = previousScore - margin
+beta  = previousScore + margin
+```
+
+**Why this is FAST**
+
+Alpha-beta pruning strength depends on window size.
+
+Smaller window ⇒ way more cutoffs ⇒ exponential speedup
+
+```py
+function iterativeDeepening(position, maxTime):
+    previousScore = 0
+    
+    for depth = 1 to ∞:
+        # Use narrow window around previous score
+        windowSize = 0.5
+        alpha = previousScore - windowSize
+        beta = previousScore + windowSize
+        
+        score = negamax(position, depth, alpha, beta, +1)
+        
+        # Re-search if score falls outside window
+        if score <= alpha or score >= beta:
+            # Widen window and re-search
+            score = negamax(position, depth, -INF, +INF, +1)
+        
+        previousScore = score
+        
+        if timeUp():
+            break
+    
+    return bestMove
+```
+
