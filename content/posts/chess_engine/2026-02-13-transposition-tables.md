@@ -947,3 +947,379 @@ if (likelyBad)
     depth -= 2;  // Reduce (could go negative)
 ```
 
+## TranspositionTable
+
+The transposition table (TT) is a large hash table storing previously searched positions so the engine can reuse search results instead of re-searching the tree
+
+```cpp
+/// A TranspositionTable consists of a power of 2 number of clusters and each
+/// cluster consists of ClusterSize number of TTEntry. Each non-empty entry
+/// contains information of exactly one position. The size of a cluster should
+/// divide the size of a cache line size, to ensure that clusters never cross
+/// cache lines. This ensures best cache performance, as the cacheline is
+/// prefetched, as soon as possible.
+
+class TranspositionTable {
+
+  static const int CacheLineSize = 64;
+  static const int ClusterSize = 3;
+
+  struct Cluster {
+    TTEntry entry[ClusterSize];
+    char padding[2]; // Align to a divisor of the cache line size
+  };
+
+  static_assert(CacheLineSize % sizeof(Cluster) == 0, "Cluster size incorrect");
+
+public:
+ ~TranspositionTable() { free(mem); }
+  void new_search() { generation8 += 4; } // Lower 2 bits are used by Bound
+  uint8_t generation() const { return generation8; }
+  TTEntry* probe(const Key key, bool& found) const;
+  int hashfull() const;
+  void resize(size_t mbSize);
+  void clear();
+
+  // The lowest order bits of the key are used to get the index of the cluster
+  TTEntry* first_entry(const Key key) const {
+    return &table[(size_t)key & (clusterCount - 1)].entry[0];
+  }
+
+private:
+  size_t clusterCount;
+  Cluster* table;
+  void* mem;
+  uint8_t generation8; // Size must be not bigger than TTEntry::genBound8
+};
+```
+
+### Clustered Layout (Important Performance Trick)
+
+#### What is a Cluster
+
+A cluster is a small bucket that contains multiple TT entries.
+
+**Layout**
+
+```
+Transposition Table
+│
+├─ index 0 → Cluster → [ entry0, entry1, entry2 ]
+├─ index 1 → Cluster → [ entry0, entry1, entry2 ]
+├─ index 2 → Cluster → [ entry0, entry1, entry2 ]
+...
+```
+
+In Stockfish:
+
+```
+ClusterSize = 3
+```
+
+It means each hash index can store up to 3 different positions
+
+**Why this exists**
+
+If only 1 entry per index:
+
+```
+hash collision → overwrite immediately → lose useful info
+```
+
+With clusters:
+
+```
+hash collision → try next slot in same cluster
+```
+
+**What happens during probe**
+	1.	Compute index from key
+	2.	Look at 3 entries in that cluster
+	3.	If any matches key16 → hit
+	4.	Otherwise choose a victim entry to replace (usually oldest / shallowest)
+
+**Why 3?**
+
+Because the entire cluster must fit in one 64-byte cache line
+
+That gives maximum CPU memory efficiency while still tolerating collisions.
+
+```cpp
+  static const int CacheLineSize = 64;
+  static const int ClusterSize = 3;
+
+  struct Cluster {
+    TTEntry entry[ClusterSize]; // 10 * 3 = 30 bytes
+    char padding[2]; // 2 bytes padding 
+  };
+
+  static_assert(CacheLineSize % sizeof(Cluster) == 0, "Cluster size incorrect");
+```
+
+Each `Cluster` is 32 bytes, keeping it aligned with 64 byte cache lines.
+
+### Methods of TranspositionTable
+
+#### first_entry
+
+```cpp
+TTEntry* first_entry(const Key key) const {
+    return &table[(size_t)key & (clusterCount - 1)].entry[0];
+}
+```
+
+This function takes the zobrist hash key and returns the first entry of TT cluster which could potentially have the position representing the key.
+
+Instead of modulo:
+
+```cpp
+index = key % size   (slow)
+```
+
+Stockfish uses:
+
+```cpp
+index = key & (size - 1)   (1 CPU cycle)
+```
+
+Works because table size is power of 2. (discussed earlier)
+
+#### Generation (Aging Mechanism)
+
+```cpp
+void new_search() { generation8 += 4; }
+uint8_t generation8;
+```
+
+TT entries get “older” across searches.
+
+Purpose:
+- prefer replacing old positions
+- keep recent analysis relevant
+- prevents table pollution
+
+Lower 2 bits of generation8 store bound type, upper bits store age.
+
+Why `+= 4` Instead of `+= 1`?
+
+**Remember `genBound8` packing:**
+```
+genBound8 (8 bits):
+┌─────────────┬─────┐
+│ Generation  │Bound│
+│  (6 bits)   │(2b) │
+└─────────────┴─────┘
+  Bits 7-2      Bits 1-0
+```
+
+`TranspositionTable::generation8` represents global search age. It goes on from 0 to 65 and wraps back to 0.
+
+#### probe
+
+```cpp
+/// TranspositionTable::probe() looks up the current position in the transposition
+/// table. It returns true and a pointer to the TTEntry if the position is found.
+/// Otherwise, it returns false and a pointer to an empty or least valuable TTEntry
+/// to be replaced later. The replace value of an entry is calculated as its depth
+/// minus 8 times its relative age. TTEntry t1 is considered more valuable than
+/// TTEntry t2 if its replace value is greater than that of t2.
+
+TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
+
+  TTEntry* const tte = first_entry(key);
+  const uint16_t key16 = key >> 48;  // Use the high 16 bits as key inside the cluster
+
+  for (int i = 0; i < ClusterSize; ++i)
+      if (!tte[i].key16 || tte[i].key16 == key16)
+      {
+          if ((tte[i].genBound8 & 0xFC) != generation8 && tte[i].key16)
+              tte[i].genBound8 = uint8_t(generation8 | tte[i].bound()); // Refresh
+
+          return found = (bool)tte[i].key16, &tte[i];
+      }
+
+  // Find an entry to be replaced according to the replacement strategy
+  TTEntry* replace = tte;
+  for (int i = 1; i < ClusterSize; ++i)
+      // Due to our packed storage format for generation and its cyclic
+      // nature we add 259 (256 is the modulus plus 3 to keep the lowest
+      // two bound bits from affecting the result) to calculate the entry
+      // age correctly even after generation8 overflows into the next cycle.
+      if (  replace->depth8 - ((259 + generation8 - replace->genBound8) & 0xFC) * 2
+          >   tte[i].depth8 - ((259 + generation8 -   tte[i].genBound8) & 0xFC) * 2)
+          replace = &tte[i];
+
+  return found = false, replace;
+}
+```
+
+`first_entry` returns the pointer to potential cluster containing the position. The for loop iterates through all 3 indexes of cluster. `key16` i.e., upper 16 bits of zobrist hash is used for validation. 
+
+**Refresh aging**
+
+```cpp
+if ((tte[i].genBound8 & 0xFC) != generation8 && tte[i].key16)
+    tte[i].genBound8 = uint8_t(generation8 | tte[i].bound());
+```
+
+```
+0xFC = 11111100
+```
+
+This masks out the lower 2 bits (bound).
+
+So we compare only generation (age):
+
+```
+stored generation != current generation
+```
+
+Meaning:
+
+> “We touched this entry again in the new search — mark it as fresh.”
+
+This prevents good entries from being replaced too early.
+
+```cpp
+return found = (bool)tte[i].key16, &tte[i];
+```
+
+The function returns TTEntry*, a pointer to the chosen entry.
+
+But this line looks weird because it uses a C/C++ trick:
+
+It uses the comma operator.
+
+In C/C++:
+
+```
+A, B
+```
+
+means:
+	1.	Evaluate A
+	2.	Then evaluate B
+	3.	The whole expression becomes B
+
+`found` will be assigned true, if `key16` is non-empty (cache-hit), since `found` is a pointer, its value will be used by caller.
+
+##### Replacement Strategy
+
+The replacement policy (which old entry to overwrite when the cluster is full).
+
+**Step 1 — Start with first candidate**
+
+```cpp
+TTEntry* replace = tte;
+```
+
+Assume first slot is worst (for now).
+
+**Step 2 — Compare with other 2 entries**
+
+```cpp
+for (int i = 1; i < ClusterSize; ++i)
+```
+
+We compare slot 0 vs 1 vs 2
+and keep the worst one in replace.
+
+
+What Stockfish cares about
+
+A TT entry is valuable if:
+	1.	Searched deeper (depth) ✔ important
+	2.	Recently used (generation) ✔ important
+
+So they combine:
+
+```cpp
+quality = depth - age_penalty
+```
+
+The formula
+
+```cpp
+replace->depth8 - ((259 + generation8 - replace->genBound8) & 0xFC) * 2
+>
+tte[i].depth8 - ((259 + generation8 - tte[i].genBound8) & 0xFC) * 2
+```
+
+```cpp
+(259 + generation8 - entry.genBound8) & 0xFC
+```
+
+This computes:
+
+> How old is this entry? (even if generation wrapped around 255 → 0)
+
+The general idea is 
+
+```cpp
+// Replacement score = depth - age_penalty
+score = depth8 - (currentGen - entryGen) * 2
+```
+
+Since generation is more important, its multiplied by 2 to give higher weightage. 
+
+Its subtracted by 259 to handle wrap around.
+
+#### hashfull
+
+```cpp
+/// TranspositionTable::hashfull() returns an approximation of the hashtable
+/// occupation during a search. The hash is x permill full, as per UCI protocol.
+
+int TranspositionTable::hashfull() const {
+
+  int cnt = 0;
+  for (int i = 0; i < 1000 / ClusterSize; i++)
+  {
+      const TTEntry* tte = &table[i].entry[0];
+      for (int j = 0; j < ClusterSize; j++)
+          if ((tte[j].genBound8 & 0xFC) == generation8)
+              cnt++;
+  }
+  return cnt;
+}
+```
+
+Purpose: Estimate how full the TT is (for time management)
+
+Stockfish does sampling instead of scanning the entire table (which could be hundreds of MB).
+
+**How it works**
+
+```cpp
+for (int i = 0; i < 1000 / ClusterSize; i++)
+```
+
+Quick note: `1000 / ClusterSize` might seem like we are performing division on every loop, but since `ClusterSize` is also a compile time constant, compiler evaluates it to 333 at compile time itself. 
+
+ClusterSize = 3 → 1000/3 ≈ 333 clusters
+
+So engine checks about 1000 entries total:
+
+```
+333 clusters × 3 entries each ≈ 999 entries
+```
+
+**Why this works (statistics intuition)**
+
+The TT entries are essentially randomly distributed because:
+
+> Zobrist hashes are random → positions land uniformly in table
+
+So:
+
+Checking 1000 random entries
+≈ same ratio as checking 10 million entries
+
+
+Per-mille means:
+
+> parts per thousand (like percent = per hundred)
+
+1‰ = 1 / 1000
+
+
