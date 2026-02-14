@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Transposition Tables on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/transposition-tables/</link><description>Recent content in Transposition Tables on Sanketh's Blog</description><generator>Hugo -- 0.155.3</generator><language>en-us</language><lastBuildDate>Fri, 13 Feb 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/transposition-tables/index.xml" rel="self" type="application/rss+xml"/><item><title>Transposition Tables</title><link>https://sankethbk.github.io/blog/posts/chess_engine/2026-02-13-transposition-tables/</link><pubDate>Fri, 13 Feb 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/chess_engine/2026-02-13-transposition-tables/</guid><description>&lt;h1 id="transposition-tables"&gt;Transposition Tables&lt;/h1&gt;
+&lt;p&gt;The transposition table is the engine’s memory of previously analyzed positions.
+Because the same chess position can be reached through different move orders (transpositions), storing results avoids re-searching identical subtrees — this is one of the biggest speedups in modern engines.&lt;/p&gt;
+&lt;p&gt;Stockfish stores a compact 10-byte entry per position.&lt;/p&gt;
+&lt;h2 id="ttentry--what-is-stored"&gt;TTEntry — What is stored&lt;/h2&gt;
+&lt;p&gt;Each entry stores just enough info to help pruning and move ordering:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-cpp" data-lang="cpp"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;struct&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;TTEntry&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;private&lt;/span&gt;&lt;span style="color:#f92672"&gt;:&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;friend&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;class&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;TranspositionTable&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;uint16_t&lt;/span&gt; key16;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;uint16_t&lt;/span&gt; move16;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int16_t&lt;/span&gt; value16;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int16_t&lt;/span&gt; eval16;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;uint8_t&lt;/span&gt; genBound8;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;int8_t&lt;/span&gt; depth8;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;};
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="c-used-here"&gt;C++ Used here&lt;/h3&gt;
+&lt;h4 id="structs-in-c"&gt;Structs in C++&lt;/h4&gt;
+&lt;p&gt;In C++, struct and class are almost identical, with one default difference:&lt;/p&gt;</description></item></channel></rss>
