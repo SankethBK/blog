@@ -417,5 +417,652 @@ FromToStats:      [color][from][to]
 - Knows WHERE from  
 - Doesn't know WHAT piece
 - "Is f3→e5 good?"
-
+```
 Complementary information!
+
+## MovePicker - The Move Ordering Engine
+
+This is the heart of move ordering in Stockfish. 
+
+### The Big Picture
+
+**Purpose:** Generate moves one at a time in best-first order to maximize alpha-beta cutoffs.
+
+```cpp
+MovePicker mp(pos, ttMove, depth, ss);
+
+Move m;
+while ((m = mp.next_move()) != MOVE_NONE) {
+    // Try move in best-first order
+    score = -search(pos.do_move(m), ...);
+    if (score >= beta)
+        break;  // Cutoff! (hopefully on first move)
+}
+```
+
+**Key insight:** Don't generate all moves at once, generate them lazily in priority order.
+
+### The Three Constructors
+
+```cpp
+MovePicker(const Position&, Move, Value);
+MovePicker(const Position&, Move, Depth, Square);
+MovePicker(const Position&, Move, Depth, Search::Stack*);
+```
+
+Three different use cases:
+
+#### Constructor 1: Quiescence Search
+
+```cpp
+MovePicker(const Position& p, Move ttm, Value threshold);
+```
+
+**Parameters:**
+
+- `ttm`: TT move (try first)
+- `threshold`: Only generate captures with SEE ≥ threshold
+
+**Used in:** Quiescence search (only captures)
+
+```cpp
+MovePicker mp(pos, ttMove, -100);
+// Only generate captures that don't lose >1 pawn
+```
+
+#### Constructor 2: Evasion Search
+
+```cpp
+MovePicker(const Position& p, Move ttm, Depth d, Square sq);
+```
+
+**Parameters:**
+
+- `sq`: Recapture square
+- Used when in check or after a capture
+
+**Used in:** Recapture extensions, check evasions
+
+```cpp
+// Opponent just captured on e4
+MovePicker mp(pos, ttMove, depth, SQ_E4);
+// Prioritize recaptures on e4
+```
+
+#### Constructor 3: Normal Search
+
+```cpp
+MovePicker(const Position& p, Move ttm, Depth d, Search::Stack* ss);
+```
+
+
+**Parameters:**
+
+- `ss`: Search stack (contains killer moves, countermoves, history)
+- `d`: Current depth
+
+**Used in:** Regular alpha-beta search
+
+```cpp
+MovePicker mp(pos, ttMove, depth, ss);
+// Full move ordering with all heuristics
+```
+
+### The Member Variables
+
+```cpp
+private:
+    const Position& pos;              // Current position
+    const Search::Stack* ss;          // Search stack (killers, history)
+    Move countermove;                 // Countermove to try
+    Depth depth;                      // Search depth
+    Move ttMove;                      // TT move (highest priority)
+    Square recaptureSquare;           // For recapture prioritization
+    Value threshold;                  // SEE threshold for captures
+    int stage;                        // Current generation stage
+    
+    ExtMove *cur;                     // Current move pointer
+    ExtMove *endMoves;                // End of generated moves
+    ExtMove *endBadCaptures;          // Separator for bad captures
+    ExtMove moves[MAX_MOVES];         // Move buffer (218 max)
+```
+
+#### 1. pos
+
+```cpp
+const Position& pos;
+```
+
+**What:** Reference to the current chess positionWhy needed:
+
+**Why needed:**
+
+- Check if moves are legal (`pos.legal(move)`)
+- Get piece types (`pos.piece_on(square)`)
+- Generate moves (`generate<CAPTURES>(pos, ...)`)
+- Evaluate captures with SEE (`pos.see_ge(move, threshold)`)
+  
+
+#### 2. ss
+
+```cpp
+const Search::Stack* ss;
+```
+
+We previously saw another stack anemd `StateInfo`, but it was used to store board state history which wil be used to make/undo moves. 
+
+**Search::Stack → search reasoning memory**
+
+This is NOT about board state.
+
+It stores what the engine learned while thinking at each ply.
+
+Each recursive search call gets one entry:
+
+```cpp
+search(depth=5) → ss[0]
+ search(depth=4) → ss[1]
+  search(depth=3) → ss[2]
+   search(depth=2) → ss[3]
+```
+
+Search depth = stack depth.
+
+So this stack represents:
+
+> the thinking path inside the search tree
+
+##### What is inside Search::Stack
+
+**Typical fields:**
+
+```
+killers[2]          → moves that caused cutoffs here before
+currentMove         → move being searched
+staticEval          → evaluation of this position
+excludedMove        → singular extension logic
+ply                 → distance from root
+continuationHistory → follow-up move learning
+```
+
+This is all heuristics — nothing about legality of position.
+
+A stack is initialized during the beginning of `search` function and it will be destroyed once the function exits. 
+
+However, some information is copied into global tables:
+- history table
+- countermove table
+
+So the experience survives, but the stack does not.
+
+##### 1. killers[2]
+
+At a given depth, positions often share tactical structure.
+
+Example:
+```
+You search 50 different branches at depth 8
+In MANY of them the move:   Re1+   immediately refutes opponent
+```
+
+So next time you reach depth 8:
+
+```
+try Re1+ FIRST
+```
+
+Because chances are high it cuts off again.
+
+That move becomes a killer move
+
+Why called “killer”?
+
+Because it kills the branch instantly (beta cutoff).
+
+Why two killers?
+
+Because positions differ slightly.
+
+Typical:
+
+```
+killer1 → most reliable
+killer2 → backup candidate
+```
+
+A killer move is NOT necessarily a good move in chess.
+
+It is:
+
+> a move that refuted opponent’s plan in many sibling nodes
+
+Extremely powerful heuristic.
+
+**Key properties:**
+- Stored **per ply** (depth level)
+- Only **quiet moves** (not captures)
+- Usually store **2 killers** per ply
+- Updated when a quiet move causes beta cutoff
+
+**Why Only Quiet Moves?**
+
+Captures are already ordered by material logic (SEE/MVV-LVA),
+killers exist to rescue quiet moves that would otherwise be searched last.
+
+**Think about move ordering priorities**
+
+Stockfish tries moves roughly in this order:
+	1.	TT move (previous best)
+	2.	Good captures
+	3.	Killer moves
+	4.	Countermoves
+	5.	History quiet moves
+	6.	Bad captures
+    
+##### 2. currentMove
+
+This stores the move played to reach this node.
+
+Why needed?
+
+Because many heuristics depend on previous move.
+
+##### 3. staticEval
+
+Static evaluation = NNUE evaluation without searching.
+
+Instead of recomputing eval again and again, we store it once in stack.
+
+Used for:
+- pruning decisions
+- futility pruning
+- razoring
+- null move pruning
+
+##### 4. excludedMove — singular extension magic
+
+This is advanced but super important.
+
+Singular extension asks:
+
+> “Is ONE move clearly much better than all others?”
+
+If yes → extend search deeper for that move.
+
+To test that, engine temporarily says:
+
+```
+Search position WITHOUT best move
+```
+
+So we must forbid it:
+
+```
+excludedMove = bestMove
+```
+
+Search runs again ignoring that move.
+
+If position collapses → the move was singular → extend it.
+
+##### 5. ply
+
+Needed because mate scores depend on distance.
+
+Example:
+
+```
+Mate in 5 is better than mate in 7
+```
+
+But raw score might be same.
+
+So engine adjusts using ply.
+
+Also used in:
+- LMR reductions
+- pruning margins
+- TT storage
+
+##### 6. continuationHistory
+
+This is extremely powerful modern heuristic.
+
+Not just:
+
+> which move is good
+
+but:
+
+> which move is good AFTER another move
+
+Example patterns:
+
+```
+Bxh7+  → Kg8 forced
+Ng5+   → strong followup
+Qh5    → mating attack
+```
+
+**Putting all together — what the stack really is**
+
+At each depth the engine keeps:
+
+- What just happened
+- What worked before
+- What patterns exist
+- What position looks like
+
+So instead of blind search:
+
+Stockfish searches informed search tree
+
+#### 3. Move countermove
+
+```cpp
+Move countermove;
+```
+
+**What:** The countermove to opponent's last move
+**How it's set:**
+
+```cpp
+// In constructor:
+if (ss && ss->ply > 0) {
+    Move lastMove = (ss-1)->currentMove;  // Opponent's last move
+    countermove = counterMoves[lastMove];  // Our recorded response
+}
+```
+
+**Why stored separately**: 
+- Need to try it during COUNTERMOVE stage
+- Need to avoid trying it twice (if it's also killer or TT move)
+
+
+#### 4. depth
+
+```cpp
+Depth depth;
+```
+
+**What:** Current search depth (in plies)
+**Why needed:**
+
+- Decide which stages to use
+- At low depths, skip expensive move generation
+- History bonuses scale with depth
+
+**Example usage:**
+
+```cpp
+Move MovePicker::next_move() {
+    // At depth < 3, skip quiet moves (ProbCut)
+    if (depth < 3 * ONE_PLY && stage == QUIET_MOVES)
+        stage = BAD_CAPTURES;  // Skip to bad captures
+    
+    // History bonus: depth²
+    int bonus = depth * depth;
+    history.update(move, bonus);
+}
+```
+
+**Typical values:**
+```
+Depth 0:  Quiescence search (only captures)
+Depth 1-3:  Tactical search (captures + killer moves)
+Depth 4+:   Full search (all moves)
+```
+
+It tells the engine how reliable a move ordering decision is worth paying for.
+
+**Near the leaves (small depth)**
+
+Example: depth = 2 plies left
+
+```
+Us → Them → evaluate
+```
+
+You will evaluate very soon anyway.
+
+Spending time generating and sorting 40 quiet moves is wasteful.
+
+So engine mostly tries:
+- captures
+- tactical moves
+- maybe killers
+
+Because quiet positional moves cannot change evaluation much in 2 plies.
+
+Deep in the tree (large depth)
+
+
+Example: depth = 12 (left)
+
+A bad move ordering here explodes the tree:
+
+```
+Wrong first move → no cutoff → millions of nodes
+Right first move → cutoff → tiny tree
+```
+
+So now it’s worth:
+- sorting quiet moves
+- using history scores
+- more heuristics
+
+**That’s what this means**
+
+> History bonuses scale with depth
+
+If a move refutes at depth 12 → extremely important
+If same move refutes at depth 2 → almost meaningless
+
+So Stockfish rewards it proportionally:
+
+```
+bonus ≈ depth²
+```
+
+##### ProbCut
+
+ProbCut = Probabilistic Cutoff
+
+It is a forward pruning technique.
+
+Meaning:
+
+> Skip searching a branch because it’s almost certainly bad.
+
+**Idea**
+
+Sometimes a move is SO winning tactically
+that you don’t need a full deep search to know it fails beta.
+
+Instead:
+	1.	Do a shallow search
+	2.	If score is already huge
+	3.	Assume deeper search will also fail-high
+	4.	Prune immediately
+
+**Example**
+
+We are searching depth 10:
+
+Instead of:
+
+```cpp
+search(move, depth=10) → expensive
+```
+
+We do:
+
+```cpp
+search(move, depth=4)
+if score >= beta + margin:
+    prune branch
+```
+
+Why valid?
+
+Because tactical wins rarely disappear at deeper depth.
+
+So we cut based on probability.
+
+
+**Why depth matters for ProbCut**
+
+ProbCut only makes sense when:
+- Depth is large enough
+- Tactics are stable
+- Confidence high
+
+At shallow depth → unreliable → disabled
+
+So MovePicker uses depth to decide:
+
+> Should we even bother generating quiet moves
+> or just try tactical pruning?
+
+**Intuition**
+
+Alpha-beta pruning = mathematically safe pruning
+ProbCut = statistically safe pruning
+
+#### 5. ttMove
+
+```cpp
+Move ttMove;
+```
+
+**What**: Move from transposition table (best move from previous search)
+Why stored separately:
+
+- **Highest priority** - try first (90% chance of causing cutoff)
+- Need to avoid trying it again in later stages
+- Need to check if it's legal before returning it
+
+Example: 
+
+```cpp
+// In search:
+TTEntry* tte = TT.probe(pos.key());
+Move ttMove = tte ? tte->move() : MOVE_NONE;
+
+MovePicker mp(pos, ttMove, depth, ss);
+
+// First call to next_move():
+Move m1 = mp.next_move();
+// Returns ttMove immediately if legal
+```
+
+**Avoiding duplicates:**
+
+```cpp
+// When generating captures:
+for (Move m : all_captures) {
+    if (m == ttMove)
+        continue;  // Skip, already tried
+    // ... add to list
+}
+```
+
+#### 6. recaptureSquare
+
+```cpp
+Square recaptureSquare;
+```
+
+**What:** Square where a piece was just captured (for recapture search)
+**When set:** In the recapture constructor
+
+```cpp
+MovePicker::MovePicker(const Position& p, Move ttm, Depth d, Square sq)
+    : pos(p), ttMove(ttm), depth(d), recaptureSquare(sq)
+{
+    // sq = square where opponent just captured
+}
+```
+
+
+**Why needed**: Prioritize recaptures on that square
+
+**Example:**
+```
+Opponent played: Nxe4 (captured our pawn on e4)
+recaptureSquare = e4
+
+When scoring moves:
+├─ Bxe4 (recaptures on e4) → score += 10000  (high priority!)
+├─ Nf3 (doesn't recapture)  → score += history[Nf3]
+└─ Qxe4 (recaptures on e4) → score += 10000
+```
+
+**Typical use case:**
+
+```cpp
+// In search, after opponent captures:
+if (is_capture(move)) {
+    Square capSq = to_sq(move);
+    // Search recaptures deeply
+    MovePicker mp(pos, ttMove, depth, capSq);
+}
+```
+
+#### 7. threshold
+
+```cpp
+Value threshold;
+```
+
+**What:** Minimum SEE (Static Exchange Evaluation) for captures
+**Why needed:** Filter out bad captures in quiescence search
+**Example:**
+
+```cpp
+// Quiescence constructor:
+MovePicker::MovePicker(const Position& p, Move ttm, Value th)
+    : pos(p), ttMove(ttm), threshold(th)
+
+// In next_move():
+Move capture = next_capture();
+if (pos.see_ge(capture, threshold))
+    return capture;  // Good capture
+else
+    continue;  // Skip bad capture
+```
+
+#### 8. stage
+
+```cpp
+int stage;
+```
+
+**What:** Current move generation stage (state machine)
+**Possible values:**
+
+```cpp
+enum Stage {
+    MAIN_SEARCH,           // Entry point
+    GOOD_CAPTURES,         // Return winning captures
+    KILLERS,               // Try killer moves
+    GOOD_QUIETS,           // Try quiet moves with good history
+    BAD_CAPTURES,          // Return losing captures
+    EVASION,               // In check (special)
+    PROBCUT,               // High SEE captures only
+    QSEARCH,               // Quiescence (captures only)
+    // ... more
+};
+```
+
+**Why needed:** Track where we are in the move generation pipeline
+
+MovePicker does not generate all moves at once.
+Instead it produces moves step-by-step in priority order every time next_move() is called.
+
+
+So Stages =
+👉 “Which category of moves should I generate/return right now?”
+
+Think of it like a pipeline:
+> Try the most promising moves first → maximize alpha-beta cutoffs → avoid searching garbage moves.
