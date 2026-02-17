@@ -470,6 +470,86 @@ MovePicker mp(pos, ttMove, -100);
 // Only generate captures that don't lose >1 pawn
 ```
 
+```cpp
+MovePicker::MovePicker(const Position& p, Move ttm, Value th)
+           : pos(p), threshold(th) {
+
+  assert(!pos.checkers());
+
+  stage = PROBCUT;
+
+  // In ProbCut we generate captures with SEE higher than the given threshold
+  ttMove =   ttm
+          && pos.pseudo_legal(ttm)
+          && pos.capture(ttm)
+          && pos.see_ge(ttm, threshold + 1)? ttm : MOVE_NONE;
+
+  stage += (ttMove == MOVE_NONE);
+}
+```
+
+```cpp
+assert(!pos.checkers());
+```
+
+**What:** Checks that we're NOT in check
+**Why:** This constructor is for quiescence/ProbCut, which doesn't handle check evasions
+
+
+```cpp
+stage = PROBCUT;
+```
+
+**What:** Set initial stage to PROBCUT
+Stage enum (approximately):
+
+```cpp
+enum Stage {
+    MAIN_TT = 0,
+    // ...
+    PROBCUT,           // Only high-SEE captures
+    PROBCUT_CAPTURES,  // Generate and return them
+    // ...
+};
+```
+
+Why PROBCUT? This constructor is used for:
+
+1. **ProbCut search** (try only captures that gain material)
+2. **Quiescence search** (try only non-losing captures)
+
+**TT Move Validation (The Tricky Part)**
+
+```cpp
+ttMove =   ttm
+        && pos.pseudo_legal(ttm)
+        && pos.capture(ttm)
+        && pos.see_ge(ttm, threshold + 1) ? ttm : MOVE_NONE;
+```
+
+This is a chain of boolean conditions that must ALL be true to accept the TT move.
+
+**Condition 1: ttm**
+
+Check: TT move exists (not MOVE_NONE)
+
+**Condition 2: pos.pseudo_legal(ttm)**
+
+**Check:** TT move is pseudo-legal in current position
+**Pseudo-legal** means:
+- Move syntax is valid (from/to squares exist)
+- Piece can make that move (e.g., knight moves like a knight)
+- But might leave king in check (not validated yet)
+
+**Condition 3: pos.capture(ttm)**
+
+**Check:** TT move is a capture
+**Why this check?** In ProbCut/quiescence, we only want captures!
+
+**Condition 4: pos.see_ge(ttm, threshold + 1)**
+
+
+
 #### Constructor 2: Evasion Search
 
 ```cpp
@@ -478,8 +558,10 @@ MovePicker(const Position& p, Move ttm, Depth d, Square sq);
 
 **Parameters:**
 
-- `sq`: Recapture square
-- Used when in check or after a capture
+- `p`: Current position
+- `ttm`: TT move
+- `d`: Negative depth (quiescence depth)
+- `s`: Recapture square (only used in one case)- Used when in check or after a capture
 
 **Used in:** Recapture extensions, check evasions
 
@@ -489,23 +571,268 @@ MovePicker mp(pos, ttMove, depth, SQ_E4);
 // Prioritize recaptures on e4
 ```
 
+```cpp
+MovePicker::MovePicker(const Position& p, Move ttm, Depth d, Square s)
+           : pos(p) {
+
+  assert(d <= DEPTH_ZERO);
+
+  if (pos.checkers())
+      stage = EVASION;
+
+  else if (d > DEPTH_QS_NO_CHECKS)
+      stage = QSEARCH_WITH_CHECKS;
+
+  else if (d > DEPTH_QS_RECAPTURES)
+      stage = QSEARCH_NO_CHECKS;
+
+  else
+  {
+      stage = QSEARCH_RECAPTURES;
+      recaptureSquare = s;
+      return;
+  }
+
+  ttMove = ttm && pos.pseudo_legal(ttm) ? ttm : MOVE_NONE;
+  stage += (ttMove == MOVE_NONE);
+}
+```
+
+```cpp
+// Depth constants (negative values):
+DEPTH_ZERO = 0
+DEPTH_QS_CHECKS = 0        // Try checks in quiescence
+DEPTH_QS_NO_CHECKS = -1    // No checks, just captures
+DEPTH_QS_RECAPTURES = -5   // Only recaptures on specific square
+
+// Typical quiescence depths:
+d = 0    → Can try checks
+d = -1   → Only captures, no checks
+d = -2   → Only captures, no checks
+d = -5   → Only recaptures on one square
+d = -7   → Only recaptures on one square
+```
+
+```cpp
+assert(d <= DEPTH_ZERO);
+```
+
+**Check:** Depth must be ≤ 0 (quiescence depths are negative/zero)
+
+**Why?** This constructor is ONLY for quiescence search, which uses negative depths.
+
+##### Why is Depth an enum?
+
+Stockfish needs multiple kinds of quiescence search, not just one.
+
+Stockfish encodes the mode inside the depth number itself.
+
+> Negative depth = different quiescence modes
+
+So depth becomes a state machine.
+
+**The Meaning of Each Constant**
+
+Think of them as search regimes, not depths.
+
+| Constant | Meaning |
+| :--- | :--- |
+| DEPTH_ZERO | transition point: start quiescence |
+| DEPTH_QS_CHECKS | full qsearch (captures + checking moves) |
+| DEPTH_QS_NO_CHECKS | captures only |
+| DEPTH_QS_RECAPTURES | only recaptures on same square |
+| DEPTH_NONE | stop search entirely |
+
+**Key idea**
+
+> The more negative the depth → the quieter the search becomes
+
+So the engine gradually reduces tactical horizon:
+
+```
+Normal search
+   ↓
+Qsearch with checks
+   ↓
+Qsearch captures only
+   ↓
+Recaptures only
+   ↓
+Stop
+```
+
+This is called tapered quiescence.
+
+Instead of writing:
+
+```cpp
+if (mode == QS_CHECKS) ...
+else if (mode == QS_CAPTURES) ...
+else if (mode == QS_RECAPTURES) ...
+```
+
+Stockfish can simply do:
+
+```cpp
+depth--
+```
+
+and naturally transition between modes.
+
+Search controls itself automatically.
+
+**Four scenarios:**
+
+1. In check (any depth):
+- Stage: EVASION
+- Generates: Evasion moves only
+
+
+2. Depth = 0 (shallow quiescence):
+- Stage: QSEARCH_WITH_CHECKS
+- Generates: Captures + Checks
+
+
+3. Depth = -1 to -4 (normal quiescence):
+- Stage: QSEARCH_NO_CHECKS
+- Generates: Captures only
+
+
+4. Depth ≤ -5 (deep quiescence):
+- Stage: QSEARCH_RECAPTURES
+- Generates: Recaptures on square only
+- Early return (skips TT validation)
+
+Key insight: Deeper quiescence = more selective (prune aggressively)
+
 #### Constructor 3: Normal Search
 
 ```cpp
-MovePicker(const Position& p, Move ttm, Depth d, Search::Stack* ss);
+MovePicker::MovePicker(const Position& p, Move ttm, Depth d, Search::Stack* s)
+    : pos(p), ss(s), depth(d)
 ```
 
+**Initializer list stores:**
 
-**Parameters:**
+- `pos(p)`: Position reference
+- `ss(s)`: Search stack pointer
+- `depth(d)`: Current search depth
 
-- `ss`: Search stack (contains killer moves, countermoves, history)
-- `d`: Current depth
+Note: No `threshold` or `recaptureSquare` - this is full search, not quiescence!
 
 **Used in:** Regular alpha-beta search
 
+Opposite of the quiescence constructor!
+
 ```cpp
-MovePicker mp(pos, ttMove, depth, ss);
-// Full move ordering with all heuristics
+assert(d > DEPTH_ZERO);
+```
+
+Get Previous Square
+
+```cpp
+Square prevSq = to_sq((ss-1)->currentMove);
+
+// ss points to current ply
+// ss-1 points to PARENT ply
+```
+
+Get Countermove
+
+```cpp
+countermove = pos.this_thread()->counterMoves[pos.piece_on(prevSq)][prevSq];
+```
+
+**Three parts:**
+
+`pos.this_thread()`
+
+```cpp
+// Get the thread searching this position
+// Each thread has its own move statistics
+Thread* thread = pos.this_thread();
+```
+
+`pos.piece_on(prevSq)`
+
+```cpp
+// What piece is on the square opponent just moved to?
+Piece theirPiece = pos.piece_on(prevSq);
+
+// Example:
+// Opponent played Nd4
+// prevSq = d4
+// piece_on(d4) = BLACK_KNIGHT
+```
+
+`counterMoves[piece][square]`
+
+```cpp
+// Look up our recorded response to this move
+Move cm = counterMoves[BLACK_KNIGHT][d4];
+
+// This is the move we previously found to be good
+// when opponent played their knight to d4
+```
+
+Set Stage
+
+```cpp
+stage = pos.checkers() ? EVASION : MAIN_SEARCH;
+```
+
+Two possibilities:
+
+In Check → EVASION
+
+```cpp
+if (pos.checkers())
+    stage = EVASION;
+
+// Must get out of check!
+// Generate only evasion moves
+```
+
+Not in Check → MAIN_SEARCH
+
+```cpp
+else
+    stage = MAIN_SEARCH;
+
+// Normal position
+// Generate all moves in priority order:
+// TT → Captures → Killers → Countermove → Quiets → Bad Captures
+```
+
+TT Move Validation
+
+```cpp
+ttMove = ttm && pos.pseudo_legal(ttm) ? ttm : MOVE_NONE;
+```
+
+**Same as quiescence constructor:**
+
+- TT move exists?
+- Pseudo-legal in current position?
+
+Stage Adjustment
+
+```cpp
+stage += (ttMove == MOVE_NONE);
+```
+
+Same trick as other constructors:
+
+```cpp
+// With valid TT move:
+stage = MAIN_SEARCH (e.g., 0)
+stage += 0
+// = MAIN_SEARCH (try TT move first)
+
+// Without TT move:
+stage = MAIN_SEARCH (0)
+stage += 1
+// = MAIN_SEARCH + 1 (skip to captures)
 ```
 
 ### The Member Variables
