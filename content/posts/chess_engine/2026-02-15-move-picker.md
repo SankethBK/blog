@@ -1393,3 +1393,932 @@ So Stages =
 
 Think of it like a pipeline:
 > Try the most promising moves first → maximize alpha-beta cutoffs → avoid searching garbage moves.
+
+### Utilities
+
+#### 1. insertion_sort
+
+```cpp
+  // Our insertion sort, which is guaranteed to be stable, as it should be
+  void insertion_sort(ExtMove* begin, ExtMove* end)
+  {
+    ExtMove tmp, *p, *q;
+
+    for (p = begin + 1; p < end; ++p)
+    {
+        tmp = *p;
+        for (q = p; q != begin && *(q-1) < tmp; --q)
+            *q = *(q-1);
+        *q = tmp;
+    }
+  }
+```
+
+This is the classic implementation of insertion sort.
+
+##### What “stable” means here
+
+A stable sort keeps the original order of elements that compare equal.
+
+So if two moves have the same value:
+
+```cpp
+Before sort:  [MoveA, MoveB]
+After sort :  [MoveA, MoveB]   (not swapped)
+```
+
+An unstable sort might output:
+
+```cpp
+[MoveB, MoveA]
+```
+
+##### Why Stockfish cares a LOT about this
+
+Move ordering in Stockfish is not decided by one heuristic.
+
+It is multi-stage ordering:
+ 1. TT move
+ 2. Winning captures (SEE)
+ 3. Killer moves
+ 4. Countermoves
+ 5. History heuristic
+ 6. Remaining quiet moves
+
+When we reach this insertion sort, the moves already have a meaningful order from earlier stages.
+
+The value field is only the last refinement (history score etc).
+
+So equal scores must NOT destroy earlier priority.
+
+**Used at Quiet Moves**
+
+```cpp
+  case QUIET_INIT:
+      cur = endBadCaptures;
+      endMoves = generate<QUIETS>(pos, cur);
+      score<QUIETS>();
+      if (depth < 3 * ONE_PLY)
+      {
+          ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
+                                             { return m.value > VALUE_ZERO; });
+          insertion_sort(cur, goodQuiet);
+      } else
+          insertion_sort(cur, endMoves);
+      ++stage;
+```
+
+This is the moment where Stockfish orders quiet moves (non-captures).
+
+Quiet moves are the largest category of moves and also the most dangerous for alpha-beta:
+
+> If we search them in bad order → branching explodes.
+
+So here Stockfish performs the final ordering refinement using the history heuristic.
+
+**What happens in this block**
+
+```cpp
+cur = endBadCaptures;
+endMoves = generate<QUIETS>(pos, cur);
+score<QUIETS>();
+```
+
+We now have a list like:
+
+```cpp
+[Killer1, Killer2, Countermove, history moves, trash moves...]
+```
+
+**Important:**
+
+They are already in a meaningful heuristic order based on generation.
+
+Now we refine them using history scores.
+
+**Special handling at low depth**
+
+```cpp
+if (depth < 3 * ONE_PLY)
+{
+    ExtMove* goodQuiet = std::partition(cur, endMoves,
+        [](const ExtMove& m){ return m.value > VALUE_ZERO; });
+
+    insertion_sort(cur, goodQuiet);
+}
+```
+
+**Why only QUIETS need this**
+
+Captures already have natural ordering:
+- MVV-LVA
+- SEE
+- winning vs losing captures
+
+
+#### 2. pick_best
+
+```cpp
+
+  // pick_best() finds the best move in the range (begin, end) and moves it to
+  // the front. It's faster than sorting all the moves in advance when there
+  // are few moves, e.g., the possible captures.
+  Move pick_best(ExtMove* begin, ExtMove* end)
+  {
+      std::swap(*begin, *std::max_element(begin, end));
+      return *begin;
+  }
+```
+
+**What It Does**
+
+Finds the highest scored move and swaps it to the front.
+
+**Why Not Full Sort?**
+
+`pick_best():`
+- O(n), finds current best → swaps to front
+- Used for captures (few moves, early cutoffs)
+- Like selection sort but one element at a time
+
+`insertion_sort():`
+- O(n²), stable, sorts highest first
+- Used for quiet moves (full order needed)
+- Stable preserves secondary ordering (killers, etc.)
+
+
+**Called repeatedly:**
+
+```cpp
+// In next_move():
+while (cur < endMoves) {
+    pick_best(cur, endMoves);  // Find best of remaining
+    return (cur++)->move;      // Return it, advance pointer
+}
+
+// Each call: O(n), O(n-1), O(n-2)...
+// Total: O(n²) worst case
+// But usually cutoff happens early → much faster!
+```
+
+### Methods
+
+#### Score
+
+Three specializations, each for different move types.
+
+##### 1. `score<CAPTURES>()`
+
+```cpp
+/// score() assigns a numerical value to each move in a move list. The moves with
+/// highest values will be picked first.
+template<>
+void MovePicker::score<CAPTURES>() {
+  // Winning and equal captures in the main search are ordered by MVV, preferring
+  // captures near our home rank. Surprisingly, this appears to perform slightly
+  // better than SEE-based move ordering: exchanging big pieces before capturing
+  // a hanging piece probably helps to reduce the subtree size.
+  // In the main search we want to push captures with negative SEE values to the
+  // badCaptures[] array, but instead of doing it now we delay until the move
+  // has been picked up, saving some SEE calls in case we get a cutoff.
+  for (auto& m : *this)
+      m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
+               - Value(200 * relative_rank(pos.side_to_move(), to_sq(m)));
+}
+```
+
+**What It Does**
+
+Scores captures by: victim value - rank penalty
+
+**Part 1: Victim Value**
+
+```cpp
+PieceValue[MG][pos.piece_on(to_sq(m))]
+```
+
+**MVV:** Most Valuable Victim - capture the most valuable piece first
+
+**Part 2: Rank Penalty**
+
+```cpp
+- Value(200 * relative_rank(pos.side_to_move(), to_sq(m)))
+```
+
+Penalizes captures far from our home rank!
+
+What is `relative_rank`?
+
+```cpp
+// relative_rank returns rank from OUR perspective:
+// Rank 1 = our home rank (lowest, best)
+// Rank 8 = opponent's home rank (highest, penalized)
+
+// For White:
+relative_rank(WHITE, a1) = 1  (home rank)
+relative_rank(WHITE, a4) = 4  (middle)
+relative_rank(WHITE, a8) = 8  (opponent's rank)
+
+// For Black (reversed!):
+relative_rank(BLACK, a8) = 1  (home rank)
+relative_rank(BLACK, a4) = 5  (middle)
+relative_rank(BLACK, a1) = 8  (opponent's rank)
+```
+
+**Why Penalize Far Captures?**
+
+**The comment explains it:**
+> "exchanging big pieces before capturing a hanging piece probably helps to reduce the subtree size"
+
+Example:
+- Hanging pawn on h7 (rank 7 for white)
+- Enemy queen on e5 (rank 5 for white)
+- We have a rook that can take either
+
+**Delayed SEE**
+
+Important comment:
+
+> "instead of doing it now we delay until the move has been picked up, saving some SEE calls in case we get a cutoff"
+
+```cpp
+
+// Done LATER in next_move():
+case GOOD_CAPTURES:
+    while (cur < endMoves) {
+        pick_best(cur, endMoves);
+        
+        // SEE check happens HERE (when move is actually picked)
+        if (!pos.see_ge(*cur, Value(-55 * cur->value / 1024)))
+            *endBadCaptures++ = *cur++;  // Move to bad captures
+        else
+            return (cur++)->move;  // Return good capture
+    }
+```
+
+##### 2. `score<QUIETS>()`
+
+```cpp
+template<>
+void MovePicker::score<QUIETS>() {
+
+  const HistoryStats& history = pos.this_thread()->history;
+  const FromToStats& fromTo = pos.this_thread()->fromTo;
+
+  const CounterMoveStats* cm = (ss-1)->counterMoves;
+  const CounterMoveStats* fm = (ss-2)->counterMoves;
+  const CounterMoveStats* f2 = (ss-4)->counterMoves;
+
+  Color c = pos.side_to_move();
+
+  for (auto& m : *this)
+      m.value =      history[pos.moved_piece(m)][to_sq(m)]
+               + (cm ? (*cm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
+               + (fm ? (*fm)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
+               + (f2 ? (*f2)[pos.moved_piece(m)][to_sq(m)] : VALUE_ZERO)
+               + fromTo.get(c, m);
+}
+```
+
+**What is *this here?**
+
+So the function is a member function of MovePicker.
+
+Therefore:
+
+```cpp
+this  → pointer to current MovePicker object
+*this → the MovePicker object itself
+```
+
+Why can we iterate over *this?
+
+Because MovePicker is made iterable.
+
+Inside MovePicker (in movepick.h) there are functions like:
+
+```cpp
+ExtMove* begin() { return cur; }
+ExtMove* end()   { return endMoves; }
+```
+
+So MovePicker behaves like a container of moves.
+
+That allows this:
+
+```cpp
+for (auto& m : *this)
+```
+
+to expand to:
+
+```cpp
+for (ExtMove* it = this->begin(); it != this->end(); ++it) {
+    auto& m = *it;
+}
+```
+
+So it loops over currently generated moves.
+
+**What the loop is doing**
+
+```cpp
+m.value =
+    history score
+  + countermove score (1 ply ago)
+  + countermove score (2 ply ago)
+  + countermove score (4 ply ago)
+  + from-to heuristic
+```
+
+##### 3. `score<EVASIONS>()`
+
+```cpp
+template<>
+void MovePicker::score<EVASIONS>() {
+    const HistoryStats& history = pos.this_thread()->history;
+    const FromToStats& fromTo = pos.this_thread()->fromTo;
+    Color c = pos.side_to_move();
+    
+    for (auto& m : *this)
+        if (pos.capture(m))
+            m.value = PieceValue[MG][pos.piece_on(to_sq(m))]
+                    - Value(type_of(pos.moved_piece(m))) + HistoryStats::Max;
+        else
+            m.value = history[pos.moved_piece(m)][to_sq(m)]
+                    + fromTo.get(c, m);
+}
+```
+
+**Two Cases: Captures vs Non-Captures**
+
+**Case 1: Captures When in Check**
+
+```cpp
+if (pos.capture(m))
+    m.value = PieceValue[MG][pos.piece_on(to_sq(m))]  // Victim value
+            - Value(type_of(pos.moved_piece(m)))        // Attacker type penalty
+            + HistoryStats::Max;                        // Large bonus!
+```
+
+**Three parts:**
+
+Victim Value (MVV)
+
+```cpp
+PieceValue[MG][pos.piece_on(to_sq(m))]
+// Capture queen (+900) > capture rook (+500) > capture pawn (+100)
+```
+
+Attacker Type Penalty (LVA)
+
+```cpp
+- Value(type_of(pos.moved_piece(m)))
+
+// type_of returns piece type as integer:
+PAWN   = 1
+KNIGHT = 2
+BISHOP = 3
+ROOK   = 4
+QUEEN  = 5
+KING   = 6
+
+// Small penalty for using expensive piece to capture
+// Pawn captures preferred over queen captures
+// (but victim value dominates)
+```
+
+**MVV-LVA combined:**
+```
+Capture queen with pawn:   900 - 1 = 899  ← Best!
+Capture queen with knight: 900 - 2 = 898
+Capture rook with pawn:    500 - 1 = 499
+Capture pawn with queen:   100 - 5 = 95   ← Worst
+```
+
+HistoryStats::Max Bonus
+
+```cpp
++ HistoryStats::Max  // = 1 << 28 (very large number!)
+```
+
+Why add this large bonus?
+
+```cpp
+// Captures score: 0 to ~900 + HistoryStats::Max
+// Non-captures score: history + fromTo (can be negative!)
+
+// Adding HistoryStats::Max ensures:
+// ALL captures score higher than ALL non-captures!
+
+// Without bonus:
+Capture pawn:   100 (small)
+Good quiet:     5000 (from history)
+→ Quiet tried before capture! WRONG!
+
+// With bonus:
+Capture pawn:   100 + 268M = 268M+ (huge!)
+Good quiet:     5000 (small)
+→ All captures tried before quiets ✓
+```
+
+**Case 2: Non-Captures When in Check**
+
+
+```cpp
+else
+    m.value = history[pos.moved_piece(m)][to_sq(m)]
+            + fromTo.get(c, m);
+```
+
+**Same as quiet scoring** (but without continuation history):
+- No `cm`, `fm`, `f2` (too expensive when in check)
+- Just history + fromTo
+
+**Why simpler?**
+```
+When in check:
+- Need to respond quickly
+- Usually few evasion moves available
+- Don't need elaborate scoring
+- Simple history + fromTo is sufficient
+```
+
+##### Comparison Table
+
+| Feature | CAPTURES | QUIETS | EVASIONS |
+|---------|----------|--------|----------|
+| **Base score** | Victim value | History | MVV-LVA or History |
+| **Rank penalty** | Yes (-200/rank) | No | No |
+| **History** | No | Yes | Yes (non-captures) |
+| **Continuation** | No | 3 levels | No |
+| **FromTo** | No | Yes | Yes |
+| **HistoryStats::Max** | No | No | Yes (captures) |
+| **SEE** | Delayed | No | No |
+
+---
+
+##### Summary
+
+**score\<CAPTURES\>()**
+```
+score = victim_value - (200 × relative_rank)
+
+MVV ordering (most valuable victim first)
+Rank penalty (prefer nearby captures)
+SEE check delayed until move is picked
+```
+
+**score\<QUIETS\>()**
+```
+score = history[piece][to]
+      + cm[piece][to]    (1 ply ago context)
+      + fm[piece][to]    (2 plies ago context)
+      + f2[piece][to]    (4 plies ago context)
+      + fromTo[color][from][to]
+
+Five statistical components for accurate ordering
+```
+
+**score\<EVASIONS\>()**
+```
+Captures: MVV-LVA + HistoryStats::Max
+          (ensures all captures before non-captures)
+
+Non-captures: history + fromTo
+              (simple, fast ordering)
+
+Key: HistoryStats::Max separates captures from quiets!
+```
+
+#### next_move
+
+This is the heart of move ordering! It contains all 17 stages.
+
+##### Stage Flow Overview
+
+```
+MAIN_SEARCH path:
+1. MAIN_SEARCH → return TT move
+2. CAPTURES_INIT → generate captures
+3. GOOD_CAPTURES → return winning captures
+4. KILLERS → return killer moves
+5. COUNTERMOVE → return countermove
+6. QUIET_INIT → generate quiet moves
+7. QUIET → return quiet moves
+8. BAD_CAPTURES → return losing captures
+
+EVASION path (in check):
+9. EVASION → return TT move
+10. EVASIONS_INIT → generate evasions
+11. ALL_EVASIONS → return all evasions
+
+PROBCUT path:
+12. PROBCUT → return TT move
+13. PROBCUT_INIT → generate captures
+14. PROBCUT_CAPTURES → return high-SEE captures
+
+QSEARCH path:
+15. QSEARCH_WITH_CHECKS/NO_CHECKS → return TT move
+16. QCAPTURES → return captures
+17. QCHECKS → return quiet checks (depth 0 only)
+18. QRECAPTURES → return recaptures only
+```
+
+##### Stages 1-8: MAIN_SEARCH (Normal Search)
+
+**Stage 1: Return TT Move**
+
+```cpp
+case MAIN_SEARCH:
+    ++stage;
+    return ttMove;
+```
+
+
+**Simple:** Try hash move first (90% cutoff rate!)
+If ttMove == MOVE_NONE: Constructor already incremented stage, skips this.
+
+**Stage 2: CAPTURES_INIT**
+
+```cpp
+case CAPTURES_INIT:
+    endBadCaptures = cur = moves;
+    endMoves = generate<CAPTURES>(pos, cur);
+    score<CAPTURES>();
+    ++stage;
+    // Fall through to GOOD_CAPTURES
+```
+
+Generate all captures:
+
+```cpp
+endBadCaptures = moves  // Start of bad captures section
+cur = moves             // Current pointer
+endMoves = ...          // End of captures
+
+// Memory layout:
+[moves ... endBadCaptures ... endMoves)
+```
+
+
+**Score them:** MVV - rank_penalty
+**No return** - falls through to next stage immediately.
+
+**Stage 3: GOOD_CAPTURES (IMPORTANT!)**
+
+```cpp
+case GOOD_CAPTURES:
+    while (cur < endMoves) {
+        move = pick_best(cur++, endMoves);
+        if (move != ttMove) {
+            if (pos.see_ge(move, VALUE_ZERO))
+                return move;  // Good capture!
+            
+            // Losing capture, save for later
+            *endBadCaptures++ = move;
+        }
+    }
+    // Falls through to killers
+```
+
+**Key behavior:**
+1. Pick best capture by MVV-LVA
+2. Skip if it's TT move (already tried)
+3. **SEE check** (delayed from scoring)
+   - SEE ≥ 0: Return (good capture)
+   - SEE < 0: Save to bad captures array
+4. Repeat until no more captures
+
+**Memory after this stage:**
+```
+[Good (returned) | Bad Captures | (gap) | Remaining]
+ ↑                ↑                      ↑
+moves         endBadCaptures          endMoves
+```
+After all captures checked: Falls through to killers.
+
+**Stage 4: KILLERS (First Killer)**
+
+```cpp
+case KILLERS:  // This actually handles first killer
+    ++stage;
+    move = ss->killers[0];
+    if (   move != MOVE_NONE
+        && move != ttMove
+        && pos.pseudo_legal(move)
+        && !pos.capture(move))
+        return move;
+    // Falls through to second killer
+```
+
+Validation checks:
+
+- Exists (not MOVE_NONE)
+- Not already tried (not ttMove)
+- Legal in this position
+- Not a capture (captures already tried)
+
+Falls through if killer invalid.
+
+**Stage 5: KILLERS (Second Killer)**
+
+```cpp
+// Second killer (no case label, falls through from above)
+++stage;
+move = ss->killers[1];
+if (   move != MOVE_NONE
+    && move != ttMove
+    && pos.pseudo_legal(move)
+    && !pos.capture(move))
+    return move;
+// Falls through to countermove
+```
+
+Same checks as first killer.
+
+**Stage 6: COUNTERMOVE**
+
+```cpp
+case COUNTERMOVE:
+    ++stage;
+    move = countermove;
+    if (   move != MOVE_NONE
+        && move != ttMove
+        && move != ss->killers[0]
+        && move != ss->killers[1]
+        && pos.pseudo_legal(move)
+        && !pos.capture(move))
+        return move;
+    // Falls through to quiet init
+```
+
+Extra checks:
+
+- Not killer[0] (avoid duplicate)
+- Not killer[1] (avoid duplicate)
+
+**Stage 7: QUIET_INIT (IMPORTANT!)**
+
+```cpp
+case QUIET_INIT:
+    cur = endBadCaptures;  // Start after bad captures
+    endMoves = generate<QUIETS>(pos, cur);
+    score<QUIETS>();  // 5-component scoring
+    
+    if (depth < 3 * ONE_PLY) {
+        // Shallow: only sort good quiets
+        ExtMove* goodQuiet = std::partition(cur, endMoves, 
+            [](const ExtMove& m) { return m.value > VALUE_ZERO; });
+        insertion_sort(cur, goodQuiet);
+    } else {
+        // Deep: sort all quiets
+        insertion_sort(cur, endMoves);
+    }
+    ++stage;
+    // Falls through to QUIET
+```
+
+Key optimizations:
+
+1. Generate after bad captures (reuse memory)
+2. Shallow depth optimization:
+
+**Stage 8: QUIET**
+
+```cpp
+case QUIET:
+    while (cur < endMoves) {
+        move = *cur++;
+        if (  move != ttMove
+           && move != ss->killers[0]
+           && move != ss->killers[1]
+           && move != countermove)
+            return move;
+    }
+    ++stage;
+    cur = moves;  // Reset to start
+    // Falls through to BAD_CAPTURES
+```
+
+Return quiets in history order.
+Skip duplicates: ttMove, killers, countermove already tried.
+After exhausted: Prepare for bad captures.
+
+**Stage 9: BAD_CAPTURES**
+
+```cpp
+case BAD_CAPTURES:
+    if (cur < endBadCaptures)
+        return *cur++;
+    break;  // END of main search path
+```
+
+Finally try losing captures (SEE < 0).
+Break - no more moves, return MOVE_NONE.
+
+##### Stages 10-11: EVASION (In Check)
+
+**Stage 10: EVASION (TT Move)**
+
+```cpp
+case EVASION:
+    ++stage;
+    return ttMove;
+```
+
+Same as MAIN_SEARCH stage 1.
+
+**Stage 11: EVASIONS_INIT**
+
+```cpp
+case EVASIONS_INIT:
+    cur = moves;
+    endMoves = generate<EVASIONS>(pos, cur);
+    score<EVASIONS>();  // MVV-LVA + Max or history
+    ++stage;
+    // Falls through to ALL_EVASIONS
+```
+
+Generate only evasion moves:
+
+- King moves
+- Block check
+- Capture checking piece
+
+**Stage 12: ALL_EVASIONS**
+
+```cpp
+case ALL_EVASIONS:
+    while (cur < endMoves) {
+        move = pick_best(cur++, endMoves);
+        if (move != ttMove)
+            return move;
+    }
+    break;  // END of evasion path
+```
+
+Return all evasions in score order.
+Simpler than main search (no killers, no quiets/captures split).
+
+##### Stages 13-14: PROBCUT
+
+**Stage 13: PROBCUT (TT Move)**
+
+```cpp
+case PROBCUT:
+    ++stage;
+    return ttMove;
+```
+
+**Stage 14: PROBCUT_INIT**
+
+```cpp
+case PROBCUT_INIT:
+    cur = moves;
+    endMoves = generate<CAPTURES>(pos, cur);
+    score<CAPTURES>();
+    ++stage;
+    // Falls through to PROBCUT_CAPTURES
+```
+
+**Stage 15: PROBCUT_CAPTURES**
+
+```cpp
+case PROBCUT_CAPTURES:
+    while (cur < endMoves) {
+        move = pick_best(cur++, endMoves);
+        if (  move != ttMove
+           && pos.see_ge(move, threshold + 1))
+            return move;
+    }
+    break;  // END of probcut path
+```
+
+Only return captures with SEE > threshold.
+Used for ProbCut pruning (test if beta cutoff likely).
+
+##### Stages 16-19: QSEARCH (Quiescence)
+
+**Stage 16: QSEARCH_WITH_CHECKS / QSEARCH_NO_CHECKS**
+
+```cpp
+case QSEARCH_WITH_CHECKS:
+case QSEARCH_NO_CHECKS:
+    ++stage;
+    return ttMove;
+```
+
+Two entry points (different constructors).
+
+**Stage 17: QCAPTURES_1_INIT / QCAPTURES_2_INIT**
+
+```cpp
+case QCAPTURES_1_INIT:
+case QCAPTURES_2_INIT:
+    cur = moves;
+    endMoves = generate<CAPTURES>(pos, cur);
+    score<CAPTURES>();
+    ++stage;
+    // Falls through
+```
+
+**Stage 18: QCAPTURES_1 / QCAPTURES_2**
+
+```cpp
+case QCAPTURES_1:
+case QCAPTURES_2:
+    while (cur < endMoves) {
+        move = pick_best(cur++, endMoves);
+        if (move != ttMove)
+            return move;
+    }
+    
+    if (stage == QCAPTURES_2)
+        break;  // QSEARCH_NO_CHECKS ends here
+    
+    // QSEARCH_WITH_CHECKS continues:
+    cur = moves;
+    endMoves = generate<QUIET_CHECKS>(pos, cur);
+    ++stage;
+    // Falls through to QCHECKS
+```
+
+Two versions:
+
+- QCAPTURES_1: With checks (continues to QCHECKS)
+- QCAPTURES_2: No checks (breaks, ends search)
+
+**Stage 19: QCHECKS**
+
+```cpp
+case QCHECKS:
+    while (cur < endMoves) {
+        move = cur++->move;  // No pick_best (already sorted)
+        if (move != ttMove)
+            return move;
+    }
+    break;  // END of qsearch with checks
+```
+
+Only in QSEARCH_WITH_CHECKS (depth 0).
+Generate quiet checks: Non-capture moves that give check.
+
+**Stage 20: QSEARCH_RECAPTURES**
+
+```cpp
+case QSEARCH_RECAPTURES:
+    cur = moves;
+    endMoves = generate<CAPTURES>(pos, cur);
+    score<CAPTURES>();
+    ++stage;
+    // Falls through to QRECAPTURES
+```
+
+Deep quiescence (depth ≤ -5).
+
+**Stage 21: QRECAPTURES**
+
+```cpp
+case QRECAPTURES:
+    while (cur < endMoves) {
+        move = pick_best(cur++, endMoves);
+        if (to_sq(move) == recaptureSquare)
+            return move;
+    }
+    break;  // END of recaptures only
+```
+
+**Only return captures on specific square.**
+
+
+##### Summary by Path
+
+**Main Search (Normal Position)
+```
+TT → Good Captures → Killer1 → Killer2 → Countermove → Quiets → Bad Captures
+```
+
+**Evasion (In Check)**
+```
+TT → All Evasions (sorted by MVV-LVA/history)
+```
+
+**ProbCut**
+```
+TT → High-SEE Captures only
+```
+
+**Quiescence (With Checks, depth=0)**
+```
+TT → Captures → Quiet Checks
+```
+
+**Quiescence (No Checks, depth=-1 to -4)**
+```
+TT → Captures only
+```
+
+**Quiescence (Recaptures, depth≤-5)******
+```
+Captures on specific square only
