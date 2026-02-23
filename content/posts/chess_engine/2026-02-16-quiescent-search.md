@@ -1,6 +1,6 @@
 ---
 title:  "Quiescent Search"
-date:   2026-02-15
+date:   2026-02-16
 draft: false
 categories: ["chess engines"]
 tags: ["quiescent search"]
