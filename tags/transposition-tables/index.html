@@ -4,7 +4,7 @@
 Stockfish stores a compact 10-byte entry per position.
 TTEntry — What is stored Each entry stores just enough info to help pruning and move ordering:
 struct TTEntry { private: friend class TranspositionTable; uint16_t key16; uint16_t move16; int16_t value16; int16_t eval16; uint8_t genBound8; int8_t depth8; }; C++ Used here Structs in C++ In C++, struct and class are almost identical, with one default difference:
-...</p></div><footer class=entry-footer><span title='2026-02-13 00:00:00 +0000 UTC'>February 13, 2026</span>&nbsp;·&nbsp;20 min&nbsp;·&nbsp;Sanketh</footer><a class=entry-link aria-label="post link to Transposition Tables" href=https://sankethbk.github.io/blog/posts/chess_engine/2026-02-13-transposition-tables/></a></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+...</p></div><footer class=entry-footer><span title='2026-02-13 00:00:00 +0000 UTC'>February 13, 2026</span>&nbsp;·&nbsp;20 min</footer><a class=entry-link aria-label="post link to Transposition Tables" href=https://sankethbk.github.io/blog/posts/chess_engine/2026-02-13-transposition-tables/></a></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
 <span>Powered by
 <a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
 <a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
