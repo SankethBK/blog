@@ -4,7 +4,7 @@ title:  "Overview of MIPS Assembly"
 date:   2024-07-12 
 categories: ["cpu"]
 tags: ["assembly", "mips"]
-author: Sanketh
+
 references: 
 - title: "MIPS Architecture - Wikipedia"
   url: "https://en.wikipedia.org/wiki/MIPS_architecture"

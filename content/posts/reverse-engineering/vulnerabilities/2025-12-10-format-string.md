@@ -3,7 +3,7 @@ title:  "Format String Vulnerability"
 date:   2025-12-10
 categories: ["reverse engineering"]
 tags: ["vulnerabilities","format string", "buffer overflow","reverse engineering"]
-author: Sanketh
+
 references:
 
 ---
@@ -167,7 +167,7 @@ printf(user_input);
 
 - User controls the format string
 - User can inject format specifiers like `%x`, `%s`, `%n`
-- These specifiers will read or write memory without authorization
+- These specifiers will read or write memory without 
 - Can lead to information disclosure or arbitrary code execution
 
 ### Sample Program With Vulnerability

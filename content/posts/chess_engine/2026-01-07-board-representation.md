@@ -4,7 +4,7 @@ date:   2026-01-07
 draft: false
 categories: ["chess engines"]
 tags: ["board representation", "Position", "StateInfo"]
-author: Sanketh
+
 ---
 
 # Representation of The Game State

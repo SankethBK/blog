@@ -4,7 +4,7 @@ date:   2026-02-15
 draft: false
 categories: ["chess engines"]
 tags: ["move picker"]
-author: Sanketh
+
 ---
 
 # Move Picker

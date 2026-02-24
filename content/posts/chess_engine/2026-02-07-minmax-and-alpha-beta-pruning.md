@@ -4,7 +4,7 @@ date:   2026-02-07
 draft: false
 categories: ["chess engines"]
 tags: ["minmax", "alpha-beta pruning", "negamax"]
-author: Sanketh
+
 ---
 
 # Minmax with Alpha Beta Pruning

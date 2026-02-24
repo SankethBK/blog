@@ -4,7 +4,7 @@ date:   2026-02-21
 draft: false
 categories: ["chess engines"]
 tags: ["principal variation", "principal variation search", "null window"]
-author: Sanketh
+
 references:
     - title: Principal Variation
       url: https://www.chessprogramming.org/Principal_Variation

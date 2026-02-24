@@ -4,7 +4,7 @@ date:   2026-01-02
 draft: false
 categories: ["chess engines"]
 tags: ["claude shannon's research"]
-author: Sanketh
+
 ---
 
 # History of Chess Engines

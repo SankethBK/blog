@@ -4,7 +4,7 @@ date:   2026-01-04
 draft: false
 categories: ["chess engines"]
 tags: ["bitboard"]
-author: Sanketh
+
 ---
 
 ## Bitboard-Based Game Representation in Stockfish

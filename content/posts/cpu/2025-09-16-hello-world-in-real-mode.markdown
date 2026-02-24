@@ -3,7 +3,7 @@ title:  "Hello World in Real Mode"
 date:   2025-08-09
 categories: ["cpu"]
 tags: ["cpu", "x86"]
-author: Sanketh
+
 references:
     - title: x86 Assembly Guide (CS Virginia)
       url: https://www.cs.virginia.edu/~evans/cs216/guides/x86.html

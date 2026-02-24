@@ -4,7 +4,7 @@ date:   2026-01-05
 draft: false
 categories: ["chess engines", "c++"]
 tags: ["c++", "stockfish"]
-author: Sanketh
+
 ---
 
 # C++ Used in Stockfish

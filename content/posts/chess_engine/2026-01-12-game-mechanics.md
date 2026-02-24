@@ -4,7 +4,7 @@ date:   2026-01-12
 draft: false
 categories: ["chess engines"]
 tags: ["game mechanics"]
-author: Sanketh
+
 ---
 
 We will go through some of the functions which are part of core game mechanics

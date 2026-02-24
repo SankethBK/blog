@@ -3,7 +3,7 @@ title:  "Executing Shellcode on Stack"
 date:   2025-12-01
 categories: ["reverse engineering"]
 tags: ["vulnerabilities", "buffer overflow","reverse engineering"]
-author: Sanketh
+
 references:
   
 ---

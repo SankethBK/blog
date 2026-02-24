@@ -4,7 +4,7 @@ date:   2026-02-13
 draft: false
 categories: ["chess engines"]
 tags: ["transposition tables"]
-author: Sanketh
+
 ---
 
 # Transposition Tables

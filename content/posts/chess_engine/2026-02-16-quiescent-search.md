@@ -4,7 +4,7 @@ date:   2026-02-16
 draft: false
 categories: ["chess engines"]
 tags: ["quiescent search"]
-author: Sanketh
+
 ---
 
 # Quiescent Search

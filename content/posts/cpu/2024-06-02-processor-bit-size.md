@@ -4,7 +4,7 @@ date:   2024-06-02
 draft: false
 categories: ["cpu"]
 tags: ["cpu"]
-author: Sanketh
+
 ---
 
 The terms 32 bit and 64 bit specifically relate to the size of the data and address registers within the CPU, which determines the maximum amount of memory that can be directly accessed and the range of values that can be processed.

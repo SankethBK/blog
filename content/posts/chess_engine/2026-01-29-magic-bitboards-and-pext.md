@@ -4,7 +4,7 @@ date:   2026-01-29
 draft: false
 categories: ["chess engines"]
 tags: ["magic bitboards", "pext"]
-author: Sanketh
+
 references: 
     - title: Carry Rippler
       url: https://www.chessprogramming.org/Traversing_Subsets_of_a_Set

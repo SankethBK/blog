@@ -3,7 +3,7 @@ title:  "ELF Format: Part 2"
 date:   2025-10-13
 categories: ["elf"]
 tags: ["elf", "reverse engineering"]
-author: Sanketh
+
 references:
   
 ---

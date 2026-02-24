@@ -3,7 +3,7 @@ title:  "x86 Assembly Part 1: Registers"
 date:   2025-08-28
 categories: ["cpu"]
 tags: ["cpu", "x86"]
-author: Sanketh
+
 references:
   - title: x86 Assembly Guide (Yale University)
     url: https://flint.cs.yale.edu/cs421/papers/x86-asm/asm.html

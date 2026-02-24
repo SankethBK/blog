@@ -4,7 +4,7 @@ date:   2026-01-10
 draft: false
 categories: ["chess engines"]
 tags: ["zobrist hashing"]
-author: Sanketh
+
 ---
 
 # Zobrist Hashing

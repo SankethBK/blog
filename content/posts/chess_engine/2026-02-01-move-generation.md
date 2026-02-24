@@ -4,7 +4,7 @@ date:   2026-02-01
 draft: false
 categories: ["chess engines"]
 tags: ["move generation"]
-author: Sanketh
+
 ---
 
 # Move Generation

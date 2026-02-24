@@ -4,7 +4,7 @@ date:   2025-06-18
 draft: true
 categories: ["cpu"]
 tags: ["cpu", "4004"]
-author: Sanketh
+
 references: 
  - title: Intel's Founding
    url: https://www.intel.com/content/www/us/en/history/virtual-vault/articles/intels-founding.html

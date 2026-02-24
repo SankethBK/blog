@@ -3,7 +3,7 @@ title:  "Stack Based Buffer Overflow Attacks"
 date:   2025-11-11
 categories: ["reverse engineering"]
 tags: ["vulnerabilities", "buffer overflow","reverse engineering"]
-author: Sanketh
+
 references:
   - title: Smashing the Stack For Fun and Profit
     url: https://inst.eecs.berkeley.edu/~cs161/fa08/papers/stack_smashing.pdf

@@ -4,7 +4,7 @@ date:   2024-05-31
 draft: false
 categories: ["cpu"]
 tags: ["cpu"]
-author: Sanketh
+
 ---
 
 Before learning Assembly, I think it would be useful to learn a bit about different components of CPU in general. If we think of CPU as a black box its main function is to fetch instructions from RAM which are in the form of [machine code](https://en.wikipedia.org/wiki/Machine_code) and execute them.

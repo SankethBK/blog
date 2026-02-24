@@ -4,7 +4,7 @@ draft: false
 date:   2024-06-30 
 categories: ["cpu"]
 tags: ["cpu"]
-author: Sanketh
+
 ---
 
 The Fetch-decode-execute cycle or instruction cycle is how CPU executes programs. During this cycle, the CPU retrieves an instruction from memory (fetch), interprets what action is required (decode), and then carries out the necessary operations to complete the instruction (execute). This cycle is crucial for the CPU to perform any computational tasks, and it repeats continuously while the computer is powered on. 

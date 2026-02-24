@@ -3,7 +3,7 @@ title: 'Characteristics of MBR Code'
 date:   2025-07-12
 categories: ["boot"]
 tags: ["boot"]
-author: Sanketh
+
 
 ---
 

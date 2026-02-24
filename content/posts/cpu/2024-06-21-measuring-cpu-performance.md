@@ -4,7 +4,7 @@ date:   2024-06-21
 categories: ["cpu"]
 draft: false
 tags: ["cpu"]
-author: Sanketh
+
 ---
 
 

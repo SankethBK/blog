@@ -4,7 +4,7 @@ date:   2025-07-02
 draft: false
 categories: ["boot"]
 tags: ["boot"]
-author: Sanketh
+
 references:
     - title: Option ROM
       url: https://en.wikipedia.org/wiki/Option_ROM
@@ -56,7 +56,7 @@ The firmware consults its boot priority list (which you can modify in BIOS/UEFI 
 
 ### 2. Secure Boot (UEFI only)
 
-Secure Boot is a security feature that creates a chain of trust from firmware to operating system by using cryptographic signatures. When enabled, the firmware maintains a database of trusted cryptographic keys and will only execute boot loaders and OS kernels that are digitally signed with certificates matching these trusted keys. This prevents malicious software, rootkits, or unauthorized operating systems from loading during the boot process. 
+Secure Boot is a security feature that creates a chain of trust from firmware to operating system by using cryptographic signatures. When enabled, the firmware maintains a database of trusted cryptographic keys and will only execute boot loaders and OS kernels that are digitally signed with certificates matching these trusted keys. This prevents malicious software, rootkits, or un
 
 ## 4. Bootloader Stage: Master Boot Record (MBR) vs GUID Partition Table (GPT)
 

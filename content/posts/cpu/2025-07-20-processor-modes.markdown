@@ -4,7 +4,7 @@ date:   2025-07-18
 draft: false
 categories: ["cpu"]
 tags: ["cpu", "x86"]
-author: Sanketh
+
 references:
     - title:  Virtual Memory in the x86 
       url: https://www.youtube.com/watch?v=jkGZDb3100Q
@@ -2310,7 +2310,7 @@ So CPU doesn't know the difference between the Operating System's code and a Use
 6. NOW protection is active - OS controls everything
 ```
 
-**2. OS Establishes Its Authority:**
+**2. OS Establishes Its 
 
 ```C
 // OS creates GDT during boot (while still unprotected)

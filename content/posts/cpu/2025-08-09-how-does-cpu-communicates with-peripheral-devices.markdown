@@ -3,7 +3,7 @@ title:  "How does CPU Communicates With Peripheral Devices"
 date:   2025-08-09
 categories: ["cpu"]
 tags: ["cpu", "x86"]
-author: Sanketh
+
 references:
   - title: Port Mapped and Memory mapped I/O
     url: https://www.youtube.com/watch?v=bY6NQb10AaI
@@ -864,7 +864,7 @@ Modern CPUs provide extensive hardware support for interrupt virtualization, ena
 
 - **Security enhancement:** Prevents guest VMs from generating arbitrary interrupts
 - **Vector translation:** Maps device interrupts to appropriate guest vectors
-- **Source validation:** Ensures interrupts originate from authorized devices
+- **Source validation:** Ensures interrupts originate from 
 - **Scalability improvement:** Supports large numbers of guest VMs and devices
 
 ### NUMA-Aware Interrupt Handling
