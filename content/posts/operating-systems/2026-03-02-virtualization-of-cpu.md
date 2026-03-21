@@ -2,7 +2,7 @@
 title:  "Virtualization of the CPU - The Process"
 date:   2026-03-03
 categories: ["operating systems"]
-tags: ["virtualization"]
+tags: ["virtualization", "process", "fork", "exec", "wait"]
 
 ---
 
