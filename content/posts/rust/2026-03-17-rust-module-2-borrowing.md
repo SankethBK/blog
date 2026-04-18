@@ -1,7 +1,6 @@
 ---
 title:  "Rust Notes — Module 2"
 date:   2026-03-17
-draft: true
 categories: ["rust"]
 tags: ["borrowing", "references", "ownership"]
 

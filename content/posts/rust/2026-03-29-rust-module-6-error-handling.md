@@ -1,9 +1,8 @@
 --- 
 title:  "Rust Notes — Module 6"
 date:   2026-03-29
-draft: true
 categories: ["rust"]
-tags: ["error handling", "result",]
+tags: ["error handling", "result"]
 
 ---
 

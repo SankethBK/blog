@@ -1,7 +1,6 @@
 --- 
 title:  "Rust Notes — Module 5"
 date:   2026-03-22
-draft: true
 categories: ["rust"]
 tags: ["generics", "closures", "iterators"]
 

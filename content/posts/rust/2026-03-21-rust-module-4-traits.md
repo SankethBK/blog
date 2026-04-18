@@ -1,7 +1,6 @@
 --- 
 title:  "Rust Notes — Module 4"
 date:   2026-03-21
-draft: true
 categories: ["rust"]
 tags: ["traits"]
 

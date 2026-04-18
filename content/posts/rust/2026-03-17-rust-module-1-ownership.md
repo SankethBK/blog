@@ -1,7 +1,6 @@
 ---
 title:  "Rust Notes — Module 1"
 date:   2026-03-17
-draft: true
 categories: ["rust"]
 tags: ["variables", "functions", "ownership"]
 
