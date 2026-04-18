@@ -1,4 +1,229 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Sanketh's Blog</title><link>https://sankethbk.github.io/blog/</link><description>Recent content on Sanketh's Blog</description><generator>Hugo -- 0.159.1</generator><language>en-us</language><lastBuildDate>Sun, 08 Mar 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Lifecycle of a Process</title><link>https://sankethbk.github.io/blog/posts/operating-systems/2026-03-08-lifecycle-of-a-process/</link><pubDate>Sun, 08 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/operating-systems/2026-03-08-lifecycle-of-a-process/</guid><description/></item><item><title>Virtualization of the CPU - The Process</title><link>https://sankethbk.github.io/blog/posts/operating-systems/2026-03-02-virtualization-of-cpu/</link><pubDate>Tue, 03 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/operating-systems/2026-03-02-virtualization-of-cpu/</guid><description>&lt;h1 id="virtualizing-the-cpu--the-process"&gt;Virtualizing the CPU — The Process&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Sanketh's Blog</title><link>https://sankethbk.github.io/blog/</link><description>Recent content on Sanketh's Blog</description><generator>Hugo -- 0.160.1</generator><language>en-us</language><lastBuildDate>Sun, 29 Mar 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Rust Notes — Module 6</title><link>https://sankethbk.github.io/blog/posts/rust/2026-03-29-rust-module-6-error-handling/</link><pubDate>Sun, 29 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/rust/2026-03-29-rust-module-6-error-handling/</guid><description>&lt;h1 id="rust-notes--module-6-error-handling"&gt;Rust Notes — Module 6: Error Handling&lt;/h1&gt;
+&lt;hr&gt;
+&lt;h2 id="1-the-philosophy"&gt;1. The Philosophy&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Language&lt;/th&gt;
+&lt;th&gt;Error Mechanism&lt;/th&gt;
+&lt;th&gt;Problem&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;C&lt;/td&gt;
+&lt;td&gt;Return codes (&lt;code&gt;-1&lt;/code&gt;, &lt;code&gt;NULL&lt;/code&gt;, &lt;code&gt;errno&lt;/code&gt;)&lt;/td&gt;
+&lt;td&gt;Easy to ignore, no enforcement&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Go&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;(value, error)&lt;/code&gt; tuples&lt;/td&gt;
+&lt;td&gt;Better, but still ignorable&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Rust&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;Result&amp;lt;T, E&amp;gt;&lt;/code&gt; in the type system&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;Impossible to ignore — compiler enforced&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;If a function can fail, its return type says so. You cannot use the success value without handling the error case first. No hidden exceptions, no surprise crashes from ignored error codes.&lt;/p&gt;</description></item><item><title>Rust Notes — Module 7</title><link>https://sankethbk.github.io/blog/posts/rust/2026-03-29-rust-module-7-crates-packages-modules/</link><pubDate>Sun, 29 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/rust/2026-03-29-rust-module-7-crates-packages-modules/</guid><description>&lt;h1 id="rust-notes--module-7-packages-crates--modules"&gt;Rust Notes — Module 7: Packages, Crates &amp;amp; Modules&lt;/h1&gt;
+&lt;hr&gt;
+&lt;h2 id="1-how-rust-compilation-works"&gt;1. How Rust Compilation Works&lt;/h2&gt;
+&lt;p&gt;In C, you hand the compiler a list of files. Each file compiles independently, and a linker stitches the object files together. The problem — the compiler has no idea which files depend on which, so you need a Makefile to track what needs recompiling when something changes.&lt;/p&gt;
+&lt;p&gt;Rust takes a different approach. You hand the compiler &lt;strong&gt;one root file&lt;/strong&gt; (&lt;code&gt;main.rs&lt;/code&gt; or &lt;code&gt;lib.rs&lt;/code&gt;). The compiler follows &lt;code&gt;mod&lt;/code&gt; declarations to find every other file that&amp;rsquo;s part of the crate. Because Rust knows the full dependency graph from the start, it handles incremental recompilation internally — no Makefile needed.&lt;/p&gt;</description></item><item><title>Rust Notes — Module 5</title><link>https://sankethbk.github.io/blog/posts/rust/2026-03-22-rust-module-5-iterators-and-closures/</link><pubDate>Sun, 22 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/rust/2026-03-22-rust-module-5-iterators-and-closures/</guid><description>&lt;h1 id="rust-notes--module-5-generics-closures--iterators"&gt;Rust Notes — Module 5: Generics, Closures &amp;amp; Iterators&lt;/h1&gt;
+&lt;hr&gt;
+&lt;h2 id="1-generics"&gt;1. Generics&lt;/h2&gt;
+&lt;p&gt;Generics let you write code that works for any type, with the compiler generating specialized versions at compile time. Zero runtime overhead — same as C++ templates.&lt;/p&gt;
+&lt;h3 id="generic-functions"&gt;Generic Functions&lt;/h3&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-rust" data-lang="rust"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;// T is a type parameter — placeholder for any concrete type
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;largest&lt;/span&gt;&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;T: PartialOrd&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt;(list: &lt;span style="color:#66d9ef"&gt;&amp;amp;&lt;/span&gt;[T]) -&amp;gt; &lt;span style="color:#66d9ef"&gt;&amp;amp;&lt;/span&gt;&lt;span style="color:#a6e22e"&gt;T&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;mut&lt;/span&gt; largest &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;list[&lt;span style="color:#ae81ff"&gt;0&lt;/span&gt;];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;for&lt;/span&gt; item &lt;span style="color:#66d9ef"&gt;in&lt;/span&gt; list {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; item &lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt; largest {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; largest &lt;span style="color:#f92672"&gt;=&lt;/span&gt; item;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; largest
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;// works for any type that implements PartialOrd
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; nums &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;vec!&lt;/span&gt;[&lt;span style="color:#ae81ff"&gt;1&lt;/span&gt;, &lt;span style="color:#ae81ff"&gt;5&lt;/span&gt;, &lt;span style="color:#ae81ff"&gt;3&lt;/span&gt;, &lt;span style="color:#ae81ff"&gt;2&lt;/span&gt;];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; chars &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;vec!&lt;/span&gt;[&lt;span style="color:#e6db74"&gt;&amp;#39;a&amp;#39;&lt;/span&gt;, &lt;span style="color:#e6db74"&gt;&amp;#39;z&amp;#39;&lt;/span&gt;, &lt;span style="color:#e6db74"&gt;&amp;#39;m&amp;#39;&lt;/span&gt;];
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#a6e22e"&gt;println!&lt;/span&gt;(&lt;span style="color:#e6db74"&gt;&amp;#34;&lt;/span&gt;&lt;span style="color:#e6db74"&gt;{}&lt;/span&gt;&lt;span style="color:#e6db74"&gt;&amp;#34;&lt;/span&gt;, largest(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;nums)); &lt;span style="color:#75715e"&gt;// 5
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#a6e22e"&gt;println!&lt;/span&gt;(&lt;span style="color:#e6db74"&gt;&amp;#34;&lt;/span&gt;&lt;span style="color:#e6db74"&gt;{}&lt;/span&gt;&lt;span style="color:#e6db74"&gt;&amp;#34;&lt;/span&gt;, largest(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;chars)); &lt;span style="color:#75715e"&gt;// z
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="generic-structs"&gt;Generic Structs&lt;/h3&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-rust" data-lang="rust"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;struct&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;Stack&lt;/span&gt;&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;T&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; elements: Vec&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;T&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;// impl block also needs &amp;lt;T&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;impl&lt;/span&gt;&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;T&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt; Stack&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;T&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;new&lt;/span&gt;() -&amp;gt; &lt;span style="color:#a6e22e"&gt;Self&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Stack { elements: Vec::new() }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;push&lt;/span&gt;(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;&lt;span style="color:#66d9ef"&gt;mut&lt;/span&gt; self, item: &lt;span style="color:#a6e22e"&gt;T&lt;/span&gt;) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; self.elements.push(item);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;pop&lt;/span&gt;(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;&lt;span style="color:#66d9ef"&gt;mut&lt;/span&gt; self) -&amp;gt; Option&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;T&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; self.elements.pop()
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;peek&lt;/span&gt;(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;self) -&amp;gt; Option&lt;span style="color:#f92672"&gt;&amp;lt;&amp;amp;&lt;/span&gt;T&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; self.elements.last()
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;is_empty&lt;/span&gt;(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;self) -&amp;gt; &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; self.elements.is_empty()
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;// type parameter inferred from usage
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;mut&lt;/span&gt; int_stack &lt;span style="color:#f92672"&gt;=&lt;/span&gt; Stack::new();
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;int_stack.push(&lt;span style="color:#ae81ff"&gt;1&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;int_stack.push(&lt;span style="color:#ae81ff"&gt;2&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;// or explicit
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;mut&lt;/span&gt; move_stack: &lt;span style="color:#a6e22e"&gt;Stack&lt;/span&gt;&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;Move&lt;span style="color:#f92672"&gt;&amp;gt;&lt;/span&gt; &lt;span style="color:#f92672"&gt;=&lt;/span&gt; Stack::new();
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="generic-enums"&gt;Generic Enums&lt;/h3&gt;
+&lt;p&gt;You&amp;rsquo;ve already used these — &lt;code&gt;Option&amp;lt;T&amp;gt;&lt;/code&gt; and &lt;code&gt;Result&amp;lt;T, E&amp;gt;&lt;/code&gt; are generic enums:&lt;/p&gt;</description></item><item><title>Rust Notes — Module 3</title><link>https://sankethbk.github.io/blog/posts/rust/2026-03-21-rust-module-3-structs-and-enums/</link><pubDate>Sat, 21 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/rust/2026-03-21-rust-module-3-structs-and-enums/</guid><description>&lt;h1 id="rust-notes--module-3-structs--enums"&gt;Rust Notes — Module 3: Structs &amp;amp; Enums&lt;/h1&gt;
+&lt;hr&gt;
+&lt;h2 id="1-structs"&gt;1. Structs&lt;/h2&gt;
+&lt;p&gt;Structs group related data together into a named type — same concept as C structs, cleaner syntax.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-rust" data-lang="rust"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;struct&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;User&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; username: String,
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; email: String,
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; age: &lt;span style="color:#66d9ef"&gt;u32&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; active: &lt;span style="color:#66d9ef"&gt;bool&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="creating-and-accessing"&gt;Creating and Accessing&lt;/h3&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-rust" data-lang="rust"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; user &lt;span style="color:#f92672"&gt;=&lt;/span&gt; User {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; username: String::from(&lt;span style="color:#e6db74"&gt;&amp;#34;sanketh&amp;#34;&lt;/span&gt;),
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; email: String::from(&lt;span style="color:#e6db74"&gt;&amp;#34;sanketh@example.com&amp;#34;&lt;/span&gt;),
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; age: &lt;span style="color:#ae81ff"&gt;20&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; active: &lt;span style="color:#a6e22e"&gt;true&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;};
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#a6e22e"&gt;println!&lt;/span&gt;(&lt;span style="color:#e6db74"&gt;&amp;#34;&lt;/span&gt;&lt;span style="color:#e6db74"&gt;{}&lt;/span&gt;&lt;span style="color:#e6db74"&gt;&amp;#34;&lt;/span&gt;, user.username); &lt;span style="color:#75715e"&gt;// field access with .
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="mutability"&gt;Mutability&lt;/h3&gt;
+&lt;p&gt;The &lt;strong&gt;entire instance&lt;/strong&gt; must be &lt;code&gt;mut&lt;/code&gt; — you cannot mark individual fields as mutable:&lt;/p&gt;</description></item><item><title>Rust Notes — Module 4</title><link>https://sankethbk.github.io/blog/posts/rust/2026-03-21-rust-module-4-traits/</link><pubDate>Sat, 21 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/rust/2026-03-21-rust-module-4-traits/</guid><description>&lt;h1 id="rust-notes--module-4-traits"&gt;Rust Notes — Module 4: Traits&lt;/h1&gt;
+&lt;hr&gt;
+&lt;h2 id="1-what-is-a-trait"&gt;1. What is a Trait?&lt;/h2&gt;
+&lt;p&gt;A trait defines a set of behaviors (methods) that a type must implement. It is a &lt;strong&gt;contract&lt;/strong&gt; — any type that implements the trait promises to provide those behaviors.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-rust" data-lang="rust"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;trait&lt;/span&gt; Greet {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;hello&lt;/span&gt;(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;self) -&amp;gt; String;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Concept&lt;/th&gt;
+&lt;th&gt;Rust&lt;/th&gt;
+&lt;th&gt;C++&lt;/th&gt;
+&lt;th&gt;Go&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Trait&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;trait&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;abstract class / concept&lt;/td&gt;
+&lt;td&gt;interface&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Implementation&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;impl Trait for Type&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;override virtual method&lt;/td&gt;
+&lt;td&gt;implicit (duck typing)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Dispatch&lt;/td&gt;
+&lt;td&gt;static (default) or dynamic&lt;/td&gt;
+&lt;td&gt;virtual table&lt;/td&gt;
+&lt;td&gt;interface table&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id="2-implementing-a-trait"&gt;2. Implementing a Trait&lt;/h2&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-rust" data-lang="rust"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;struct&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;Human&lt;/span&gt; { name: String }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;struct&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;Robot&lt;/span&gt; { id: &lt;span style="color:#66d9ef"&gt;u32&lt;/span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;impl&lt;/span&gt; Greet &lt;span style="color:#66d9ef"&gt;for&lt;/span&gt; Human {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;hello&lt;/span&gt;(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;self) -&amp;gt; String {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#a6e22e"&gt;format!&lt;/span&gt;(&lt;span style="color:#e6db74"&gt;&amp;#34;Hi, I&amp;#39;m &lt;/span&gt;&lt;span style="color:#e6db74"&gt;{}&lt;/span&gt;&lt;span style="color:#e6db74"&gt;!&amp;#34;&lt;/span&gt;, self.name)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;impl&lt;/span&gt; Greet &lt;span style="color:#66d9ef"&gt;for&lt;/span&gt; Robot {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;hello&lt;/span&gt;(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;self) -&amp;gt; String {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#a6e22e"&gt;format!&lt;/span&gt;(&lt;span style="color:#e6db74"&gt;&amp;#34;BEEP. I AM UNIT &lt;/span&gt;&lt;span style="color:#e6db74"&gt;{}&lt;/span&gt;&lt;span style="color:#e6db74"&gt;.&amp;#34;&lt;/span&gt;, self.id)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Each type provides its own implementation of the trait methods.&lt;/li&gt;
+&lt;li&gt;A type can implement any number of traits.&lt;/li&gt;
+&lt;li&gt;You can implement traits for types you didn&amp;rsquo;t define (with some restrictions — see orphan rule below).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="3-default-implementations"&gt;3. Default Implementations&lt;/h2&gt;
+&lt;p&gt;Traits can provide default method implementations. Types can override them or inherit them for free:&lt;/p&gt;</description></item><item><title>Rust Notes — Module 1</title><link>https://sankethbk.github.io/blog/posts/rust/2026-03-17-rust-module-1-ownership/</link><pubDate>Tue, 17 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/rust/2026-03-17-rust-module-1-ownership/</guid><description>&lt;h1 id="rust-notes--module-1-the-basics--ownership"&gt;Rust Notes — Module 1: The Basics &amp;amp; Ownership&lt;/h1&gt;
+&lt;hr&gt;
+&lt;h2 id="1-why-rust"&gt;1. Why Rust?&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Language&lt;/th&gt;
+&lt;th&gt;Memory Management&lt;/th&gt;
+&lt;th&gt;Cost&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;C&lt;/td&gt;
+&lt;td&gt;Manual (&lt;code&gt;malloc&lt;/code&gt;/&lt;code&gt;free&lt;/code&gt;)&lt;/td&gt;
+&lt;td&gt;Unsafe — use-after-free, double-free, null deref&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Go&lt;/td&gt;
+&lt;td&gt;Garbage Collector&lt;/td&gt;
+&lt;td&gt;Safe, but runtime overhead (GC pauses)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Rust&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;Ownership system (compiler-enforced)&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;Safe + zero runtime cost&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Rust&amp;rsquo;s core promise: &lt;strong&gt;memory safety at compile time, with no garbage collector.&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-variables--mutability"&gt;2. Variables &amp;amp; Mutability&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Variables are &lt;strong&gt;immutable by default&lt;/strong&gt; in Rust.&lt;/li&gt;
+&lt;li&gt;You must explicitly opt into mutation with &lt;code&gt;mut&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-rust" data-lang="rust"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; x &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;5&lt;/span&gt;; &lt;span style="color:#75715e"&gt;// immutable — cannot be reassigned
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;// x = 6; // ❌ compile error
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;mut&lt;/span&gt; y &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;5&lt;/span&gt;; &lt;span style="color:#75715e"&gt;// mutable
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;y &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;6&lt;/span&gt;; &lt;span style="color:#75715e"&gt;// ✅ fine
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="shadowing"&gt;Shadowing&lt;/h3&gt;
+&lt;p&gt;You can redeclare a variable with &lt;code&gt;let&lt;/code&gt; in the same scope — this is called &lt;strong&gt;shadowing&lt;/strong&gt;:&lt;/p&gt;</description></item><item><title>Rust Notes — Module 2</title><link>https://sankethbk.github.io/blog/posts/rust/2026-03-17-rust-module-2-borrowing/</link><pubDate>Tue, 17 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/rust/2026-03-17-rust-module-2-borrowing/</guid><description>&lt;h1 id="rust-notes--module-2-borrowing--references"&gt;Rust Notes — Module 2: Borrowing &amp;amp; References&lt;/h1&gt;
+&lt;hr&gt;
+&lt;h2 id="1-the-problem-ownership-alone-creates"&gt;1. The Problem Ownership Alone Creates&lt;/h2&gt;
+&lt;p&gt;If ownership always moves, passing values to functions becomes painful — you lose access to the value after the call:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-rust" data-lang="rust"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;print_string&lt;/span&gt;(s: String) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#a6e22e"&gt;println!&lt;/span&gt;(&lt;span style="color:#e6db74"&gt;&amp;#34;&lt;/span&gt;&lt;span style="color:#e6db74"&gt;{}&lt;/span&gt;&lt;span style="color:#e6db74"&gt;&amp;#34;&lt;/span&gt;, s);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;} &lt;span style="color:#75715e"&gt;// s is dropped here
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;main&lt;/span&gt;() {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; s &lt;span style="color:#f92672"&gt;=&lt;/span&gt; String::from(&lt;span style="color:#e6db74"&gt;&amp;#34;hello&amp;#34;&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; print_string(s);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// println!(&amp;#34;{}&amp;#34;, s); // ❌ s was moved into print_string, gone!
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;You&amp;rsquo;d have to clone everything or return ownership back — both are tedious. &lt;strong&gt;Borrowing&lt;/strong&gt; solves this.&lt;/p&gt;</description></item><item><title>Lifecycle of a Process</title><link>https://sankethbk.github.io/blog/posts/operating-systems/2026-03-08-lifecycle-of-a-process/</link><pubDate>Sun, 08 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/operating-systems/2026-03-08-lifecycle-of-a-process/</guid><description/></item><item><title>Virtualization of the CPU - The Process</title><link>https://sankethbk.github.io/blog/posts/operating-systems/2026-03-02-virtualization-of-cpu/</link><pubDate>Tue, 03 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/operating-systems/2026-03-02-virtualization-of-cpu/</guid><description>&lt;h1 id="virtualizing-the-cpu--the-process"&gt;Virtualizing the CPU — The Process&lt;/h1&gt;
 &lt;h2 id="the-core-idea"&gt;The Core Idea&lt;/h2&gt;
 &lt;p&gt;The OS virtualizes the CPU by running one process, stopping it, running another, and so on. Done fast enough, this creates the illusion that many programs run simultaneously on what might be a single CPU core.&lt;/p&gt;
 &lt;p&gt;The abstraction the OS exposes for this is the &lt;strong&gt;Process&lt;/strong&gt; — simply put, a running program.&lt;/p&gt;

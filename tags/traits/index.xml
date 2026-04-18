@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Traits on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/traits/</link><description>Recent content in Traits on Sanketh's Blog</description><generator>Hugo -- 0.160.1</generator><language>en-us</language><lastBuildDate>Sat, 21 Mar 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/traits/index.xml" rel="self" type="application/rss+xml"/><item><title>Rust Notes — Module 4</title><link>https://sankethbk.github.io/blog/posts/rust/2026-03-21-rust-module-4-traits/</link><pubDate>Sat, 21 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/rust/2026-03-21-rust-module-4-traits/</guid><description>&lt;h1 id="rust-notes--module-4-traits"&gt;Rust Notes — Module 4: Traits&lt;/h1&gt;
+&lt;hr&gt;
+&lt;h2 id="1-what-is-a-trait"&gt;1. What is a Trait?&lt;/h2&gt;
+&lt;p&gt;A trait defines a set of behaviors (methods) that a type must implement. It is a &lt;strong&gt;contract&lt;/strong&gt; — any type that implements the trait promises to provide those behaviors.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-rust" data-lang="rust"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;trait&lt;/span&gt; Greet {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;hello&lt;/span&gt;(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;self) -&amp;gt; String;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Concept&lt;/th&gt;
+&lt;th&gt;Rust&lt;/th&gt;
+&lt;th&gt;C++&lt;/th&gt;
+&lt;th&gt;Go&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Trait&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;trait&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;abstract class / concept&lt;/td&gt;
+&lt;td&gt;interface&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Implementation&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;impl Trait for Type&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;override virtual method&lt;/td&gt;
+&lt;td&gt;implicit (duck typing)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Dispatch&lt;/td&gt;
+&lt;td&gt;static (default) or dynamic&lt;/td&gt;
+&lt;td&gt;virtual table&lt;/td&gt;
+&lt;td&gt;interface table&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id="2-implementing-a-trait"&gt;2. Implementing a Trait&lt;/h2&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-rust" data-lang="rust"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;struct&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;Human&lt;/span&gt; { name: String }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;struct&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;Robot&lt;/span&gt; { id: &lt;span style="color:#66d9ef"&gt;u32&lt;/span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;impl&lt;/span&gt; Greet &lt;span style="color:#66d9ef"&gt;for&lt;/span&gt; Human {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;hello&lt;/span&gt;(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;self) -&amp;gt; String {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#a6e22e"&gt;format!&lt;/span&gt;(&lt;span style="color:#e6db74"&gt;&amp;#34;Hi, I&amp;#39;m &lt;/span&gt;&lt;span style="color:#e6db74"&gt;{}&lt;/span&gt;&lt;span style="color:#e6db74"&gt;!&amp;#34;&lt;/span&gt;, self.name)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;impl&lt;/span&gt; Greet &lt;span style="color:#66d9ef"&gt;for&lt;/span&gt; Robot {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;fn&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;hello&lt;/span&gt;(&lt;span style="color:#f92672"&gt;&amp;amp;&lt;/span&gt;self) -&amp;gt; String {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#a6e22e"&gt;format!&lt;/span&gt;(&lt;span style="color:#e6db74"&gt;&amp;#34;BEEP. I AM UNIT &lt;/span&gt;&lt;span style="color:#e6db74"&gt;{}&lt;/span&gt;&lt;span style="color:#e6db74"&gt;.&amp;#34;&lt;/span&gt;, self.id)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Each type provides its own implementation of the trait methods.&lt;/li&gt;
+&lt;li&gt;A type can implement any number of traits.&lt;/li&gt;
+&lt;li&gt;You can implement traits for types you didn&amp;rsquo;t define (with some restrictions — see orphan rule below).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="3-default-implementations"&gt;3. Default Implementations&lt;/h2&gt;
+&lt;p&gt;Traits can provide default method implementations. Types can override them or inherit them for free:&lt;/p&gt;</description></item></channel></rss>

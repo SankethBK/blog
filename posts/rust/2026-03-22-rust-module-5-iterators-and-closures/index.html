@@ -1,0 +1,470 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Rust Notes — Module 5 | Sanketh's Blog</title><meta name=keywords content="generics,closures,iterators"><meta name=description content="Rust Notes — Module 5: Generics, Closures & Iterators
+
+1. Generics
+Generics let you write code that works for any type, with the compiler generating specialized versions at compile time. Zero runtime overhead — same as C++ templates.
+Generic Functions
+// T is a type parameter — placeholder for any concrete type
+fn largest<T: PartialOrd>(list: &[T]) -> &amp;T {
+    let mut largest = &amp;list[0];
+    for item in list {
+        if item > largest {
+            largest = item;
+        }
+    }
+    largest
+}
+
+// works for any type that implements PartialOrd
+let nums = vec![1, 5, 3, 2];
+let chars = vec!['a', 'z', 'm'];
+println!(&#34;{}&#34;, largest(&amp;nums));   // 5
+println!(&#34;{}&#34;, largest(&amp;chars));  // z
+Generic Structs
+struct Stack<T> {
+    elements: Vec<T>,
+}
+
+// impl block also needs <T>
+impl<T> Stack<T> {
+    fn new() -> Self {
+        Stack { elements: Vec::new() }
+    }
+
+    fn push(&amp;mut self, item: T) {
+        self.elements.push(item);
+    }
+
+    fn pop(&amp;mut self) -> Option<T> {
+        self.elements.pop()
+    }
+
+    fn peek(&amp;self) -> Option<&amp;T> {
+        self.elements.last()
+    }
+
+    fn is_empty(&amp;self) -> bool {
+        self.elements.is_empty()
+    }
+}
+
+// type parameter inferred from usage
+let mut int_stack = Stack::new();
+int_stack.push(1);
+int_stack.push(2);
+
+// or explicit
+let mut move_stack: Stack<Move> = Stack::new();
+Generic Enums
+You&rsquo;ve already used these — Option<T> and Result<T, E> are generic enums:"><meta name=author content><link rel=canonical href=https://sankethbk.github.io/blog/posts/rust/2026-03-22-rust-module-5-iterators-and-closures/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.a7100ced1662b06824a54ff97bb59f1d1070a2db645a1d0a8d848e4ffd63ac7a.css integrity="sha256-pxAM7RZisGgkpU/5e7WfHRBwottkWh0KjYSOT/1jrHo=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/rust/2026-03-22-rust-module-5-iterators-and-closures/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/rust/2026-03-22-rust-module-5-iterators-and-closures/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="Rust Notes — Module 5"><meta property="og:description" content="Rust Notes — Module 5: Generics, Closures & Iterators 1. Generics Generics let you write code that works for any type, with the compiler generating specialized versions at compile time. Zero runtime overhead — same as C++ templates.
+Generic Functions // T is a type parameter — placeholder for any concrete type fn largest<T: PartialOrd>(list: &[T]) -> &amp;T { let mut largest = &amp;list[0]; for item in list { if item > largest { largest = item; } } largest } // works for any type that implements PartialOrd let nums = vec![1, 5, 3, 2]; let chars = vec!['a', 'z', 'm']; println!(&#34;{}&#34;, largest(&amp;nums)); // 5 println!(&#34;{}&#34;, largest(&amp;chars)); // z Generic Structs struct Stack<T> { elements: Vec<T>, } // impl block also needs <T> impl<T> Stack<T> { fn new() -> Self { Stack { elements: Vec::new() } } fn push(&amp;mut self, item: T) { self.elements.push(item); } fn pop(&amp;mut self) -> Option<T> { self.elements.pop() } fn peek(&amp;self) -> Option<&amp;T> { self.elements.last() } fn is_empty(&amp;self) -> bool { self.elements.is_empty() } } // type parameter inferred from usage let mut int_stack = Stack::new(); int_stack.push(1); int_stack.push(2); // or explicit let mut move_stack: Stack<Move> = Stack::new(); Generic Enums You’ve already used these — Option<T> and Result<T, E> are generic enums:"><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2026-03-22T00:00:00+00:00"><meta property="article:modified_time" content="2026-03-22T00:00:00+00:00"><meta property="article:tag" content="Generics"><meta property="article:tag" content="Closures"><meta property="article:tag" content="Iterators"><meta name=twitter:card content="summary"><meta name=twitter:title content="Rust Notes — Module 5"><meta name=twitter:description content="Rust Notes — Module 5: Generics, Closures & Iterators
+
+1. Generics
+Generics let you write code that works for any type, with the compiler generating specialized versions at compile time. Zero runtime overhead — same as C++ templates.
+Generic Functions
+// T is a type parameter — placeholder for any concrete type
+fn largest<T: PartialOrd>(list: &[T]) -> &amp;T {
+    let mut largest = &amp;list[0];
+    for item in list {
+        if item > largest {
+            largest = item;
+        }
+    }
+    largest
+}
+
+// works for any type that implements PartialOrd
+let nums = vec![1, 5, 3, 2];
+let chars = vec!['a', 'z', 'm'];
+println!(&#34;{}&#34;, largest(&amp;nums));   // 5
+println!(&#34;{}&#34;, largest(&amp;chars));  // z
+Generic Structs
+struct Stack<T> {
+    elements: Vec<T>,
+}
+
+// impl block also needs <T>
+impl<T> Stack<T> {
+    fn new() -> Self {
+        Stack { elements: Vec::new() }
+    }
+
+    fn push(&amp;mut self, item: T) {
+        self.elements.push(item);
+    }
+
+    fn pop(&amp;mut self) -> Option<T> {
+        self.elements.pop()
+    }
+
+    fn peek(&amp;self) -> Option<&amp;T> {
+        self.elements.last()
+    }
+
+    fn is_empty(&amp;self) -> bool {
+        self.elements.is_empty()
+    }
+}
+
+// type parameter inferred from usage
+let mut int_stack = Stack::new();
+int_stack.push(1);
+int_stack.push(2);
+
+// or explicit
+let mut move_stack: Stack<Move> = Stack::new();
+Generic Enums
+You&rsquo;ve already used these — Option<T> and Result<T, E> are generic enums:"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"Rust Notes — Module 5","item":"https://sankethbk.github.io/blog/posts/rust/2026-03-22-rust-module-5-iterators-and-closures/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Rust Notes — Module 5","name":"Rust Notes — Module 5","description":"Rust Notes — Module 5: Generics, Closures \u0026amp; Iterators 1. Generics Generics let you write code that works for any type, with the compiler generating specialized versions at compile time. Zero runtime overhead — same as C++ templates.\nGeneric Functions // T is a type parameter — placeholder for any concrete type fn largest\u0026lt;T: PartialOrd\u0026gt;(list: \u0026amp;[T]) -\u0026gt; \u0026amp;T { let mut largest = \u0026amp;list[0]; for item in list { if item \u0026gt; largest { largest = item; } } largest } // works for any type that implements PartialOrd let nums = vec![1, 5, 3, 2]; let chars = vec![\u0026#39;a\u0026#39;, \u0026#39;z\u0026#39;, \u0026#39;m\u0026#39;]; println!(\u0026#34;{}\u0026#34;, largest(\u0026amp;nums)); // 5 println!(\u0026#34;{}\u0026#34;, largest(\u0026amp;chars)); // z Generic Structs struct Stack\u0026lt;T\u0026gt; { elements: Vec\u0026lt;T\u0026gt;, } // impl block also needs \u0026lt;T\u0026gt; impl\u0026lt;T\u0026gt; Stack\u0026lt;T\u0026gt; { fn new() -\u0026gt; Self { Stack { elements: Vec::new() } } fn push(\u0026amp;mut self, item: T) { self.elements.push(item); } fn pop(\u0026amp;mut self) -\u0026gt; Option\u0026lt;T\u0026gt; { self.elements.pop() } fn peek(\u0026amp;self) -\u0026gt; Option\u0026lt;\u0026amp;T\u0026gt; { self.elements.last() } fn is_empty(\u0026amp;self) -\u0026gt; bool { self.elements.is_empty() } } // type parameter inferred from usage let mut int_stack = Stack::new(); int_stack.push(1); int_stack.push(2); // or explicit let mut move_stack: Stack\u0026lt;Move\u0026gt; = Stack::new(); Generic Enums You\u0026rsquo;ve already used these — Option\u0026lt;T\u0026gt; and Result\u0026lt;T, E\u0026gt; are generic enums:\n","keywords":["generics","closures","iterators"],"articleBody":"Rust Notes — Module 5: Generics, Closures \u0026 Iterators 1. Generics Generics let you write code that works for any type, with the compiler generating specialized versions at compile time. Zero runtime overhead — same as C++ templates.\nGeneric Functions // T is a type parameter — placeholder for any concrete type fn largest\u003cT: PartialOrd\u003e(list: \u0026[T]) -\u003e \u0026T { let mut largest = \u0026list[0]; for item in list { if item \u003e largest { largest = item; } } largest } // works for any type that implements PartialOrd let nums = vec![1, 5, 3, 2]; let chars = vec!['a', 'z', 'm']; println!(\"{}\", largest(\u0026nums)); // 5 println!(\"{}\", largest(\u0026chars)); // z Generic Structs struct Stack\u003cT\u003e { elements: Vec\u003cT\u003e, } // impl block also needs impl\u003cT\u003e Stack\u003cT\u003e { fn new() -\u003e Self { Stack { elements: Vec::new() } } fn push(\u0026mut self, item: T) { self.elements.push(item); } fn pop(\u0026mut self) -\u003e Option\u003cT\u003e { self.elements.pop() } fn peek(\u0026self) -\u003e Option\u003c\u0026T\u003e { self.elements.last() } fn is_empty(\u0026self) -\u003e bool { self.elements.is_empty() } } // type parameter inferred from usage let mut int_stack = Stack::new(); int_stack.push(1); int_stack.push(2); // or explicit let mut move_stack: Stack\u003cMove\u003e = Stack::new(); Generic Enums You’ve already used these — Option and Result are generic enums:\n// from the standard library — this is how they're defined enum Option\u003cT\u003e { Some(T), None, } enum Result\u003cT, E\u003e { Ok(T), Err(E), } Generic Structs with Trait Bounds Add bounds when the implementation needs specific behavior from T:\nuse std::fmt::Display; struct Wrapper\u003cT: Display\u003e { value: T, } impl\u003cT: Display\u003e Wrapper\u003cT\u003e { fn print(\u0026self) { println!(\"{}\", self.value); } } Multiple Type Parameters struct Pair\u003cT, U\u003e { first: T, second: U, } let p = Pair { first: 42, second: \"hello\" }; Monomorphization — How Generics Work The compiler generates a separate concrete version for each type you use:\n// you write fn largest\u003cT: PartialOrd\u003e(list: \u0026[T]) -\u003e \u0026T { ... } // compiler generates (conceptually) fn largest_i32(list: \u0026[i32]) -\u003e \u0026i32 { ... } fn largest_f64(list: \u0026[f64]) -\u003e \u0026f64 { ... } This is why generic Rust code has zero runtime overhead — by the time the binary is produced, all generics are replaced with concrete types.\n2. Closures Closures are anonymous functions that can capture variables from their surrounding scope.\nBasic Syntax // full syntax let add = |a: i32, b: i32| -\u003e i32 { a + b }; // types inferred — most common let add = |a, b| a + b; // single expression — no braces needed let double = |x| x * 2; // multi-line — braces required let complex = |x| { let y = x * 2; y + 1 }; println!(\"{}\", add(3, 4)); // 7 println!(\"{}\", double(5)); // 10 println!(\"{}\", complex(3)); // 7 Capturing the Environment The key difference from regular functions — closures capture variables from the enclosing scope:\nlet bonus = 50; let threshold = 100; let add_bonus = |x| x + bonus; // captures bonus let is_above = |x| x \u003e threshold; // captures threshold let combined = |x| x + bonus \u003e threshold; // captures both println!(\"{}\", add_bonus(60)); // 110 println!(\"{}\", is_above(110)); // true Three Capture Modes Closures automatically choose the least restrictive capture mode:\nlet s = String::from(\"hello\"); let n = 5; // 1. Immutable borrow — just reads the value let borrow = || println!(\"{} {}\", s, n); borrow(); println!(\"{}\", s); // ✅ s still valid // 2. Mutable borrow — modifies the value let mut s2 = String::from(\"hello\"); let mut mut_borrow = || s2.push_str(\" world\"); mut_borrow(); println!(\"{}\", s2); // \"hello world\" // 3. Move — takes ownership let owned = move || println!(\"{}\", s); // s moved into closure owned(); // println!(\"{}\", s); // ❌ s was moved Use move closures when passing to threads — the thread needs to own its data since it may outlive the current scope.\nClosures as Function Parameters Closures implement one of three traits depending on what they do:\nTrait Meaning Can be called FnOnce consumes captured values once only FnMut mutates captured values multiple times, needs mut Fn only reads captured values multiple times // Fn — read only, most restrictive to the caller fn apply\u003cF: Fn(i32) -\u003e i32\u003e(f: F, x: i32) -\u003e i32 { f(x) } // FnMut — closure may mutate captured state fn apply_mut\u003cF: FnMut(i32) -\u003e i32\u003e(mut f: F, x: i32) -\u003e i32 { f(x) } // FnOnce — closure may consume captured values, least restrictive fn apply_once\u003cF: FnOnce(i32) -\u003e i32\u003e(f: F, x: i32) -\u003e i32 { f(x) } let double = |x| x * 2; println!(\"{}\", apply(double, 5)); // 10 println!(\"{}\", apply_mut(double, 5)); // 10 println!(\"{}\", apply_once(double, 5)); // 10 FnOnce is the most permissive bound (accepts all closures). Fn is the most restrictive (only accepts non-mutating closures). When in doubt, start with Fn and loosen if the compiler complains.\nReturning Closures Closures have no concrete type — you must use impl Fn or Box:\n// impl Fn — always returns same closure type (preferred) fn make_adder(x: i32) -\u003e impl Fn(i32) -\u003e i32 { move |y| x + y } // Box — when you need to return different closure types fn make_op(add: bool) -\u003e Box\u003cdyn Fn(i32, i32) -\u003e i32\u003e { if add { Box::new(|a, b| a + b) } else { Box::new(|a, b| a * b) } } let add5 = make_adder(5); println!(\"{}\", add5(3)); // 8 println!(\"{}\", add5(10)); // 15 3. Iterators An iterator is any type implementing the Iterator trait:\ntrait Iterator { type Item; // the type of values yielded fn next(\u0026mut self) -\u003e Option\u003cSelf::Item\u003e; // the only required method } Returns Some(value) on each call, None when exhausted. Everything else is built on top of these two.\nCreating Iterators let v = vec![1, 2, 3, 4, 5]; v.iter() // yields \u0026T — immutable borrows, v still usable after v.iter_mut() // yields \u0026mut T — mutable borrows v.into_iter() // yields T — consumes v, takes ownership of elements // ranges are iterators (0..5) // 0, 1, 2, 3, 4 (0..=5) // 0, 1, 2, 3, 4, 5 Iterators are Lazy Nothing executes until you consume the iterator:\nlet v = vec![1, 2, 3]; // this does NOTHING yet — just builds a pipeline description let pipeline = v.iter().map(|x| x * 2).filter(|x| x \u003e \u00263); // THIS executes the pipeline let result: Vec\u003ci32\u003e = pipeline.collect(); // [4, 6] Iterator Adapters (Lazy — return a new iterator) let v = vec![1, 2, 3, 4, 5]; // map — transform each element v.iter().map(|x| x * 2) // yields 2, 4, 6, 8, 10 // filter — keep elements matching predicate v.iter().filter(|x| *x % 2 == 0) // yields \u00262, \u00264 // filter_map — map and filter in one step, keeps Some values v.iter().filter_map(|x| if x % 2 == 0 { Some(x * 10) } else { None }) // yields 20, 40 // take — first n elements v.iter().take(3) // yields \u00261, \u00262, \u00263 // skip — skip first n elements v.iter().skip(2) // yields \u00263, \u00264, \u00265 // chain — concatenate two iterators let a = vec![1, 2]; let b = vec![3, 4]; a.iter().chain(b.iter()) // yields \u00261, \u00262, \u00263, \u00264 // enumerate — yields (index, value) pairs v.iter().enumerate() // yields (0, \u00261), (1, \u00262), (2, \u00263) ... // zip — pair up two iterators let names = vec![\"pawn\", \"knight\"]; let values = vec![100, 320]; names.iter().zip(values.iter()) // yields (\u0026\"pawn\", \u0026100), (\u0026\"knight\", \u0026320) // flat_map — map then flatten one level let boards = vec![vec![1,2], vec![3,4]]; boards.iter().flat_map(|b| b.iter()) // yields \u00261, \u00262, \u00263, \u00264 // peekable — look at next element without consuming let mut iter = v.iter().peekable(); println!(\"{:?}\", iter.peek()); // Some(\u00261) — not consumed println!(\"{:?}\", iter.next()); // Some(\u00261) — now consumed Consuming Adapters (Execute the pipeline) let v = vec![1, 2, 3, 4, 5]; // collect — gather into a collection let doubled: Vec\u003ci32\u003e = v.iter().map(|x| x * 2).collect(); // sum / product let sum: i32 = v.iter().sum(); // 15 let product: i32 = v.iter().product(); // 120 // count let count = v.iter().filter(|x| **x \u003e 2).count(); // 3 // fold — reduce to a single value with accumulator let sum = v.iter().fold(0, |acc, x| acc + x); // 15 let max = v.iter().fold(i32::MIN, |acc, \u0026x| acc.max(x)); // 5 // any / all — short-circuit boolean checks let has_even = v.iter().any(|x| x % 2 == 0); // true let all_pos = v.iter().all(|x| *x \u003e 0); // true // find — first element matching predicate let first_even = v.iter().find(|x| *x % 2 == 0); // Some(\u00262) // position — index of first match let pos = v.iter().position(|x| *x == 3); // Some(2) // min / max let min = v.iter().min(); // Some(\u00261) let max = v.iter().max(); // Some(\u00265) // for_each — like a for loop, consumes iterator v.iter().for_each(|x| println!(\"{}\", x)); Custom Iterator — BitboardIter Implement Iterator once, get the entire adapter chain for free:\nstruct BitboardIter(u64); impl Iterator for BitboardIter { type Item = u32; // yields square indices (0-63) fn next(\u0026mut self) -\u003e Option\u003cu32\u003e { if self.0 == 0 { None } else { let sq = self.0.trailing_zeros(); self.0 \u0026= self.0 - 1; // pop lsb Some(sq) } } } // basic iteration for sq in BitboardIter(pawn_bb) { // generate pawn moves from sq } // count pieces on the board let pawn_count = BitboardIter(pawn_bb).count(); // collect all squares let squares: Vec\u003cu32\u003e = BitboardIter(pawn_bb).collect(); // filter squares on rank 7 (promotion rank) let promoting_pawns: Vec\u003cu32\u003e = BitboardIter(pawn_bb) .filter(|\u0026sq| sq / 8 == 6) .collect(); // get the least significant square without consuming let lsb_sq = BitboardIter(pawn_bb).next(); // Option for Loops and Iterators for loops are syntactic sugar over iterators — they call into_iter() automatically:\nlet v = vec![1, 2, 3]; // these are equivalent for x in \u0026v { println!(\"{}\", x); } for x in v.iter() { println!(\"{}\", x); } // mutable iteration for x in \u0026mut v { *x *= 2; } for x in v.iter_mut() { *x *= 2; } // consuming iteration for x in v { println!(\"{}\", x); } // v moved for x in v.into_iter() { println!(\"{}\", x); } 4. Combining Generics, Closures \u0026 Iterators These three features compose naturally — most real Rust code uses all three together:\n// generic function taking a closure, used with iterators fn apply_to_bb\u003cF\u003e(bb: u64, mut f: F) where F: FnMut(u32), { BitboardIter(bb).for_each(|sq| f(sq)); } // collect squares matching a condition into a generic container fn squares_where\u003cC, F\u003e(bb: u64, predicate: F) -\u003e C where C: FromIterator\u003cu32\u003e, F: Fn(u32) -\u003e bool, { BitboardIter(bb).filter(predicate).collect() } let squares: Vec\u003cu32\u003e = squares_where(pawn_bb, |sq| sq \u003e 16); 5. Quick Reference fn f(x: T) → generic function struct Foo { } → generic struct impl Foo { } → impl block for generic struct |x| x * 2 → closure, types inferred |x: i32| -\u003e i32 { x * 2 } → closure, explicit types move || ... → closure that owns captured variables Fn / FnMut / FnOnce → closure traits (restrictive → permissive) .iter() → borrows, yields \u0026T .iter_mut() → mutably borrows, yields \u0026mut T .into_iter() → consumes, yields T .map(|x| ...) → transform (lazy) .filter(|x| ...) → keep matching (lazy) .enumerate() → add index (lazy) .chain(other) → concatenate (lazy) .take(n) / .skip(n) → slice iterator (lazy) .collect() → execute pipeline into collection .fold(init, |acc, x| ...) → reduce to single value .any() / .all() → short-circuit boolean checks .count() / .sum() / .min() → consuming aggregates Key Takeaways Generics are zero-cost — the compiler generates specialized code per type (monomorphization), same as C++ templates. Closures capture their environment — immutably, mutably, or by move. Fn / FnMut / FnOnce describe how a closure uses captured variables — FnOnce is most permissive, Fn most restrictive. Iterators are lazy — adapters build a pipeline description, consuming adapters execute it. Implementing Iterator (just next()) gives you the entire adapter library for free. BitboardIter is a natural fit for chess engines — clean square iteration with no boilerplate. for x in collection is sugar for into_iter() — understand which ownership mode you need. Generics + closures + iterators compose naturally — most idiomatic Rust uses all three together. ","wordCount":"2002","inLanguage":"en","datePublished":"2026-03-22T00:00:00Z","dateModified":"2026-03-22T00:00:00Z","mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/rust/2026-03-22-rust-module-5-iterators-and-closures/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload=renderMathInElement(document.body)></script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">Rust Notes — Module 5</h1><div class=post-meta><span title='2026-03-22 00:00:00 +0000 UTC'>March 22, 2026</span>&nbsp;·&nbsp;10 min&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/rust/2026-03-22-rust-module-5-iterators-and-closures.md rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#rust-notes--module-5-generics-closures--iterators aria-label="Rust Notes — Module 5: Generics, Closures & Iterators">Rust Notes — Module 5: Generics, Closures & Iterators</a><ul><li><a href=#1-generics aria-label="1. Generics">1. Generics</a><ul><li><a href=#generic-functions aria-label="Generic Functions">Generic Functions</a></li><li><a href=#generic-structs aria-label="Generic Structs">Generic Structs</a></li><li><a href=#generic-enums aria-label="Generic Enums">Generic Enums</a></li><li><a href=#generic-structs-with-trait-bounds aria-label="Generic Structs with Trait Bounds">Generic Structs with Trait Bounds</a></li><li><a href=#multiple-type-parameters aria-label="Multiple Type Parameters">Multiple Type Parameters</a></li><li><a href=#monomorphization--how-generics-work aria-label="Monomorphization — How Generics Work">Monomorphization — How Generics Work</a></li></ul></li><li><a href=#2-closures aria-label="2. Closures">2. Closures</a><ul><li><a href=#basic-syntax aria-label="Basic Syntax">Basic Syntax</a></li><li><a href=#capturing-the-environment aria-label="Capturing the Environment">Capturing the Environment</a></li><li><a href=#three-capture-modes aria-label="Three Capture Modes">Three Capture Modes</a></li><li><a href=#closures-as-function-parameters aria-label="Closures as Function Parameters">Closures as Function Parameters</a></li><li><a href=#returning-closures aria-label="Returning Closures">Returning Closures</a></li></ul></li><li><a href=#3-iterators aria-label="3. Iterators">3. Iterators</a><ul><li><a href=#creating-iterators aria-label="Creating Iterators">Creating Iterators</a></li><li><a href=#iterators-are-lazy aria-label="Iterators are Lazy">Iterators are Lazy</a></li><li><a href=#iterator-adapters-lazy--return-a-new-iterator aria-label="Iterator Adapters (Lazy — return a new iterator)">Iterator Adapters (Lazy — return a new iterator)</a></li><li><a href=#consuming-adapters-execute-the-pipeline aria-label="Consuming Adapters (Execute the pipeline)">Consuming Adapters (Execute the pipeline)</a></li><li><a href=#custom-iterator--bitboarditer aria-label="Custom Iterator — BitboardIter">Custom Iterator — BitboardIter</a></li><li><a href=#for-loops-and-iterators aria-label="for Loops and Iterators">for Loops and Iterators</a></li></ul></li><li><a href=#4-combining-generics-closures--iterators aria-label="4. Combining Generics, Closures & Iterators">4. Combining Generics, Closures & Iterators</a></li><li><a href=#5-quick-reference aria-label="5. Quick Reference">5. Quick Reference</a></li><li><a href=#key-takeaways aria-label="Key Takeaways">Key Takeaways</a></li></ul></li></ul></div></details></div><div class=post-content><h1 id=rust-notes--module-5-generics-closures--iterators>Rust Notes — Module 5: Generics, Closures & Iterators<a hidden class=anchor aria-hidden=true href=#rust-notes--module-5-generics-closures--iterators>#</a></h1><hr><h2 id=1-generics>1. Generics<a hidden class=anchor aria-hidden=true href=#1-generics>#</a></h2><p>Generics let you write code that works for any type, with the compiler generating specialized versions at compile time. Zero runtime overhead — same as C++ templates.</p><h3 id=generic-functions>Generic Functions<a hidden class=anchor aria-hidden=true href=#generic-functions>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#75715e>// T is a type parameter — placeholder for any concrete type
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>largest</span><span style=color:#f92672>&lt;</span>T: PartialOrd<span style=color:#f92672>&gt;</span>(list: <span style=color:#66d9ef>&amp;</span>[T]) -&gt; <span style=color:#66d9ef>&amp;</span><span style=color:#a6e22e>T</span> {
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>let</span> <span style=color:#66d9ef>mut</span> largest <span style=color:#f92672>=</span> <span style=color:#f92672>&amp;</span>list[<span style=color:#ae81ff>0</span>];
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>for</span> item <span style=color:#66d9ef>in</span> list {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> item <span style=color:#f92672>&gt;</span> largest {
+</span></span><span style=display:flex><span>            largest <span style=color:#f92672>=</span> item;
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    largest
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// works for any type that implements PartialOrd
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> nums <span style=color:#f92672>=</span> <span style=color:#a6e22e>vec!</span>[<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>5</span>, <span style=color:#ae81ff>3</span>, <span style=color:#ae81ff>2</span>];
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> chars <span style=color:#f92672>=</span> <span style=color:#a6e22e>vec!</span>[<span style=color:#e6db74>&#39;a&#39;</span>, <span style=color:#e6db74>&#39;z&#39;</span>, <span style=color:#e6db74>&#39;m&#39;</span>];
+</span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, largest(<span style=color:#f92672>&amp;</span>nums));   <span style=color:#75715e>// 5
+</span></span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, largest(<span style=color:#f92672>&amp;</span>chars));  <span style=color:#75715e>// z
+</span></span></span></code></pre></div><h3 id=generic-structs>Generic Structs<a hidden class=anchor aria-hidden=true href=#generic-structs>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#66d9ef>struct</span> <span style=color:#a6e22e>Stack</span><span style=color:#f92672>&lt;</span>T<span style=color:#f92672>&gt;</span> {
+</span></span><span style=display:flex><span>    elements: Vec<span style=color:#f92672>&lt;</span>T<span style=color:#f92672>&gt;</span>,
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// impl block also needs &lt;T&gt;
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>impl</span><span style=color:#f92672>&lt;</span>T<span style=color:#f92672>&gt;</span> Stack<span style=color:#f92672>&lt;</span>T<span style=color:#f92672>&gt;</span> {
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>new</span>() -&gt; <span style=color:#a6e22e>Self</span> {
+</span></span><span style=display:flex><span>        Stack { elements: Vec::new() }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>push</span>(<span style=color:#f92672>&amp;</span><span style=color:#66d9ef>mut</span> self, item: <span style=color:#a6e22e>T</span>) {
+</span></span><span style=display:flex><span>        self.elements.push(item);
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>pop</span>(<span style=color:#f92672>&amp;</span><span style=color:#66d9ef>mut</span> self) -&gt; Option<span style=color:#f92672>&lt;</span>T<span style=color:#f92672>&gt;</span> {
+</span></span><span style=display:flex><span>        self.elements.pop()
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>peek</span>(<span style=color:#f92672>&amp;</span>self) -&gt; Option<span style=color:#f92672>&lt;&amp;</span>T<span style=color:#f92672>&gt;</span> {
+</span></span><span style=display:flex><span>        self.elements.last()
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>is_empty</span>(<span style=color:#f92672>&amp;</span>self) -&gt; <span style=color:#66d9ef>bool</span> {
+</span></span><span style=display:flex><span>        self.elements.is_empty()
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// type parameter inferred from usage
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> <span style=color:#66d9ef>mut</span> int_stack <span style=color:#f92672>=</span> Stack::new();
+</span></span><span style=display:flex><span>int_stack.push(<span style=color:#ae81ff>1</span>);
+</span></span><span style=display:flex><span>int_stack.push(<span style=color:#ae81ff>2</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// or explicit
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> <span style=color:#66d9ef>mut</span> move_stack: <span style=color:#a6e22e>Stack</span><span style=color:#f92672>&lt;</span>Move<span style=color:#f92672>&gt;</span> <span style=color:#f92672>=</span> Stack::new();
+</span></span></code></pre></div><h3 id=generic-enums>Generic Enums<a hidden class=anchor aria-hidden=true href=#generic-enums>#</a></h3><p>You&rsquo;ve already used these — <code>Option&lt;T></code> and <code>Result&lt;T, E></code> are generic enums:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#75715e>// from the standard library — this is how they&#39;re defined
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>enum</span> Option<span style=color:#f92672>&lt;</span>T<span style=color:#f92672>&gt;</span> {
+</span></span><span style=display:flex><span>    Some(T),
+</span></span><span style=display:flex><span>    None,
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>enum</span> Result<span style=color:#f92672>&lt;</span>T, E<span style=color:#f92672>&gt;</span> {
+</span></span><span style=display:flex><span>    Ok(T),
+</span></span><span style=display:flex><span>    Err(E),
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h3 id=generic-structs-with-trait-bounds>Generic Structs with Trait Bounds<a hidden class=anchor aria-hidden=true href=#generic-structs-with-trait-bounds>#</a></h3><p>Add bounds when the implementation needs specific behavior from T:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#66d9ef>use</span> std::fmt::Display;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>struct</span> <span style=color:#a6e22e>Wrapper</span><span style=color:#f92672>&lt;</span>T: <span style=color:#a6e22e>Display</span><span style=color:#f92672>&gt;</span> {
+</span></span><span style=display:flex><span>    value: <span style=color:#a6e22e>T</span>,
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>impl</span><span style=color:#f92672>&lt;</span>T: <span style=color:#a6e22e>Display</span><span style=color:#f92672>&gt;</span> Wrapper<span style=color:#f92672>&lt;</span>T<span style=color:#f92672>&gt;</span> {
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>print</span>(<span style=color:#f92672>&amp;</span>self) {
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, self.value);
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h3 id=multiple-type-parameters>Multiple Type Parameters<a hidden class=anchor aria-hidden=true href=#multiple-type-parameters>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#66d9ef>struct</span> <span style=color:#a6e22e>Pair</span><span style=color:#f92672>&lt;</span>T, U<span style=color:#f92672>&gt;</span> {
+</span></span><span style=display:flex><span>    first: <span style=color:#a6e22e>T</span>,
+</span></span><span style=display:flex><span>    second: <span style=color:#a6e22e>U</span>,
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> p <span style=color:#f92672>=</span> Pair { first: <span style=color:#ae81ff>42</span>, second: <span style=color:#e6db74>&#34;hello&#34;</span> };
+</span></span></code></pre></div><h3 id=monomorphization--how-generics-work>Monomorphization — How Generics Work<a hidden class=anchor aria-hidden=true href=#monomorphization--how-generics-work>#</a></h3><p>The compiler generates a <strong>separate concrete version</strong> for each type you use:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#75715e>// you write
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>largest</span><span style=color:#f92672>&lt;</span>T: PartialOrd<span style=color:#f92672>&gt;</span>(list: <span style=color:#66d9ef>&amp;</span>[T]) -&gt; <span style=color:#66d9ef>&amp;</span><span style=color:#a6e22e>T</span> { <span style=color:#f92672>..</span>. }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// compiler generates (conceptually)
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>largest_i32</span>(list: <span style=color:#66d9ef>&amp;</span>[<span style=color:#66d9ef>i32</span>]) -&gt; <span style=color:#66d9ef>&amp;</span><span style=color:#66d9ef>i32</span> { <span style=color:#f92672>..</span>. }
+</span></span><span style=display:flex><span><span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>largest_f64</span>(list: <span style=color:#66d9ef>&amp;</span>[<span style=color:#66d9ef>f64</span>]) -&gt; <span style=color:#66d9ef>&amp;</span><span style=color:#66d9ef>f64</span> { <span style=color:#f92672>..</span>. }
+</span></span></code></pre></div><p>This is why generic Rust code has zero runtime overhead — by the time the binary is produced, all generics are replaced with concrete types.</p><hr><h2 id=2-closures>2. Closures<a hidden class=anchor aria-hidden=true href=#2-closures>#</a></h2><p>Closures are anonymous functions that can capture variables from their surrounding scope.</p><h3 id=basic-syntax>Basic Syntax<a hidden class=anchor aria-hidden=true href=#basic-syntax>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#75715e>// full syntax
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> add <span style=color:#f92672>=</span> <span style=color:#f92672>|</span>a: <span style=color:#66d9ef>i32</span>, b: <span style=color:#66d9ef>i32</span><span style=color:#f92672>|</span> -&gt; <span style=color:#66d9ef>i32</span> { a <span style=color:#f92672>+</span> b };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// types inferred — most common
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> add <span style=color:#f92672>=</span> <span style=color:#f92672>|</span>a, b<span style=color:#f92672>|</span> a <span style=color:#f92672>+</span> b;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// single expression — no braces needed
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> double <span style=color:#f92672>=</span> <span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> x <span style=color:#f92672>*</span> <span style=color:#ae81ff>2</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// multi-line — braces required
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> complex <span style=color:#f92672>=</span> <span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> {
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>let</span> y <span style=color:#f92672>=</span> x <span style=color:#f92672>*</span> <span style=color:#ae81ff>2</span>;
+</span></span><span style=display:flex><span>    y <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>};
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, add(<span style=color:#ae81ff>3</span>, <span style=color:#ae81ff>4</span>));     <span style=color:#75715e>// 7
+</span></span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, double(<span style=color:#ae81ff>5</span>));     <span style=color:#75715e>// 10
+</span></span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, complex(<span style=color:#ae81ff>3</span>));    <span style=color:#75715e>// 7
+</span></span></span></code></pre></div><h3 id=capturing-the-environment>Capturing the Environment<a hidden class=anchor aria-hidden=true href=#capturing-the-environment>#</a></h3><p>The key difference from regular functions — closures capture variables from the enclosing scope:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#66d9ef>let</span> bonus <span style=color:#f92672>=</span> <span style=color:#ae81ff>50</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> threshold <span style=color:#f92672>=</span> <span style=color:#ae81ff>100</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> add_bonus <span style=color:#f92672>=</span> <span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> x <span style=color:#f92672>+</span> bonus;              <span style=color:#75715e>// captures bonus
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> is_above  <span style=color:#f92672>=</span> <span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> x <span style=color:#f92672>&gt;</span> threshold;          <span style=color:#75715e>// captures threshold
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> combined  <span style=color:#f92672>=</span> <span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> x <span style=color:#f92672>+</span> bonus <span style=color:#f92672>&gt;</span> threshold;  <span style=color:#75715e>// captures both
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, add_bonus(<span style=color:#ae81ff>60</span>));   <span style=color:#75715e>// 110
+</span></span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, is_above(<span style=color:#ae81ff>110</span>));   <span style=color:#75715e>// true
+</span></span></span></code></pre></div><h3 id=three-capture-modes>Three Capture Modes<a hidden class=anchor aria-hidden=true href=#three-capture-modes>#</a></h3><p>Closures automatically choose the least restrictive capture mode:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#66d9ef>let</span> s <span style=color:#f92672>=</span> String::from(<span style=color:#e6db74>&#34;hello&#34;</span>);
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> n <span style=color:#f92672>=</span> <span style=color:#ae81ff>5</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// 1. Immutable borrow — just reads the value
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> borrow <span style=color:#f92672>=</span> <span style=color:#f92672>||</span> <span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74> </span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, s, n);
+</span></span><span style=display:flex><span>borrow();
+</span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, s);  <span style=color:#75715e>// ✅ s still valid
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// 2. Mutable borrow — modifies the value
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> <span style=color:#66d9ef>mut</span> s2 <span style=color:#f92672>=</span> String::from(<span style=color:#e6db74>&#34;hello&#34;</span>);
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> <span style=color:#66d9ef>mut</span> mut_borrow <span style=color:#f92672>=</span> <span style=color:#f92672>||</span> s2.push_str(<span style=color:#e6db74>&#34; world&#34;</span>);
+</span></span><span style=display:flex><span>mut_borrow();
+</span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, s2);  <span style=color:#75715e>// &#34;hello world&#34;
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// 3. Move — takes ownership
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> owned <span style=color:#f92672>=</span> <span style=color:#66d9ef>move</span> <span style=color:#f92672>||</span> <span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, s);  <span style=color:#75715e>// s moved into closure
+</span></span></span><span style=display:flex><span>owned();
+</span></span><span style=display:flex><span><span style=color:#75715e>// println!(&#34;{}&#34;, s);  // ❌ s was moved
+</span></span></span></code></pre></div><blockquote><p>Use <code>move</code> closures when passing to threads — the thread needs to own its data since it may outlive the current scope.</p></blockquote><h3 id=closures-as-function-parameters>Closures as Function Parameters<a hidden class=anchor aria-hidden=true href=#closures-as-function-parameters>#</a></h3><p>Closures implement one of three traits depending on what they do:</p><table><thead><tr><th>Trait</th><th>Meaning</th><th>Can be called</th></tr></thead><tbody><tr><td><code>FnOnce</code></td><td>consumes captured values</td><td>once only</td></tr><tr><td><code>FnMut</code></td><td>mutates captured values</td><td>multiple times, needs <code>mut</code></td></tr><tr><td><code>Fn</code></td><td>only reads captured values</td><td>multiple times</td></tr></tbody></table><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#75715e>// Fn — read only, most restrictive to the caller
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>apply</span><span style=color:#f92672>&lt;</span>F: Fn(<span style=color:#66d9ef>i32</span>) -&gt; <span style=color:#66d9ef>i32</span><span style=color:#f92672>&gt;</span>(f: <span style=color:#a6e22e>F</span>, x: <span style=color:#66d9ef>i32</span>) -&gt; <span style=color:#66d9ef>i32</span> {
+</span></span><span style=display:flex><span>    f(x)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// FnMut — closure may mutate captured state
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>apply_mut</span><span style=color:#f92672>&lt;</span>F: FnMut(<span style=color:#66d9ef>i32</span>) -&gt; <span style=color:#66d9ef>i32</span><span style=color:#f92672>&gt;</span>(<span style=color:#66d9ef>mut</span> f: <span style=color:#a6e22e>F</span>, x: <span style=color:#66d9ef>i32</span>) -&gt; <span style=color:#66d9ef>i32</span> {
+</span></span><span style=display:flex><span>    f(x)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// FnOnce — closure may consume captured values, least restrictive
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>apply_once</span><span style=color:#f92672>&lt;</span>F: FnOnce(<span style=color:#66d9ef>i32</span>) -&gt; <span style=color:#66d9ef>i32</span><span style=color:#f92672>&gt;</span>(f: <span style=color:#a6e22e>F</span>, x: <span style=color:#66d9ef>i32</span>) -&gt; <span style=color:#66d9ef>i32</span> {
+</span></span><span style=display:flex><span>    f(x)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> double <span style=color:#f92672>=</span> <span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> x <span style=color:#f92672>*</span> <span style=color:#ae81ff>2</span>;
+</span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, apply(double, <span style=color:#ae81ff>5</span>));       <span style=color:#75715e>// 10
+</span></span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, apply_mut(double, <span style=color:#ae81ff>5</span>));   <span style=color:#75715e>// 10
+</span></span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, apply_once(double, <span style=color:#ae81ff>5</span>));  <span style=color:#75715e>// 10
+</span></span></span></code></pre></div><blockquote><p><code>FnOnce</code> is the most permissive bound (accepts all closures). <code>Fn</code> is the most restrictive (only accepts non-mutating closures). When in doubt, start with <code>Fn</code> and loosen if the compiler complains.</p></blockquote><h3 id=returning-closures>Returning Closures<a hidden class=anchor aria-hidden=true href=#returning-closures>#</a></h3><p>Closures have no concrete type — you must use <code>impl Fn</code> or <code>Box&lt;dyn Fn></code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#75715e>// impl Fn — always returns same closure type (preferred)
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>make_adder</span>(x: <span style=color:#66d9ef>i32</span>) -&gt; <span style=color:#a6e22e>impl</span> Fn(<span style=color:#66d9ef>i32</span>) -&gt; <span style=color:#66d9ef>i32</span> {
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>move</span> <span style=color:#f92672>|</span>y<span style=color:#f92672>|</span> x <span style=color:#f92672>+</span> y
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// Box&lt;dyn Fn&gt; — when you need to return different closure types
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>make_op</span>(add: <span style=color:#66d9ef>bool</span>) -&gt; Box<span style=color:#f92672>&lt;</span><span style=color:#66d9ef>dyn</span> Fn(<span style=color:#66d9ef>i32</span>, <span style=color:#66d9ef>i32</span>) -&gt; <span style=color:#66d9ef>i32</span><span style=color:#f92672>&gt;</span> {
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> add {
+</span></span><span style=display:flex><span>        Box::new(<span style=color:#f92672>|</span>a, b<span style=color:#f92672>|</span> a <span style=color:#f92672>+</span> b)
+</span></span><span style=display:flex><span>    } <span style=color:#66d9ef>else</span> {
+</span></span><span style=display:flex><span>        Box::new(<span style=color:#f92672>|</span>a, b<span style=color:#f92672>|</span> a <span style=color:#f92672>*</span> b)
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> add5 <span style=color:#f92672>=</span> make_adder(<span style=color:#ae81ff>5</span>);
+</span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, add5(<span style=color:#ae81ff>3</span>));   <span style=color:#75715e>// 8
+</span></span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, add5(<span style=color:#ae81ff>10</span>));  <span style=color:#75715e>// 15
+</span></span></span></code></pre></div><hr><h2 id=3-iterators>3. Iterators<a hidden class=anchor aria-hidden=true href=#3-iterators>#</a></h2><p>An iterator is any type implementing the <code>Iterator</code> trait:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#66d9ef>trait</span> Iterator {
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>type</span> <span style=color:#a6e22e>Item</span>;                                    <span style=color:#75715e>// the type of values yielded
+</span></span></span><span style=display:flex><span>    <span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>next</span>(<span style=color:#f92672>&amp;</span><span style=color:#66d9ef>mut</span> self) -&gt; Option<span style=color:#f92672>&lt;</span>Self::Item<span style=color:#f92672>&gt;</span>;    <span style=color:#75715e>// the only required method
+</span></span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Returns <code>Some(value)</code> on each call, <code>None</code> when exhausted. Everything else is built on top of these two.</p><h3 id=creating-iterators>Creating Iterators<a hidden class=anchor aria-hidden=true href=#creating-iterators>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#66d9ef>let</span> v <span style=color:#f92672>=</span> <span style=color:#a6e22e>vec!</span>[<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>2</span>, <span style=color:#ae81ff>3</span>, <span style=color:#ae81ff>4</span>, <span style=color:#ae81ff>5</span>];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>v.iter()        <span style=color:#75715e>// yields &amp;T      — immutable borrows, v still usable after
+</span></span></span><span style=display:flex><span>v.iter_mut()    <span style=color:#75715e>// yields &amp;mut T  — mutable borrows
+</span></span></span><span style=display:flex><span>v.into_iter()   <span style=color:#75715e>// yields T       — consumes v, takes ownership of elements
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// ranges are iterators
+</span></span></span><span style=display:flex><span>(<span style=color:#ae81ff>0</span><span style=color:#f92672>..</span><span style=color:#ae81ff>5</span>)          <span style=color:#75715e>// 0, 1, 2, 3, 4
+</span></span></span><span style=display:flex><span>(<span style=color:#ae81ff>0</span><span style=color:#f92672>..=</span><span style=color:#ae81ff>5</span>)         <span style=color:#75715e>// 0, 1, 2, 3, 4, 5
+</span></span></span></code></pre></div><h3 id=iterators-are-lazy>Iterators are Lazy<a hidden class=anchor aria-hidden=true href=#iterators-are-lazy>#</a></h3><p>Nothing executes until you consume the iterator:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#66d9ef>let</span> v <span style=color:#f92672>=</span> <span style=color:#a6e22e>vec!</span>[<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>2</span>, <span style=color:#ae81ff>3</span>];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// this does NOTHING yet — just builds a pipeline description
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> pipeline <span style=color:#f92672>=</span> v.iter().map(<span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> x <span style=color:#f92672>*</span> <span style=color:#ae81ff>2</span>).filter(<span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> x <span style=color:#f92672>&gt;</span> <span style=color:#f92672>&amp;</span><span style=color:#ae81ff>3</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// THIS executes the pipeline
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> result: Vec<span style=color:#f92672>&lt;</span><span style=color:#66d9ef>i32</span><span style=color:#f92672>&gt;</span> <span style=color:#f92672>=</span> pipeline.collect();
+</span></span><span style=display:flex><span><span style=color:#75715e>// [4, 6]
+</span></span></span></code></pre></div><h3 id=iterator-adapters-lazy--return-a-new-iterator>Iterator Adapters (Lazy — return a new iterator)<a hidden class=anchor aria-hidden=true href=#iterator-adapters-lazy--return-a-new-iterator>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#66d9ef>let</span> v <span style=color:#f92672>=</span> <span style=color:#a6e22e>vec!</span>[<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>2</span>, <span style=color:#ae81ff>3</span>, <span style=color:#ae81ff>4</span>, <span style=color:#ae81ff>5</span>];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// map — transform each element
+</span></span></span><span style=display:flex><span>v.iter().map(<span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> x <span style=color:#f92672>*</span> <span style=color:#ae81ff>2</span>)
+</span></span><span style=display:flex><span><span style=color:#75715e>// yields 2, 4, 6, 8, 10
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// filter — keep elements matching predicate
+</span></span></span><span style=display:flex><span>v.iter().filter(<span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> <span style=color:#f92672>*</span>x <span style=color:#f92672>%</span> <span style=color:#ae81ff>2</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>)
+</span></span><span style=display:flex><span><span style=color:#75715e>// yields &amp;2, &amp;4
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// filter_map — map and filter in one step, keeps Some values
+</span></span></span><span style=display:flex><span>v.iter().filter_map(<span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> <span style=color:#66d9ef>if</span> x <span style=color:#f92672>%</span> <span style=color:#ae81ff>2</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span> { Some(x <span style=color:#f92672>*</span> <span style=color:#ae81ff>10</span>) } <span style=color:#66d9ef>else</span> { None })
+</span></span><span style=display:flex><span><span style=color:#75715e>// yields 20, 40
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// take — first n elements
+</span></span></span><span style=display:flex><span>v.iter().take(<span style=color:#ae81ff>3</span>)
+</span></span><span style=display:flex><span><span style=color:#75715e>// yields &amp;1, &amp;2, &amp;3
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// skip — skip first n elements
+</span></span></span><span style=display:flex><span>v.iter().skip(<span style=color:#ae81ff>2</span>)
+</span></span><span style=display:flex><span><span style=color:#75715e>// yields &amp;3, &amp;4, &amp;5
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// chain — concatenate two iterators
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> a <span style=color:#f92672>=</span> <span style=color:#a6e22e>vec!</span>[<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>2</span>];
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> b <span style=color:#f92672>=</span> <span style=color:#a6e22e>vec!</span>[<span style=color:#ae81ff>3</span>, <span style=color:#ae81ff>4</span>];
+</span></span><span style=display:flex><span>a.iter().chain(b.iter())
+</span></span><span style=display:flex><span><span style=color:#75715e>// yields &amp;1, &amp;2, &amp;3, &amp;4
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// enumerate — yields (index, value) pairs
+</span></span></span><span style=display:flex><span>v.iter().enumerate()
+</span></span><span style=display:flex><span><span style=color:#75715e>// yields (0, &amp;1), (1, &amp;2), (2, &amp;3) ...
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// zip — pair up two iterators
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> names <span style=color:#f92672>=</span> <span style=color:#a6e22e>vec!</span>[<span style=color:#e6db74>&#34;pawn&#34;</span>, <span style=color:#e6db74>&#34;knight&#34;</span>];
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> values <span style=color:#f92672>=</span> <span style=color:#a6e22e>vec!</span>[<span style=color:#ae81ff>100</span>, <span style=color:#ae81ff>320</span>];
+</span></span><span style=display:flex><span>names.iter().zip(values.iter())
+</span></span><span style=display:flex><span><span style=color:#75715e>// yields (&amp;&#34;pawn&#34;, &amp;100), (&amp;&#34;knight&#34;, &amp;320)
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// flat_map — map then flatten one level
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> boards <span style=color:#f92672>=</span> <span style=color:#a6e22e>vec!</span>[<span style=color:#a6e22e>vec!</span>[<span style=color:#ae81ff>1</span>,<span style=color:#ae81ff>2</span>], <span style=color:#a6e22e>vec!</span>[<span style=color:#ae81ff>3</span>,<span style=color:#ae81ff>4</span>]];
+</span></span><span style=display:flex><span>boards.iter().flat_map(<span style=color:#f92672>|</span>b<span style=color:#f92672>|</span> b.iter())
+</span></span><span style=display:flex><span><span style=color:#75715e>// yields &amp;1, &amp;2, &amp;3, &amp;4
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// peekable — look at next element without consuming
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> <span style=color:#66d9ef>mut</span> iter <span style=color:#f92672>=</span> v.iter().peekable();
+</span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{:?}</span><span style=color:#e6db74>&#34;</span>, iter.peek());  <span style=color:#75715e>// Some(&amp;1) — not consumed
+</span></span></span><span style=display:flex><span><span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{:?}</span><span style=color:#e6db74>&#34;</span>, iter.next());  <span style=color:#75715e>// Some(&amp;1) — now consumed
+</span></span></span></code></pre></div><h3 id=consuming-adapters-execute-the-pipeline>Consuming Adapters (Execute the pipeline)<a hidden class=anchor aria-hidden=true href=#consuming-adapters-execute-the-pipeline>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#66d9ef>let</span> v <span style=color:#f92672>=</span> <span style=color:#a6e22e>vec!</span>[<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>2</span>, <span style=color:#ae81ff>3</span>, <span style=color:#ae81ff>4</span>, <span style=color:#ae81ff>5</span>];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// collect — gather into a collection
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> doubled: Vec<span style=color:#f92672>&lt;</span><span style=color:#66d9ef>i32</span><span style=color:#f92672>&gt;</span> <span style=color:#f92672>=</span> v.iter().map(<span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> x <span style=color:#f92672>*</span> <span style=color:#ae81ff>2</span>).collect();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// sum / product
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> sum: <span style=color:#66d9ef>i32</span> <span style=color:#f92672>=</span> v.iter().sum();        <span style=color:#75715e>// 15
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> product: <span style=color:#66d9ef>i32</span> <span style=color:#f92672>=</span> v.iter().product(); <span style=color:#75715e>// 120
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// count
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> count <span style=color:#f92672>=</span> v.iter().filter(<span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> <span style=color:#f92672>**</span>x <span style=color:#f92672>&gt;</span> <span style=color:#ae81ff>2</span>).count();  <span style=color:#75715e>// 3
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// fold — reduce to a single value with accumulator
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> sum <span style=color:#f92672>=</span> v.iter().fold(<span style=color:#ae81ff>0</span>, <span style=color:#f92672>|</span>acc, x<span style=color:#f92672>|</span> acc <span style=color:#f92672>+</span> x);  <span style=color:#75715e>// 15
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> max <span style=color:#f92672>=</span> v.iter().fold(<span style=color:#66d9ef>i32</span>::<span style=color:#66d9ef>MIN</span>, <span style=color:#f92672>|</span>acc, <span style=color:#f92672>&amp;</span>x<span style=color:#f92672>|</span> acc.max(x));  <span style=color:#75715e>// 5
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// any / all — short-circuit boolean checks
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> has_even <span style=color:#f92672>=</span> v.iter().any(<span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> x <span style=color:#f92672>%</span> <span style=color:#ae81ff>2</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>);   <span style=color:#75715e>// true
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> all_pos  <span style=color:#f92672>=</span> v.iter().all(<span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> <span style=color:#f92672>*</span>x <span style=color:#f92672>&gt;</span> <span style=color:#ae81ff>0</span>);         <span style=color:#75715e>// true
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// find — first element matching predicate
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> first_even <span style=color:#f92672>=</span> v.iter().find(<span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> <span style=color:#f92672>*</span>x <span style=color:#f92672>%</span> <span style=color:#ae81ff>2</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>);  <span style=color:#75715e>// Some(&amp;2)
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// position — index of first match
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> pos <span style=color:#f92672>=</span> v.iter().position(<span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> <span style=color:#f92672>*</span>x <span style=color:#f92672>==</span> <span style=color:#ae81ff>3</span>);  <span style=color:#75715e>// Some(2)
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// min / max
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> min <span style=color:#f92672>=</span> v.iter().min();  <span style=color:#75715e>// Some(&amp;1)
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> max <span style=color:#f92672>=</span> v.iter().max();  <span style=color:#75715e>// Some(&amp;5)
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// for_each — like a for loop, consumes iterator
+</span></span></span><span style=display:flex><span>v.iter().for_each(<span style=color:#f92672>|</span>x<span style=color:#f92672>|</span> <span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, x));
+</span></span></code></pre></div><h3 id=custom-iterator--bitboarditer>Custom Iterator — BitboardIter<a hidden class=anchor aria-hidden=true href=#custom-iterator--bitboarditer>#</a></h3><p>Implement <code>Iterator</code> once, get the entire adapter chain for free:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#66d9ef>struct</span> <span style=color:#a6e22e>BitboardIter</span>(<span style=color:#66d9ef>u64</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>impl</span> Iterator <span style=color:#66d9ef>for</span> BitboardIter {
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>type</span> <span style=color:#a6e22e>Item</span> <span style=color:#f92672>=</span> <span style=color:#66d9ef>u32</span>;  <span style=color:#75715e>// yields square indices (0-63)
+</span></span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>next</span>(<span style=color:#f92672>&amp;</span><span style=color:#66d9ef>mut</span> self) -&gt; Option<span style=color:#f92672>&lt;</span><span style=color:#66d9ef>u32</span><span style=color:#f92672>&gt;</span> {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> self.<span style=color:#ae81ff>0</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span> {
+</span></span><span style=display:flex><span>            None
+</span></span><span style=display:flex><span>        } <span style=color:#66d9ef>else</span> {
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>let</span> sq <span style=color:#f92672>=</span> self.<span style=color:#ae81ff>0.</span>trailing_zeros();
+</span></span><span style=display:flex><span>            self.<span style=color:#ae81ff>0</span> <span style=color:#f92672>&amp;=</span> self.<span style=color:#ae81ff>0</span> <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>;  <span style=color:#75715e>// pop lsb
+</span></span></span><span style=display:flex><span>            Some(sq)
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// basic iteration
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> sq <span style=color:#66d9ef>in</span> BitboardIter(pawn_bb) {
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// generate pawn moves from sq
+</span></span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// count pieces on the board
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> pawn_count <span style=color:#f92672>=</span> BitboardIter(pawn_bb).count();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// collect all squares
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> squares: Vec<span style=color:#f92672>&lt;</span><span style=color:#66d9ef>u32</span><span style=color:#f92672>&gt;</span> <span style=color:#f92672>=</span> BitboardIter(pawn_bb).collect();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// filter squares on rank 7 (promotion rank)
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> promoting_pawns: Vec<span style=color:#f92672>&lt;</span><span style=color:#66d9ef>u32</span><span style=color:#f92672>&gt;</span> <span style=color:#f92672>=</span> BitboardIter(pawn_bb)
+</span></span><span style=display:flex><span>    .filter(<span style=color:#f92672>|&amp;</span>sq<span style=color:#f92672>|</span> sq <span style=color:#f92672>/</span> <span style=color:#ae81ff>8</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>6</span>)
+</span></span><span style=display:flex><span>    .collect();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// get the least significant square without consuming
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> lsb_sq <span style=color:#f92672>=</span> BitboardIter(pawn_bb).next();  <span style=color:#75715e>// Option&lt;u32&gt;
+</span></span></span></code></pre></div><h3 id=for-loops-and-iterators><code>for</code> Loops and Iterators<a hidden class=anchor aria-hidden=true href=#for-loops-and-iterators>#</a></h3><p><code>for</code> loops are syntactic sugar over iterators — they call <code>into_iter()</code> automatically:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#66d9ef>let</span> v <span style=color:#f92672>=</span> <span style=color:#a6e22e>vec!</span>[<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>2</span>, <span style=color:#ae81ff>3</span>];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// these are equivalent
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> x <span style=color:#66d9ef>in</span> <span style=color:#f92672>&amp;</span>v { <span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, x); }
+</span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> x <span style=color:#66d9ef>in</span> v.iter() { <span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, x); }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// mutable iteration
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> x <span style=color:#66d9ef>in</span> <span style=color:#f92672>&amp;</span><span style=color:#66d9ef>mut</span> v { <span style=color:#f92672>*</span>x <span style=color:#f92672>*=</span> <span style=color:#ae81ff>2</span>; }
+</span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> x <span style=color:#66d9ef>in</span> v.iter_mut() { <span style=color:#f92672>*</span>x <span style=color:#f92672>*=</span> <span style=color:#ae81ff>2</span>; }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// consuming iteration
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> x <span style=color:#66d9ef>in</span> v { <span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, x); }  <span style=color:#75715e>// v moved
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> x <span style=color:#66d9ef>in</span> v.into_iter() { <span style=color:#a6e22e>println!</span>(<span style=color:#e6db74>&#34;</span><span style=color:#e6db74>{}</span><span style=color:#e6db74>&#34;</span>, x); }
+</span></span></code></pre></div><hr><h2 id=4-combining-generics-closures--iterators>4. Combining Generics, Closures & Iterators<a hidden class=anchor aria-hidden=true href=#4-combining-generics-closures--iterators>#</a></h2><p>These three features compose naturally — most real Rust code uses all three together:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#75715e>// generic function taking a closure, used with iterators
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>apply_to_bb</span><span style=color:#f92672>&lt;</span>F<span style=color:#f92672>&gt;</span>(bb: <span style=color:#66d9ef>u64</span>, <span style=color:#66d9ef>mut</span> f: <span style=color:#a6e22e>F</span>)
+</span></span><span style=display:flex><span><span style=color:#66d9ef>where</span>
+</span></span><span style=display:flex><span>    F: FnMut(<span style=color:#66d9ef>u32</span>),
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    BitboardIter(bb).for_each(<span style=color:#f92672>|</span>sq<span style=color:#f92672>|</span> f(sq));
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// collect squares matching a condition into a generic container
+</span></span></span><span style=display:flex><span><span style=color:#66d9ef>fn</span> <span style=color:#a6e22e>squares_where</span><span style=color:#f92672>&lt;</span>C, F<span style=color:#f92672>&gt;</span>(bb: <span style=color:#66d9ef>u64</span>, predicate: <span style=color:#a6e22e>F</span>) -&gt; <span style=color:#a6e22e>C</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>where</span>
+</span></span><span style=display:flex><span>    C: <span style=color:#a6e22e>FromIterator</span><span style=color:#f92672>&lt;</span><span style=color:#66d9ef>u32</span><span style=color:#f92672>&gt;</span>,
+</span></span><span style=display:flex><span>    F: Fn(<span style=color:#66d9ef>u32</span>) -&gt; <span style=color:#66d9ef>bool</span>,
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    BitboardIter(bb).filter(predicate).collect()
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> squares: Vec<span style=color:#f92672>&lt;</span><span style=color:#66d9ef>u32</span><span style=color:#f92672>&gt;</span> <span style=color:#f92672>=</span> squares_where(pawn_bb, <span style=color:#f92672>|</span>sq<span style=color:#f92672>|</span> sq <span style=color:#f92672>&gt;</span> <span style=color:#ae81ff>16</span>);
+</span></span></code></pre></div><hr><h2 id=5-quick-reference>5. Quick Reference<a hidden class=anchor aria-hidden=true href=#5-quick-reference>#</a></h2><pre tabindex=0><code>fn f&lt;T: Bound&gt;(x: T)         →  generic function
+struct Foo&lt;T&gt; { }            →  generic struct
+impl&lt;T&gt; Foo&lt;T&gt; { }           →  impl block for generic struct
+|x| x * 2                   →  closure, types inferred
+|x: i32| -&gt; i32 { x * 2 }   →  closure, explicit types
+move || ...                  →  closure that owns captured variables
+Fn / FnMut / FnOnce          →  closure traits (restrictive → permissive)
+.iter()                      →  borrows, yields &amp;T
+.iter_mut()                  →  mutably borrows, yields &amp;mut T
+.into_iter()                 →  consumes, yields T
+.map(|x| ...)                →  transform (lazy)
+.filter(|x| ...)             →  keep matching (lazy)
+.enumerate()                 →  add index (lazy)
+.chain(other)                →  concatenate (lazy)
+.take(n) / .skip(n)          →  slice iterator (lazy)
+.collect()                   →  execute pipeline into collection
+.fold(init, |acc, x| ...)    →  reduce to single value
+.any() / .all()              →  short-circuit boolean checks
+.count() / .sum() / .min()   →  consuming aggregates
+</code></pre><hr><h2 id=key-takeaways>Key Takeaways<a hidden class=anchor aria-hidden=true href=#key-takeaways>#</a></h2><ul><li>Generics are zero-cost — the compiler generates specialized code per type (monomorphization), same as C++ templates.</li><li>Closures capture their environment — immutably, mutably, or by move.</li><li><code>Fn</code> / <code>FnMut</code> / <code>FnOnce</code> describe how a closure uses captured variables — <code>FnOnce</code> is most permissive, <code>Fn</code> most restrictive.</li><li>Iterators are lazy — adapters build a pipeline description, consuming adapters execute it.</li><li>Implementing <code>Iterator</code> (just <code>next()</code>) gives you the entire adapter library for free.</li><li><code>BitboardIter</code> is a natural fit for chess engines — clean square iteration with no boilerplate.</li><li><code>for x in collection</code> is sugar for <code>into_iter()</code> — understand which ownership mode you need.</li><li>Generics + closures + iterators compose naturally — most idiomatic Rust uses all three together.</li></ul></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/generics/>Generics</a></li><li><a href=https://sankethbk.github.io/blog/tags/closures/>Closures</a></li><li><a href=https://sankethbk.github.io/blog/tags/iterators/>Iterators</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>

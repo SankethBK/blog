@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Functions on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/functions/</link><description>Recent content in Functions on Sanketh's Blog</description><generator>Hugo -- 0.160.1</generator><language>en-us</language><lastBuildDate>Tue, 17 Mar 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/functions/index.xml" rel="self" type="application/rss+xml"/><item><title>Rust Notes — Module 1</title><link>https://sankethbk.github.io/blog/posts/rust/2026-03-17-rust-module-1-ownership/</link><pubDate>Tue, 17 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/rust/2026-03-17-rust-module-1-ownership/</guid><description>&lt;h1 id="rust-notes--module-1-the-basics--ownership"&gt;Rust Notes — Module 1: The Basics &amp;amp; Ownership&lt;/h1&gt;
+&lt;hr&gt;
+&lt;h2 id="1-why-rust"&gt;1. Why Rust?&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Language&lt;/th&gt;
+&lt;th&gt;Memory Management&lt;/th&gt;
+&lt;th&gt;Cost&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;C&lt;/td&gt;
+&lt;td&gt;Manual (&lt;code&gt;malloc&lt;/code&gt;/&lt;code&gt;free&lt;/code&gt;)&lt;/td&gt;
+&lt;td&gt;Unsafe — use-after-free, double-free, null deref&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Go&lt;/td&gt;
+&lt;td&gt;Garbage Collector&lt;/td&gt;
+&lt;td&gt;Safe, but runtime overhead (GC pauses)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Rust&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;Ownership system (compiler-enforced)&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;Safe + zero runtime cost&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Rust&amp;rsquo;s core promise: &lt;strong&gt;memory safety at compile time, with no garbage collector.&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-variables--mutability"&gt;2. Variables &amp;amp; Mutability&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Variables are &lt;strong&gt;immutable by default&lt;/strong&gt; in Rust.&lt;/li&gt;
+&lt;li&gt;You must explicitly opt into mutation with &lt;code&gt;mut&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-rust" data-lang="rust"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; x &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;5&lt;/span&gt;; &lt;span style="color:#75715e"&gt;// immutable — cannot be reassigned
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;// x = 6; // ❌ compile error
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;mut&lt;/span&gt; y &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;5&lt;/span&gt;; &lt;span style="color:#75715e"&gt;// mutable
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;y &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;6&lt;/span&gt;; &lt;span style="color:#75715e"&gt;// ✅ fine
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="shadowing"&gt;Shadowing&lt;/h3&gt;
+&lt;p&gt;You can redeclare a variable with &lt;code&gt;let&lt;/code&gt; in the same scope — this is called &lt;strong&gt;shadowing&lt;/strong&gt;:&lt;/p&gt;</description></item></channel></rss>
