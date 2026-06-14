@@ -235,3 +235,66 @@ Because `struct page` became too confusing—especially when dealing with "Compo
 They introduced a new concept called `struct folio`.
 
 A folio represents a memory allocation that is guaranteed not to be a random tail page of a larger block. The kernel community is currently in the multi-year process of converting hundreds of thousands of lines of code from using struct page to struct folio to make memory management safer and easier to reason about.
+
+
+## Zones
+
+### The Big Concept: Hardware Inequality
+
+Imagine a computer with 16GB of RAM.
+
+* The CPU can access all 16GB perfectly.
+* An old sound card might only have a 24-bit address bus. It can physically only "see" and transfer data (DMA) to the first **16 Megabytes** of RAM.
+* A modern 32-bit graphics card might only be able to see the first **4 Gigabytes** of RAM.
+
+If the kernel accidentally gave that old sound card a memory page located at the 10GB mark, the sound card literally couldn't reach it. The system would crash or corrupt data. **Zones prevent this.**
+
+
+### The Primary Zones (x86 Architecture)
+
+Here are the main zones you will encounter in the Linux kernel:
+
+#### 1. `ZONE_DMA` (The Bottom 16 MB)
+
+* **What it is:** The lowest 16 Megabytes of physical RAM.
+* **Why it exists:** Reserved exclusively for ancient ISA hardware and legacy devices that have severely limited Direct Memory Access (DMA) capabilities.
+* **Usage:** Extremely rare in modern systems, but kept for backward compatibility.
+
+#### 2. `ZONE_DMA32` (Up to 4 GB)
+
+* **What it is:** Physical RAM from 16 MB up to 4 GB.
+* **Why it exists:** Used for 32-bit devices (like older PCI cards) that can only address up to 4GB of physical memory.
+* **Usage:** If a driver requests memory with the `GFP_DMA32` flag, the allocator guarantees the returned page lives below the 4GB physical boundary.
+
+#### 3. `ZONE_NORMAL` (The "Everything Else" Zone)
+
+* **What it is:** All physical RAM above 4 GB (on modern 64-bit systems).
+* **Why it exists:** This is the standard, unrestricted memory. The kernel and CPU can access it perfectly, and modern 64-bit hardware can DMA into it without issue.
+* **Usage:** This is where the vast majority of your applications, page cache, and standard kernel allocations live.
+
+#### 4. `ZONE_HIGHMEM` (The 32-bit Nightmare)
+
+* **What it is:** A historical zone for memory that the CPU cannot permanently map into the kernel's virtual address space.
+* **Why it exists:** On old 32-bit CPUs, the kernel only had ~1GB of virtual address space. If you had 4GB of physical RAM, the kernel couldn't see it all at once. It had to temporarily "map" a window to high memory, read it, and unmap it.
+* **Usage:** Mostly irrelevant on modern 64-bit CPUs (since a 64-bit kernel can map petabytes of RAM simultaneously), but you will still see it referenced everywhere in the kernel source code.
+
+
+### Two Special Modern Zones
+
+As systems evolved, developers added logical zones to solve software problems, rather than just hardware limits:
+
+* **`ZONE_MOVABLE`:** A fake, logical zone used to fight fragmentation. It is populated only by memory that can be easily moved (like anonymous userspace pages or the Page Cache). By keeping movable pages isolated here, the kernel ensures that large, contiguous blocks of RAM are always available when a hardware device suddenly needs them.
+* **`ZONE_DEVICE`:** Used for persistent memory (like Intel Optane PMEM) or memory that lives directly on a device (like a GPU) but is being mapped into the CPU's address space.
+
+
+### How it connects to your `GFP` Flags
+
+Earlier, we talked about how kernel allocators use `GFP` (Get Free Page) flags. This is exactly where they intersect!
+
+When a kernel developer writes:
+`page = alloc_pages(GFP_DMA32, order);`
+
+They are telling the Buddy Allocator: *"I need a block of pages, but you MUST pull them from `ZONE_DMA32` or lower, because my hardware cannot reach `ZONE_NORMAL`."*
+
+The Buddy Allocator maintains a separate free list for *each* zone. It will check the `ZONE_DMA32` list. If that zone is out of memory, the allocation fails, even if `ZONE_NORMAL` has 10 GB of free space.
+
