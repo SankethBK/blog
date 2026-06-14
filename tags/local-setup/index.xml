@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Local-Setup on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/local-setup/</link><description>Recent content in Local-Setup on Sanketh's Blog</description><generator>Hugo -- 0.163.1</generator><language>en-us</language><lastBuildDate>Sun, 01 Mar 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/local-setup/index.xml" rel="self" type="application/rss+xml"/><item><title>Setting up Linux Kernel in Local</title><link>https://sankethbk.github.io/blog/posts/operating-systems/linux/2026-05-10-setting-up-linux-kernel/</link><pubDate>Sun, 01 Mar 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/operating-systems/linux/2026-05-10-setting-up-linux-kernel/</guid><description>&lt;h1 id="kernel-lab-setup-checklist"&gt;Kernel Lab Setup Checklist&lt;/h1&gt;
+&lt;h2 id="cve-2026-31431-copy-fail--debug-environment"&gt;CVE-2026-31431 (Copy Fail) — Debug Environment&lt;/h2&gt;
+&lt;p&gt;This checklist covers everything needed to go from zero to a running kernel inside
+QEMU with GDB attached and a breakpoint set in the vulnerable function. Follow in
+order — each step depends on the previous one.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="theory-what-were-building-and-why"&gt;Theory: What We&amp;rsquo;re Building and Why&lt;/h2&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;Your Ubuntu laptop
+├── QEMU ← virtual machine running your custom kernel
+│ └── bzImage ← the compiled kernel (compressed, no debug symbols)
+└── GDB ← debugger attached to QEMU via TCP port 1234
+└── vmlinux ← same kernel with full debug symbols (used by GDB only)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;strong&gt;Why two kernel files?&lt;/strong&gt;&lt;/p&gt;</description></item></channel></rss>

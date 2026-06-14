@@ -2,59 +2,59 @@
 
 1. The Philosophy
 
-  
-      
-          Language
-          Error Mechanism
-          Problem
-      
-  
-  
-      
-          C
-          Return codes (-1, NULL, errno)
-          Easy to ignore, no enforcement
-      
-      
-          Go
-          (value, error) tuples
-          Better, but still ignorable
-      
-      
-          Rust
-          Result<T, E> in the type system
-          Impossible to ignore — compiler enforced
-      
-  
+	
+			
+					Language
+					Error Mechanism
+					Problem
+			
+	
+	
+			
+					C
+					Return codes (-1, NULL, errno)
+					Easy to ignore, no enforcement
+			
+			
+					Go
+					(value, error) tuples
+					Better, but still ignorable
+			
+			
+					Rust
+					Result<T, E> in the type system
+					Impossible to ignore — compiler enforced
+			
+	
 
 If a function can fail, its return type says so. You cannot use the success value without handling the error case first. No hidden exceptions, no surprise crashes from ignored error codes."><meta name=author content><link rel=canonical href=https://sankethbk.github.io/blog/posts/rust/2026-03-29-rust-module-6-error-handling/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.a7100ced1662b06824a54ff97bb59f1d1070a2db645a1d0a8d848e4ffd63ac7a.css integrity="sha256-pxAM7RZisGgkpU/5e7WfHRBwottkWh0KjYSOT/1jrHo=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/rust/2026-03-29-rust-module-6-error-handling/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/rust/2026-03-29-rust-module-6-error-handling/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="Rust Notes — Module 6"><meta property="og:description" content="Rust Notes — Module 6: Error Handling 1. The Philosophy Language Error Mechanism Problem C Return codes (-1, NULL, errno) Easy to ignore, no enforcement Go (value, error) tuples Better, but still ignorable Rust Result<T, E> in the type system Impossible to ignore — compiler enforced If a function can fail, its return type says so. You cannot use the success value without handling the error case first. No hidden exceptions, no surprise crashes from ignored error codes."><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2026-03-29T00:00:00+00:00"><meta property="article:modified_time" content="2026-03-29T00:00:00+00:00"><meta property="article:tag" content="Error Handling"><meta property="article:tag" content="Result"><meta name=twitter:card content="summary"><meta name=twitter:title content="Rust Notes — Module 6"><meta name=twitter:description content="Rust Notes — Module 6: Error Handling
 
 1. The Philosophy
 
-  
-      
-          Language
-          Error Mechanism
-          Problem
-      
-  
-  
-      
-          C
-          Return codes (-1, NULL, errno)
-          Easy to ignore, no enforcement
-      
-      
-          Go
-          (value, error) tuples
-          Better, but still ignorable
-      
-      
-          Rust
-          Result<T, E> in the type system
-          Impossible to ignore — compiler enforced
-      
-  
+	
+			
+					Language
+					Error Mechanism
+					Problem
+			
+	
+	
+			
+					C
+					Return codes (-1, NULL, errno)
+					Easy to ignore, no enforcement
+			
+			
+					Go
+					(value, error) tuples
+					Better, but still ignorable
+			
+			
+					Rust
+					Result<T, E> in the type system
+					Impossible to ignore — compiler enforced
+			
+	
 
 If a function can fail, its return type says so. You cannot use the success value without handling the error case first. No hidden exceptions, no surprise crashes from ignored error codes."><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"Rust Notes — Module 6","item":"https://sankethbk.github.io/blog/posts/rust/2026-03-29-rust-module-6-error-handling/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Rust Notes — Module 6","name":"Rust Notes — Module 6","description":"Rust Notes — Module 6: Error Handling 1. The Philosophy Language Error Mechanism Problem C Return codes (-1, NULL, errno) Easy to ignore, no enforcement Go (value, error) tuples Better, but still ignorable Rust Result\u0026lt;T, E\u0026gt; in the type system Impossible to ignore — compiler enforced If a function can fail, its return type says so. You cannot use the success value without handling the error case first. No hidden exceptions, no surprise crashes from ignored error codes.\n","keywords":["error handling","result"],"articleBody":"Rust Notes — Module 6: Error Handling 1. The Philosophy Language Error Mechanism Problem C Return codes (-1, NULL, errno) Easy to ignore, no enforcement Go (value, error) tuples Better, but still ignorable Rust Result in the type system Impossible to ignore — compiler enforced If a function can fail, its return type says so. You cannot use the success value without handling the error case first. No hidden exceptions, no surprise crashes from ignored error codes.\n2. Result enum Result\u003cT, E\u003e { Ok(T), // success — contains the value of type T Err(E), // failure — contains the error of type E } Basic Usage // cannot call methods on Result directly let board = Board::from_fen(\"...\"); // type: Result // board.pretty_print(); // ❌ compile error // must handle both cases match Board::from_fen(\"...\") { Ok(board) =\u003e board.pretty_print(), Err(e) =\u003e println!(\"Invalid FEN: {:?}\", e), } Functions that Return Result fn parse_number(s: \u0026str) -\u003e Result\u003ci32, String\u003e { s.parse::\u003ci32\u003e().map_err(|e| e.to_string()) } // caller must handle the Result match parse_number(\"42\") { Ok(n) =\u003e println!(\"Got: {}\", n), Err(e) =\u003e println!(\"Error: {}\", e), } 3. Option enum Option\u003cT\u003e { Some(T), // value exists None, // no value — no reason given } Use Option when absence is normal and expected (not an error). Use Result when failure needs an explanation.\n// piece_on returns None for empty squares — not an error, just absence fn piece_on(\u0026self, sq: Square) -\u003e Option\u003c(Color, Piece)\u003e { ... } // from_fen returns Err with a reason — failure needs explanation fn from_fen(fen: \u0026str) -\u003e Result\u003cBoard, FenError\u003e { ... } Option vs Result Option Result Use when value may or may not exist operation may succeed or fail Failure carries info ❌ No ✅ Yes Engine examples piece_on, en_passant from_fen, file I/O 4. The ? Operator ? is shorthand for: unwrap Ok/Some and continue, or return the error/None immediately to the caller.\n// without ? fn parse_castling(field: \u0026str) -\u003e Result\u003cu8, FenError\u003e { match inner_parse(field) { Ok(val) =\u003e val, Err(e) =\u003e return Err(e), } } // with ? — identical behavior fn parse_castling(field: \u0026str) -\u003e Result\u003cu8, FenError\u003e { let val = inner_parse(field)?; // returns Err early if inner_parse fails Ok(val) } Chaining ? pub fn from_fen(fen: \u0026str) -\u003e Result\u003cBoard, FenError\u003e { // each ? either unwraps and continues, or returns Err early board.castling_rights = parse_castling_rights(castling)?; board.en_passant = parse_en_passant(en_passant)?; board.halfmove_clock = halfmove.parse::\u003cu32\u003e().map_err(|_| FenError::InvalidHalfmoveClock)?; Ok(board) } ? on Option ? works on Option too — returns None early if the value is absent:\nfn first_piece_value(board: \u0026Board, sq: Square) -\u003e Option\u003ci32\u003e { let (_, piece) = board.piece_on(sq)?; // returns None if square empty Some(piece.value()) } ⚠️ ? only works inside functions that return Result or Option. Using it in main requires main to return Result.\nfn main() -\u003e Result\u003c(), Box\u003cdyn std::error::Error\u003e\u003e { let board = Board::from_fen(\"...\")?; Ok(()) } 5. unwrap and expect For cases where you’re certain the operation won’t fail:\n// unwrap — panics with generic message if Err/None let board = Board::from_fen(\"...\").unwrap(); // expect — panics with YOUR message if Err/None (always prefer this) let board = Board::from_fen(\"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\") .expect(\"starting position FEN must be valid\"); Always prefer expect over unwrap — the message explains why you expected success, which is invaluable when debugging a panic.\n⚠️ Never use unwrap/expect in production paths. Use them for: known-valid constants (starting position FEN), tests, and prototyping. Replace with proper error handling in real code paths.\n6. Defining Custom Error Types #[derive(Debug, Clone, PartialEq, Eq)] pub enum FenError { InvalidFieldCount, InvalidPiecePlacement, InvalidSideToMove, InvalidCastlingRights, InvalidEnPassant, InvalidHalfmoveClock, InvalidFullmoveNumber, } #[derive(Debug)] is required — lets you print with {:?}. For user-facing errors, implement Display:\nuse std::fmt; impl fmt::Display for FenError { fn fmt(\u0026self, f: \u0026mut fmt::Formatter) -\u003e fmt::Result { match self { FenError::InvalidFieldCount =\u003e write!(f, \"FEN must have exactly 6 fields\"), FenError::InvalidPiecePlacement =\u003e write!(f, \"invalid piece placement string\"), FenError::InvalidSideToMove =\u003e write!(f, \"side to move must be 'w' or 'b'\"), FenError::InvalidCastlingRights =\u003e write!(f, \"invalid castling rights\"), FenError::InvalidEnPassant =\u003e write!(f, \"invalid en passant square\"), FenError::InvalidHalfmoveClock =\u003e write!(f, \"invalid halfmove clock\"), FenError::InvalidFullmoveNumber =\u003e write!(f, \"invalid fullmove number\"), } } } // now {} works in addition to {:?} println!(\"{}\", FenError::InvalidFieldCount); // \"FEN must have exactly 6 fields\" println!(\"{:?}\", FenError::InvalidFieldCount); // \"InvalidFieldCount\" 7. Result and Option Methods Transforming Values let r: Result\u003ci32, \u0026str\u003e = Ok(42); let o: Option\u003ci32\u003e = Some(42); // map — transform the inner value, leave Err/None untouched r.map(|x| x * 2) // Ok(84) o.map(|x| x * 2) // Some(84) // map_err — transform only the error type r.map_err(|e| format!(\"error: {}\", e)) // Ok(42) — maps only if Err // and_then — chain operations that also return Result/Option (flatmap) r.and_then(|x| if x \u003e 0 { Ok(x * 2) } else { Err(\"negative\") }) o.and_then(|x| if x \u003e 0 { Some(x * 2) } else { None }) Providing Defaults r.unwrap_or(0) // 42 — or 0 if Err o.unwrap_or(0) // 42 — or 0 if None // unwrap_or_else — default computed lazily from a closure r.unwrap_or_else(|_| expensive_default()) o.unwrap_or_else(|| expensive_default()) Checking Without Consuming r.is_ok() // true r.is_err() // false o.is_some() // true o.is_none() // false Converting Between Result and Option // Result → Option (discards the error) r.ok() // Some(42) // Option → Result (gives it an error value) o.ok_or(FenError::InvalidFieldCount) // Ok(42) if Some, Err(InvalidFieldCount) if None // ok_or_else — error computed lazily from a closure // use this when constructing the error is expensive or needs context o.ok_or_else(|| { eprintln!(\"piece lookup failed\"); FenError::InvalidPiecePlacement }) // Same as ok_or but the Err value is only constructed if actually None // Prefer ok_or_else over ok_or when the error value is non-trivial Filtering Options // filter — turns Some into None if predicate fails o.filter(|x| *x \u003e 10) // None — 42 \u003e 10 so stays Some(42)... wait Some(5).filter(|x| *x \u003e 10) // None — 5 fails the predicate Some(42).filter(|x| *x \u003e 10) // Some(42) — 42 passes // flatten — Option","wordCount":"1329","inLanguage":"en","datePublished":"2026-03-29T00:00:00Z","dateModified":"2026-03-29T00:00:00Z","mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/rust/2026-03-29-rust-module-6-error-handling/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
 <svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
