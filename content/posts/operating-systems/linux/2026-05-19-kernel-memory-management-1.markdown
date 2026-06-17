@@ -1,9 +1,12 @@
 ---
-title:  "Memory Maangement in Kernel"
-date:   2026-05-19
+title: "Memory Management in Kernel"
+date: 2026-05-19T00:00:00Z
 categories: ["operating systems", "linux"]
 tags: ["memory", "pages"]
-
+draft: false
+ShowToc: true
+TocOpen: false
+hidemeta: false
 ---
 
 # Memory Management in Kernel
@@ -297,4 +300,243 @@ When a kernel developer writes:
 They are telling the Buddy Allocator: *"I need a block of pages, but you MUST pull them from `ZONE_DMA32` or lower, because my hardware cannot reach `ZONE_NORMAL`."*
 
 The Buddy Allocator maintains a separate free list for *each* zone. It will check the `ZONE_DMA32` list. If that zone is out of memory, the allocation fails, even if `ZONE_NORMAL` has 10 GB of free space.
+
+## Low Level API's for Memory Management
+
+These APIs are the direct interface to the **Buddy Allocator**. When you use these, you are bypassing the higher-level slab/slub allocators (`kmalloc`) and asking the kernel for raw, contiguous blocks of physical memory.
+
+Before looking at the functions, you need to know about **`order`**.
+The low-level allocator does not take a "size in bytes." It takes an `order`, which dictates the number of pages based on powers of two: **2^order**.
+
+* `order = 0` → 1 page (2^0)
+* `order = 1` → 2 contiguous pages (2^1)
+* `order = 3` → 8 contiguous pages (2^3)
+
+Here are the compressed notes for the core low-level page APIs.
+
+---
+
+### 1. APIs that return a `struct page` (Physical Tracking)
+
+These functions return a pointer to the `struct page` metadata object, **not** a memory address you can directly read/write to. You use these when you are doing low-level memory manipulation (like mapping hardware or editing page tables).
+
+* `alloc_pages(gfp_mask, order)`
+* **The Big One.** Allocates 2^order physically contiguous pages.
+* Returns a pointer to the `struct page` of the *first* page in the block (the "head" page). Returns `NULL` on failure.
+
+
+* `alloc_page(gfp_mask)`
+* A shortcut macro for `alloc_pages(gfp_mask, 0)`. Gets exactly one page.
+
+
+
+### 2. APIs that return a Virtual Address (Usable Memory)
+
+These functions allocate the pages *and* automatically return the virtual memory address pointing to the actual data. You use these when your C code actually needs to store data in the pages. *(Note: They return an `unsigned long` that you cast to a pointer).*
+
+* `__get_free_pages(gfp_mask, order)`
+* Allocates 2^order contiguous pages and returns a logical virtual address to the start of the block.
+
+
+* `__get_free_page(gfp_mask)`
+* Shortcut for `__get_free_pages(gfp_mask, 0)`. Gets one page.
+
+#### How is Getting Virtual Address from __get_free_page Useful?
+
+`alloc_pages()` returns `struct page *` which is metadata describing the physical pages. 
+
+But we can't do
+
+```c
+struct page *page = alloc_pages(...);
+
+page[0] = 42;
+```
+
+because `page` is only metadata about the actual emmory allocated, the the memory itself. 
+
+`__get_free_page()` returns the actual start of the allocated memory as kernel virtual address (unsigned long).
+
+So kernel can do
+
+```c
+unsigned long addr = __get_free_page(...);
+
+char *buf = (char *)addr;
+
+buf[0] = 'A';
+```
+
+### 3. APIs for Getting ZEROED Pages
+
+**Why zero them?** If the kernel allocates a recycled page and gives it to a userspace process without clearing it, the new process might be able to read residual passwords, crypto keys, or data left behind by the previous owner.
+
+* `get_zeroed_page(gfp_mask)`
+* Allocates a single page, fills it entirely with zeros, and returns the virtual address.
+* *Note:* There is no `get_zeroed_pages()` for multiple pages.
+
+
+* **The `__GFP_ZERO` Flag**
+* If you need multiple zeroed pages, or if you need the `struct page *` instead of the virtual address, you simply add the `__GFP_ZERO` flag to your `gfp_mask`.
+* *Example:* `alloc_pages(GFP_KERNEL | __GFP_ZERO, 2)` → Returns 4 zeroed pages.
+
+
+
+### 4. APIs for Freeing the Pages
+
+You must free pages using the exact same `order` you used to allocate them, or the Buddy Allocator will severely corrupt its internal tracking.
+
+* `__free_pages(struct page *page, order)`
+* Frees a block of pages if you hold the `struct page` pointer.
+
+
+* `free_pages(unsigned long addr, order)`
+* Frees a block of pages if you hold the virtual memory address.
+
+
+* `__free_page(struct page *page)` / `free_page(unsigned long addr)`
+* Shortcuts for freeing a single page (`order = 0`).
+
+
+
+---
+
+### Cheat Sheet Summary
+
+| Function | Returns | Number of Pages | Zeroed? |
+| --- | --- | --- | --- |
+| `alloc_pages(mask, order)` | `struct page *` | 2^order | No |
+| `alloc_page(mask)` | `struct page *` | 1 | No |
+| `__get_free_pages(mask, order)` | Virtual Address | 2^order | No |
+| `__get_free_page(mask)` | Virtual Address | 1 | No |
+| `get_zeroed_page(mask)` | Virtual Address | 1 | **Yes** |
+| *(Any above) +* `__GFP_ZERO` | Depends on func | Depends on func | **Yes** |
+
+## The Kernel's Virtual Address Space
+
+### Why does Kernel Uses Virtual Addresses in First Place?
+
+We noticed that `__get_free_page` returns the virtual address in kernel's address space. It raises the question, why is kernel using the virtual addresses in the first place?
+
+The whole idea of virtual address space was to provide user space processes a notion that they are running independently. It also simplifies how user space accesses memory and adds a layer of security b/w user psace processes. But why does kernel also uses the same virtual address concept? Since the kernel obviously can see the actual physical address frames, and in fact it is the one to build and maintain page tables, why can't it just use the actual physical addresses?
+
+The easier answer is MMU, all the memory accesses have to go via MMU and MMU can only receive VA as input, it will search the PA using 4 level page tables and return it. But if kernel passes PA, then it's not going to be present in the page table which results in failure. 
+
+**The Real Reason: The Kernel Doesn't Want to Use Physical Addresses**
+
+Even if kernel could magically bypass the MMU, the kernel would still choose virtual addresses. Here's why.
+
+#### Problem 1: Physical Memory is Discontinuous
+
+When you boot a machine with 16GB RAM, the physical address space is not a clean `0x0` to `0x3FFFFFFF` slab. It looks more like this:
+
+```
+0x00000000 - 0x0009FFFF  →  Usable RAM
+0x000A0000 - 0x000BFFFF  →  VGA framebuffer (HOLE)
+0x000C0000 - 0x000FFFFF  →  BIOS ROM (HOLE)
+0x00100000 - 0x3FFFFFFF  →  Usable RAM
+0x40000000 - 0x403FFFFF  →  MMIO for some device (HOLE)
+...
+```
+
+
+ACPI tables, MMIO regions, firmware reservations — all punching holes in physical memory. If the kernel used raw physical addresses, every single subsystem would need to know about this map and dance around the holes. Virtual addresses let the kernel present a clean, contiguous view over a physically fragmented landscape.
+
+#### Problem 2: The Kernel Has to Map Hardware Too
+
+The kernel doesn't just manage RAM — it talks to device registers, framebuffers, PCIe BARs. These live at physical addresses outside RAM entirely.
+
+With virtual addresses, the kernel can map a GPU framebuffer at some sane virtual address like `0xFFFF880040000000` and just treat it like memory. Without that abstraction, you'd need to constantly distinguish "is this a RAM address or a device address" at every layer of the stack.
+
+#### Problem 3: vmalloc — The Killer Use Case
+
+This is the one that really shows why virtual addresses are necessary by design, not just convenience.
+The Buddy Allocator gives you physically contiguous pages. But physical contiguity is rare and expensive — fragmentation eats it up. For large kernel allocations (driver buffers, module code), there often aren't enough contiguous physical pages.
+
+`vmalloc()` solves this by allocating physically scattered pages and mapping them into a virtually contiguous region:
+
+```
+Physical:                     Virtual (kernel):
+Page at 0x1000  ──────────►  0xFFFF000000000000
+Page at 0x9000  ──────────►  0xFFFF000000001000
+Page at 0x3000  ──────────►  0xFFFF000000002000
+```
+
+The code using this memory sees a flat buffer. Without virtual addresses, this is simply impossible — you can't make scattered physical pages look contiguous to anyone.
+
+### The Full Kernel Virtual Address Layout
+
+```
+0xFFFF888000000000  →  Direct map        (all physical RAM, linear)
+0xFFFF000000000000  →  vmalloc area       (scattered pages, contiguous VA)
+0xFFFFFFFF80000000  →  Kernel text/data   (the kernel image itself)
+0xFFFFFFFFFF000000  →  Fixmap             (special fixed-purpose slots)
++ per-CPU areas, KASAN shadow, module space, vsyscall page, etc.
+```
+
+#### 1. The Direct Map Region (The Fast Lane)
+
+The Direct Map is a massive, contiguous region in the kernel's top-half virtual address space where the kernel maps all physical RAM directly, byte-for-byte.
+
+Instead of scattering memory randomly, the kernel creates a perfectly parallel virtual mirror of the physical hardware.
+
+##### 1. The Golden Formula
+
+Because the mapping is perfectly linear, the kernel can bypass complex page-table lookups entirely when it needs to translate between physical and virtual addresses. It uses basic arithmetic:
+
+```
+ - Virtual Address = Physical Address + PAGE_OFFSET
+
+ - Physical Address = Virtual Address - PAGE_OFFSET
+```
+
+(Note: `PAGE_OFFSET` is a hardcoded constant in the kernel architecture code. On modern x86_64, it is typically a massive number like `0xffff888000000000`).
+
+It's a permanent, boot-time mapping of all physical RAM into the kernel's virtual address space, starting at `0xFFFF888000000000`.
+
+```
+Physical RAM          Direct Map (kernel virtual)
+
+0x0000_0000     ───►  0xFFFF888000000000
+0x0000_1000     ───►  0xFFFF888000001000
+0x0000_2000     ───►  0xFFFF888000002000
+...
+0x4000_0000     ───►  0xFFFF8884_00000000
+(1GB physical)        (1GB offset into direct map)
+```
+
+The math is just: `virtual = physical + 0xFFFF888000000000`
+This is what `__va()` and `__pa()` do in the kernel source:
+
+```c
+#define __va(x)  ((void *)((unsigned long)(x) + PAGE_OFFSET))
+#define __pa(x)  ((unsigned long)(x) - PAGE_OFFSET)
+// PAGE_OFFSET = 0xFFFF888000000000
+```
+
+So when the kernel has a physical address — say from a struct page or a DMA report — it can reach the actual memory in one line, no page table manipulation needed.
+
+##### 2. How the Kernel Builds It (Boot Time)
+
+When the computer turns on, the CPU is running in physical memory mode. Before turning on the MMU (Memory Management Unit) to enable virtual memory, the kernel must set up its own page tables:
+
+1. Hardware Discovery: The kernel asks the BIOS/UEFI, "Where are the physical RAM chips located?" (This is called the e820 memory map).
+
+2. The Loop: The kernel writes a simple loop iterating over every available physical page frame (starting from physical address `0x0`).
+
+3. Sequential Mapping: For every physical page it finds, it creates a Page Table Entry (PTE) mapping it directly to `PAGE_OFFSET + current_physical_address`.
+
+4. Flipping the Switch: Once the loop finishes mapping all RAM, the kernel turns on the MMU. From that microsecond forward, the CPU only uses virtual addresses, but the kernel retains a perfect mathematical shortcut to physical hardware.
+
+##### 3. Why the Direct Map Exists?
+
+Remember that once MMU is enabled, it expects only VA's as input. The direct map is the cheapest form of virtual address translation for kernel's virtual address space. Because the way its setup is VA is always at a constant offset from PA, so kernel can easily derive one from another with simple math. Morever it sets up actual page table entries mapping these VA's to PA's because MMU is not aware of this cheap trick, it always refers to the page table and gets the corresponding PA from there. 
+
+So in the end, its a win-win scenario for both kernel and MMU. The kernel's hypothetical direct map allows is to translate VA's to PA's and vice verse through simple math and MMU gets proper page table entries.
+
+##### 4. Advanced Optimization: HugePages
+
+Mapping 16GB of RAM in 4KB chunks would require creating 4 million Page Table Entries, wasting a massive amount of RAM just to hold the map itself.
+
+To solve this, the kernel does not use 4KB pages for the Direct Map. It tells the hardware MMU to use HugePages (usually 2MB or 1GB pages) for this specific region. This drastically shrinks the size of the kernel's page tables and makes the hardware TLB (Translation Lookaside Buffer) extremely efficient.
 
