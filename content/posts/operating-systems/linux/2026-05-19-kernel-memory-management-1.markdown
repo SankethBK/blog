@@ -601,3 +601,75 @@ This is why vmalloc is used only for large, infrequent allocations — drivers, 
 `__pa()` subtracts `PAGE_OFFSET` and assumes the result is a valid physical address. This is only true inside the direct map. On a vmalloc address, `__pa()` returns garbage — a physical address that has nothing to do with where the memory actually is.
 
 This is a real class of kernel bug. If you ever hold a vmalloc'd pointer, never pass it to `__pa()` or `virt_to_phys()`. The compiler won't stop you.
+
+Right — that "multiple VAs to one PA" insight is the key that unlocks the rest of this. Once you accept that page tables are just flexible mappings with no exclusivity rule, the rest of the kernel's virtual address layout stops looking mysterious and starts looking like "different regions, each built for a different job."
+
+Here's the rest of the map you need on x86-64.
+
+### 3. Kernel Text/Data Region (`0xFFFFFFFF80000000`)
+
+This is where the **kernel image itself** lives — the compiled code of the kernel, its global variables, `.bss`, `.rodata`, all of it.
+
+Why a separate region instead of just using the direct map? Because this needs to be at a **fixed, predictable address** decided at link time, so that function calls inside the kernel resolve to constant addresses baked into the compiled binary. The direct map shifts depending on how much RAM you have and where it's physically laid out; the kernel's own code can't depend on that.
+
+```
+movq $0xFFFFFFFF81234560, %rax   ; call some_kernel_function
+```
+
+This only works if the kernel's code address is fixed and known at compile/link time, not computed at boot.
+
+(Syscalls depend on interrupt tables mapping numbers to fixed memory addresses)
+
+### 4. Module Space
+
+Kernel modules (`insmod`'d drivers, filesystems) get loaded into a region adjacent to kernel text, **not** the direct map and **not** vmalloc.
+
+Why not vmalloc? Because module code needs to be **executable**, and historically vmalloc regions had different protection defaults. Also, module addresses need to be close enough to kernel text for certain relocation types (some CPU architectures have limited branch-offset ranges, so "near" placement matters for performance and correctness).
+
+So: another purpose, another carved-out region.
+
+### 5. Fixmap (`0xFFFFFFFFFF000000`-ish)
+
+This is a small set of **fixed virtual address slots**, set up very early at boot (before normal page table machinery is even fully running), used for things like:
+
+- the APIC (interrupt controller) registers
+- early consoles
+- ACPI tables before the rest of memory management is online
+
+The whole point: these are addresses you need to *know at compile time*, before you can dynamically allocate or look anything up. Fixmap exists because at certain points during boot, "dynamically map something" isn't an option yet — you need a hardcoded slot that's guaranteed to exist.
+
+## 4. Per-CPU Areas
+
+Each CPU core gets its **own private copy** of certain kernel data — scheduler run queues, statistics counters, local caches. The *same* per-CPU variable name resolves to a **different physical page** depending on which CPU is currently executing.
+
+```c
+DEFINE_PER_CPU(int, my_counter);
+
+// On CPU 0, this resolves to one physical page
+// On CPU 3, this resolves to a different physical page
+this_cpu_inc(my_counter);
+```
+
+This is the wildest case of "same virtual concept, different physical backing" — except here it's not even the *same* virtual address; the kernel uses a base + per-CPU offset trick (stored in a CPU register) so the *same source code* transparently lands on different memory per core. This avoids cache-line contention between cores hammering the same counter.
+
+## 5. KASAN Shadow Memory (debug builds)
+
+If you've compiled a kernel with KASAN (Kernel Address Sanitizer) — which you might, since you're doing kernel debugging — there's a **shadow region** that mirrors the entire address space at 1/8th scale, tracking which bytes are valid to access. Every real memory access gets an extra check against its shadow byte to catch use-after-free and out-of-bounds bugs.
+
+This is relevant to you specifically: if you ever build a debug kernel for your CVE-2026-31431 work and see addresses in the `0xFFFFEC00...` range in a crash dump, that's KASAN shadow memory, not "real" data — it's metadata about memory, not memory being used by the bug itself.
+
+## The Pattern Across All of These
+
+Every region answers the same two questions differently:
+
+| Region | "What goes here?" | "Why not just direct map?" |
+|---|---|---|
+| Direct map | All physical RAM | — (this is the baseline) |
+| vmalloc | Large scattered allocations | Needs *contiguous* VA from non-contiguous PA |
+| Kernel text | The kernel binary | Needs a *fixed, link-time-known* address |
+| Modules | Loadable driver code | Needs proximity to kernel text + execute permissions |
+| Fixmap | Boot-critical hardware | Needs to exist *before* dynamic mapping works |
+| Per-CPU | Per-core private data | Needs *different* physical backing per CPU, same source |
+| KASAN shadow | Memory-safety metadata | Needs a parallel universe mirroring all of memory |
+
+Each one exists because the direct map's one good trick — "VA = PA + constant" — is only useful when you actually want a linear, permanent, 1:1 mirror of physical layout. Everything else needs some other property (fixed address, contiguity from chaos, per-core identity, execute permission, pre-boot availability), and the only way to get a different property is to build a different mapping with different rules.
