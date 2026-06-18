@@ -638,7 +638,7 @@ This is a small set of **fixed virtual address slots**, set up very early at boo
 
 The whole point: these are addresses you need to *know at compile time*, before you can dynamically allocate or look anything up. Fixmap exists because at certain points during boot, "dynamically map something" isn't an option yet — you need a hardcoded slot that's guaranteed to exist.
 
-## 4. Per-CPU Areas
+### 6. Per-CPU Areas
 
 Each CPU core gets its **own private copy** of certain kernel data — scheduler run queues, statistics counters, local caches. The *same* per-CPU variable name resolves to a **different physical page** depending on which CPU is currently executing.
 
@@ -652,13 +652,13 @@ this_cpu_inc(my_counter);
 
 This is the wildest case of "same virtual concept, different physical backing" — except here it's not even the *same* virtual address; the kernel uses a base + per-CPU offset trick (stored in a CPU register) so the *same source code* transparently lands on different memory per core. This avoids cache-line contention between cores hammering the same counter.
 
-## 5. KASAN Shadow Memory (debug builds)
+### 7. KASAN Shadow Memory (debug builds)
 
 If you've compiled a kernel with KASAN (Kernel Address Sanitizer) — which you might, since you're doing kernel debugging — there's a **shadow region** that mirrors the entire address space at 1/8th scale, tracking which bytes are valid to access. Every real memory access gets an extra check against its shadow byte to catch use-after-free and out-of-bounds bugs.
 
 This is relevant to you specifically: if you ever build a debug kernel for your CVE-2026-31431 work and see addresses in the `0xFFFFEC00...` range in a crash dump, that's KASAN shadow memory, not "real" data — it's metadata about memory, not memory being used by the bug itself.
 
-## The Pattern Across All of These
+**The Pattern Across All of These**
 
 Every region answers the same two questions differently:
 
@@ -673,3 +673,51 @@ Every region answers the same two questions differently:
 | KASAN shadow | Memory-safety metadata | Needs a parallel universe mirroring all of memory |
 
 Each one exists because the direct map's one good trick — "VA = PA + constant" — is only useful when you actually want a linear, permanent, 1:1 mirror of physical layout. Everything else needs some other property (fixed address, contiguity from chaos, per-core identity, execute permission, pre-boot availability), and the only way to get a different property is to build a different mapping with different rules.
+
+## High Level (Byte) Allocators 
+
+### kmalloc() and vmalloc()
+
+#### kmalloc() — the everyday allocator
+
+The go-to for almost all kernel allocations. Returns a **physically and virtually contiguous** chunk of memory, carved out of the direct map region. This is why `__pa()` works on kmalloc'd pointers — the memory genuinely lives in the direct map.
+
+```c
+struct dog *p = kmalloc(sizeof(struct dog), GFP_KERNEL);
+if (!p)
+    /* always check — never assume */
+```
+
+One subtlety: kmalloc may give you *more* than you asked for, because the underlying allocator is page/slab-based and rounds up. You'll never get less, but you can't know how much extra you got, so don't use it.
+
+Free with `kfree()`. Calling `kfree(NULL)` is safe. Calling it on a non-kmalloc'd pointer, or double-freeing, is a kernel bug.
+
+#### vmalloc() — when you just need the VA to be contiguous
+
+Physically scattered pages, virtually contiguous. Slower than kmalloc because every access triggers a real 4-level page table walk and causes TLB pressure. Use it only when you need a large region and can't guarantee physical contiguity — the canonical example in the kernel itself is loading modules at runtime.
+
+```c
+buf = vmalloc(16 * PAGE_SIZE);
+/* ... */
+vfree(buf);   /* can sleep, don't call from interrupt context */
+```
+
+Never call `__pa()` on a vmalloc pointer. The result is garbage.
+
+#### GFP flags — the ones that actually matter
+
+Three categories exist (action, zone, type) but in practice you almost always reach for a **type flag**, which bundles the right action + zone combination for your context.
+
+The decision tree is simple:
+
+| Where are you? | Flag |
+|---|---|
+| Process context, can sleep | `GFP_KERNEL` — default choice, highest success probability |
+| Interrupt handler / softirq / tasklet / holding spinlock | `GFP_ATOMIC` — cannot sleep, uses emergency reserves, more likely to fail |
+| Block I/O code, must not recurse into more I/O | `GFP_NOIO` |
+| Filesystem code, must not recurse into more FS ops | `GFP_NOFS` — classic deadlock prevention flag |
+| DMA-able memory | `GFP_DMA | GFP_KERNEL` (or `GFP_ATOMIC` if no sleep) |
+
+`GFP_KERNEL` vs `GFP_ATOMIC` is the axis that matters most. `GFP_KERNEL` can put the caller to sleep, swap pages, flush dirty data — it will fight hard to get you memory. `GFP_ATOMIC` cannot do any of that; it grabs from emergency reserves or fails immediately. This is why interrupt handlers are stuck with it and why it fails more often under memory pressure.
+
+`GFP_NOFS` is worth internalizing separately — it exists entirely to prevent the deadlock where a filesystem allocation triggers more filesystem operations, which trigger more allocations, which loop forever. If you ever write filesystem or block layer code, this flag is why you don't just use `GFP_KERNEL` everywhere.
