@@ -721,3 +721,84 @@ The decision tree is simple:
 `GFP_KERNEL` vs `GFP_ATOMIC` is the axis that matters most. `GFP_KERNEL` can put the caller to sleep, swap pages, flush dirty data — it will fight hard to get you memory. `GFP_ATOMIC` cannot do any of that; it grabs from emergency reserves or fails immediately. This is why interrupt handlers are stuck with it and why it fails more often under memory pressure.
 
 `GFP_NOFS` is worth internalizing separately — it exists entirely to prevent the deadlock where a filesystem allocation triggers more filesystem operations, which trigger more allocations, which loop forever. If you ever write filesystem or block layer code, this flag is why you don't just use `GFP_KERNEL` everywhere.
+
+Here's the consolidated slab allocator section, written to slot into your existing notes — concise, conceptual, same style as your direct map / vmalloc sections.
+
+---
+
+## The Slab Layer
+
+### Why It Exists
+
+Kernel code constantly allocates and frees the same kinds of structs — `task_struct`, `struct inode`, `struct dentry` — thousands of times per second. Two problems with doing this via plain `kmalloc`/`kfree`:
+
+1. **Re-initialization cost.** Every fresh object needs its fields zeroed, locks set up, defaults applied — redone every single time even though you just freed an identical object microseconds ago.
+2. **No global coordination.** Before the slab layer, subsystems built their own ad-hoc "free lists" (a pool of reusable pre-built objects). The kernel had no visibility into these — it couldn't tell any of them to shrink under memory pressure.
+
+The slab layer replaces all of that with one disciplined, kernel-wide object cache.
+
+### The Three Layers
+
+```
+Cache  →  one per object type (inode_cachep, task_struct_cachep...)
+Slab   →  one or more physically contiguous pages, owned by a cache
+Object →  individual struct instances packed inside a slab
+```
+
+- **Cache**: one per type. Not multiple — just one pool per struct.
+- **Slab**: a chunk of pages (often just one), sliced into equal-size slots. Exists because memory only comes from the page allocator in page-sized units, and object size rarely divides page size evenly — the slab absorbs that mismatch as small, bounded waste per page (vs. unbounded fragmentation).
+- **Object**: the actual struct instance living in a slot.
+
+Each slab is **full**, **partial**, or **empty**. Allocation preference: partial → empty → only ask the buddy allocator for fresh pages if neither exists. This means the buddy allocator is invoked once per *slab*, not once per *object* — that's the performance win.
+
+### The Bookkeeping (skip the internals, keep this)
+
+```
+kmem_cache (the cache)
+├── slabs_full
+├── slabs_partial
+├── slabs_empty
+
+struct slab (one per slab)
+├── s_mem   → first object
+├── inuse   → how many allocated right now
+├── free    → first free slot
+```
+
+Slab descriptors live inside the slab itself if there's enough leftover slack space, otherwise externally. The descriptor allocation logic itself goes through `__get_free_pages()` — i.e., down to the buddy allocator — only when a cache needs to grow.
+
+### The API (this is the part you'll actually type)
+
+```c
+// Create once, typically at boot or module init
+cachep = kmem_cache_create("name", sizeof(struct foo), align, flags, ctor);
+
+// Alloc / free instead of kmalloc / kfree
+obj = kmem_cache_alloc(cachep, GFP_KERNEL);
+kmem_cache_free(cachep, obj);
+
+// Destroy (rare — only if cache is fully empty and unused)
+kmem_cache_destroy(cachep);
+```
+
+`create`/`destroy` can sleep — never call from interrupt context.
+
+### Flags Worth Remembering
+
+| Flag | One-liner |
+|---|---|
+| `SLAB_HWCACHE_ALIGN` | Cache-line align objects, avoids false sharing — use for hot paths |
+| `SLAB_POISON` | Fills freed memory with `a5a5a5a5` — catches use of uninitialized memory |
+| `SLAB_RED_ZONE` | Padding around objects — catches buffer overruns |
+| `SLAB_PANIC` | Panic if allocation fails — for objects the kernel can't live without (e.g. `task_struct`) |
+| `SLAB_CACHE_DMA` | Forces slab into `ZONE_DMA` — only if objects need DMA |
+
+`SLAB_POISON`/`SLAB_RED_ZONE` are the conceptual ancestors of what KASAN does today.
+
+### Where kmalloc Fits In
+
+`kmalloc()` itself is built on the slab layer — it rides on a small ladder of general-purpose, size-bucketed caches (32B, 64B, 128B...). Dedicated named caches (`task_struct_cachep`, `inode_cachep`) exist for high-frequency, fixed-size structs where the overhead of a dedicated cache pays for itself. Everything else goes through `kmalloc`'s generic buckets.
+
+### The One Rule to Carry Forward
+
+If you're repeatedly creating/destroying objects of the same type — use `kmem_cache_*`. Never hand-roll your own free list.
