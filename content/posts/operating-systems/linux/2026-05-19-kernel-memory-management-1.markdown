@@ -722,8 +722,6 @@ The decision tree is simple:
 
 `GFP_NOFS` is worth internalizing separately — it exists entirely to prevent the deadlock where a filesystem allocation triggers more filesystem operations, which trigger more allocations, which loop forever. If you ever write filesystem or block layer code, this flag is why you don't just use `GFP_KERNEL` everywhere.
 
-Here's the consolidated slab allocator section, written to slot into your existing notes — concise, conceptual, same style as your direct map / vmalloc sections.
-
 ---
 
 ## The Slab Layer
