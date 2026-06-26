@@ -3,10 +3,6 @@ title: "Memory Management in Kernel"
 date: 2026-05-19T00:00:00Z
 categories: ["operating systems", "linux"]
 tags: ["memory", "pages"]
-draft: false
-ShowToc: true
-TocOpen: false
-hidemeta: false
 ---
 
 # Memory Management in Kernel

@@ -273,7 +273,6 @@ Beyond the four primary objects, the VFS relies on a few other key structures to
 
 * **`fs_struct`** & **`file` structure:** These track the specific files and filesystem states associated with an individual running process.
 
-Here are your notes for the Superblock object — high-value fields only, methods explained by what they do for you conceptually, not exhaustively.
 
 
 ## The Superblock Object
@@ -334,8 +333,6 @@ sb->s_op->write_super(sb);   // sb passed explicitly — there's no other way to
 ### The pattern to internalize
 
 This is the same shape you'll see repeated for Inode, Dentry, and File objects next: **a struct holding state + a pointer to an operations table**, and the operations table is how a filesystem driver customizes behavior without the VFS needing any `if (fstype == ext4)` branching anywhere. ext4 fills in real disk-writing logic; sysfs leaves most of these NULL because there's no disk to write to.
-
-Here are your notes for the Inode object — same filtering principle.
 
 ---
 
@@ -505,3 +502,84 @@ The flow of opening a file is a three-stage handoff:
 3. **The File Data:** The physical disk blocks where the actual text/bytes are stored.
 
 > **The One-Sentence Summary:** > The kernel resolves a path by repeatedly asking each directory, *"Do you have an entry named X?"* until it reaches the final inode; Dentries are simply the cached results of those questions so the kernel never has to ask twice.
+
+### Dentry State (the missing piece in your notes)
+
+Your notes cover *what* a dentry is and *why* negative dentries exist conceptually. What's missing is that every dentry sits in exactly one of three states, and this is what actually drives eviction under memory pressure:
+
+| State | `d_inode` | `d_count` | Meaning |
+|---|---|---|---|
+| **Used** | valid | > 0 | Actively referenced right now — cannot be reclaimed |
+| **Unused** | valid | 0 | Valid mapping, nobody's using it *this instant* — kept around speculatively |
+| **Negative** | NULL | — | Confirmed nonexistence — kept around so repeated failed lookups don't re-walk the disk |
+
+The distinction between **used** and **unused** is the one your notes don't have yet, and it matters: a dentry doesn't disappear the moment nothing references it. It just becomes reclaimable. This is the same pattern as `_refcount` on `struct page` — refcount hitting zero means "eligible for reclaim," not "freed immediately."
+
+#### The dcache's three parts
+
+- **Per-inode lists** (`i_dentry`) — since one inode can have multiple dentries (your hard link example), the inode keeps a list of all dentries pointing at it
+- **LRU list of unused/negative dentries** — new entries inserted at head, reclaimed from tail under memory pressure. This is your eviction mechanism
+- **Hash table** (`dentry_hashtable` + `d_lookup()`) — this is the actual fast-path lookup your notes describe as "the dentry cache hit." `d_lookup()` is the function call hiding behind your "checks the dentry cache in RAM" line
+
+### One detail worth keeping: dentries pin inodes
+
+As long as a dentry is cached (even unused), its inode stays cached too, because the dentry holds a positive reference on it. This is why warm dcache entries mean warm icache entries for free — cache one, you implicitly cache the other.
+
+---
+
+## Dentry Operations — brief, mostly skippable
+
+Same shape as before: `dentry_operations`, function pointer table. Only two worth remembering:
+
+- **`d_hash()`** — lets a filesystem customize hashing (only matters if it has unusual name comparison rules)
+- **`d_compare()`** — why this exists: FAT32 is case-insensitive, so `"FILE.TXT"` and `"file.txt"` must hash/compare as the same dentry. Most filesystems just use the VFS default string compare; FAT overrides this specifically because of that quirk
+
+`d_revalidate`, `d_delete`, `d_release`, `d_iput` — these are network filesystem / cleanup hooks (NFS uses `d_revalidate` since a cached dentry might be stale if another machine changed the file). Not worth memorizing signatures for.
+
+---
+
+## The File Object
+
+You haven't written this one yet, so here's the condensed version.
+
+### What it is
+
+The in-memory representation of **an open file**, from one process's point of view. This is the object that actually backs `read()`/`write()`/`close()` — the thing userspace thinks it's holding when it has a file descriptor.
+
+Key distinction worth internalizing: **File object is per-open, Inode is per-file.** Two processes opening the same file get two separate `struct file` objects, both pointing at the *same* inode (via the dentry). This is exactly the same "many dentries can pin one inode" idea you already wrote up — now extended one layer further.
+
+```
+Process A: open("notes.txt") → file object A ─┐
+                                                ├──► same dentry → same inode
+Process B: open("notes.txt") → file object B ─┘
+```
+
+### Fields worth keeping
+
+| Field | Why it matters |
+|---|---|
+| `f_path` (contains the dentry) | The route back to dentry → inode |
+| `f_op` | File operations table — covered below |
+| `f_pos` | The file offset — this is literally "where am I in the file right now" for *this* open instance. Two processes reading the same file have independent offsets, because this lives in the file object, not the inode |
+| `f_flags` | Flags from `open()` — `O_APPEND`, `O_NONBLOCK`, etc. |
+| `f_mode` | Read/write access mode for this open |
+| `f_count` | Refcount — same pattern again |
+| `f_mapping` | Page cache mapping — usually just mirrors the inode's `i_mapping` |
+
+No dirty flag here — makes sense, since the file object isn't an on-disk thing. Dirtiness lives at the inode level (which you already noted in your superblock work — `dirty_inode()`).
+
+### File Operations — the ones that matter to you specifically
+
+This table is the literal backing for the syscalls you use daily:
+
+- `read()` / `write()` — the synchronous calls
+- `aio_read()` / `aio_write()` — async variants
+- `open()` / `release()` — `release()` fires when the *last* reference to the file is dropped (last `close()` across all processes sharing it), not on every `close()` call
+- `mmap()` — maps the file into a process's address space — this is your bridge into the process address space chapter you're eager to get to
+- `llseek()` — backs `lseek()`, moves `f_pos`
+
+**Specifically relevant to your CVE work:**
+- `splice_read()` / `splice_write()` — these exist precisely because `splice()` needs to move data between a pipe and a file *without* a userspace copy. Your CVE chain runs through `splice()` into AF_ALG sockets, and this is the function-pointer slot that gets called. Worth remembering this table is *where* that call lands before it descends into the crypto/authencesn code.
+- `sendpage()` — used for zero-copy sends, conceptually adjacent to splice
+
+`ioctl()` / `unlocked_ioctl()` / `compat_ioctl()` — skip the BKL history, just know: modern drivers implement `unlocked_ioctl()` only, and `compat_ioctl()` exists purely for 32-bit-app-on-64-bit-kernel size translation.
