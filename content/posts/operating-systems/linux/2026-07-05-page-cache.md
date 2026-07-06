@@ -594,3 +594,41 @@ To solve the global congestion bottleneck of `pdflush`, Linux moved to a **per-s
 Instead of a global pool, the kernel now spins up dedicated flusher threads for *each individual physical disk* (each "spindle").
 
 **The Result:** I/O congestion is completely isolated. A slow, congested USB drive will only block its own dedicated flusher thread, allowing the main NVMe or SSD flusher threads to continue writing back pages synchronously at maximum speed.
+
+### Avoiding Disk Congestion
+
+**The Core Concept:** Processor speed scales exponentially (Moore’s Law), but physical hard drive throughput scales at a crawl. Because disks are the slowest component in the system, their I/O request queues fill up rapidly, causing **congestion**. If the kernel's memory management isn't carefully designed, the entire system can stall waiting on a single slow disk queue.
+
+Here is how the kernel evolved to keep multiple disks fully saturated without blocking.
+
+#### The Single-Threaded Bottleneck (`bdflush`)
+
+In early kernels, a single `bdflush` thread handled all writebacks.
+
+* **The Flaw:** If the system had three hard drives, and Disk A became congested, the `bdflush` thread would get stuck waiting in Disk A's queue.
+* **The Result:** Even if Disks B and C were completely idle and ready to accept data, they received nothing. A single congested disk bottlenecked the entire machine's I/O.
+
+#### The "Congestion Avoidance" Hack (`pdflush`)
+
+To fix this, Linux introduced `pdflush`, a dynamic pool of multiple global threads. This allowed different threads to write to different disks simultaneously.
+
+* **The New Threat:** What if all the global `pdflush` threads accidentally tried to write to Disk A at the same time? They would all get stuck in the same congested queue.
+* **The Workaround:** The kernel engineers introduced **Congestion Avoidance**. The `pdflush` threads actively monitored the device queues. If a queue looked busy, the thread would artificially back off and look for a different disk's dirty pages to write instead.
+* **The Flaw:** Congestion avoidance was a complex, imperfect hack. Because it actively avoided busy disks, a heavily congested disk could end up being ignored for dangerously long periods (a phenomenon called **starvation**).
+
+#### The Modern Solution: Per-Spindle Flushing (Linux 2.6.32+)
+
+Kernel developers realized that global threads were the wrong abstraction. Modern Linux solves congestion by associating threads directly with the physical block devices (the "spindles").
+
+* **The Mechanism:** Every block device gets its own dedicated flusher thread. Thread A pulls exclusively from Disk A's dirty list; Thread B pulls exclusively from Disk B's dirty list.
+* **Why this is brilliant:** It completely eliminates the need for complex Congestion Avoidance algorithms in the software layer.
+* **The Result:** Writebacks are entirely synchronous and strictly isolated. If Disk A is severely congested, Thread A blocks, but Thread B continues hammering Disk B at maximum throughput. Starvation is eliminated, fairness is guaranteed, and the OS can saturate an unlimited number of disks in parallel.
+
+
+#### Summary of Writeback Architectures
+
+| Architecture | Thread Mapping | Handles Congestion By | Primary Flaw |
+| --- | --- | --- | --- |
+| **`bdflush`** | 1 Global Thread | Getting stuck (Blocking) | Wastes idle disks. |
+| **`pdflush`** | 2-8 Global Threads | Software Congestion Avoidance | Risks starving busy disks. |
+| **Flusher Threads** | 1 per Block Device | Hardware Isolation (Per-queue) | None (Current standard). |
