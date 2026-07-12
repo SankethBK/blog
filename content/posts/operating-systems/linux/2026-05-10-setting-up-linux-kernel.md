@@ -258,12 +258,13 @@ to the terminal instead of a window. `nokaslr` disables address randomization.
 # Run from anywhere — uses full paths
 # Terminal 1: boot QEMU (this terminal becomes the VM console)
 qemu-system-x86_64 \
-  -kernel ~/kernel-lab/linux-vulnerable/arch/x86/boot/bzImage \
+  -kernel ~/linux/arch/x86/boot/bzImage \
   -initrd ~/initramfs.cpio.gz \
   -append "nokaslr console=ttyS0 rdinit=/init" \
   -m 2G \
   -nographic \
-  -s
+  -s \
+  -virtfs local,path=/home/sanketh/kernel-lab,mount_tag=host,security_model=none
 ```
 
 **Key flags explained:**
@@ -287,6 +288,15 @@ Run /init as init process
 
 **To exit QEMU:** press `Ctrl+A` then `X`
 
+### Mount the kernel-labs folder
+
+Inside VM
+
+```sh
+mkdir /mnt
+mount -t 9p -o trans=virtio host /mnt
+ls /mnt    # you'll see your kernel-lab directory from Ubuntu
+```
 ---
 
 ## Step 6 — Attach GDB and Set Breakpoint
