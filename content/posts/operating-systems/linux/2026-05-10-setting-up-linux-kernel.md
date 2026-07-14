@@ -292,6 +292,12 @@ Run /init as init process
 
 Inside VM
 
+
+```sh
+mkdir -p /etc
+echo "root:x:0:0:root:/root:/bin/sh" > /etc/passwd
+```
+
 ```sh
 mkdir /mnt
 mount -t 9p -o trans=virtio host /mnt
@@ -312,7 +318,7 @@ CPU reaches that address.
 ```bash
 # Terminal 2: leave QEMU running in Terminal 1, open a new terminal
 # IMPORTANT: run from inside kernel source directory (so gdb finds vmlinux)
-cd ~/kernel-lab/linux-vulnerable   # or ~/linux
+cd ~/linux   # or ~/linux
 
 gdb vmlinux
 ```
