@@ -2,7 +2,7 @@
 title: "Kernel Lab 1: Observing Process and VFS Structs"
 date: 2026-07-16
 categories: ["operating systems", "linux"]
-tags: ["process", "vfs"]
+tags: ["process", "task_struct", "mm_struct"]
 ---
 
 # Kernel Lab 1: Observing Process and VFS Structs
