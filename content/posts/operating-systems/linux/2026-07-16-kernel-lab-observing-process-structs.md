@@ -1,5 +1,5 @@
 ---
-title: "Kernel Lab 1: Observing Process and VFS Structs"
+title: "Kernel Lab 1: Observing Process Structs"
 date: 2026-07-16
 categories: ["operating systems", "linux"]
 tags: ["process", "task_struct", "mm_struct"]
