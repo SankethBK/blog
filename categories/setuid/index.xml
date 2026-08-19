@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Setuid on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/categories/setuid/</link><description>Recent content in Setuid on Sanketh's Blog</description><generator>Hugo -- 0.165.0</generator><language>en-us</language><lastBuildDate>Sun, 02 Aug 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/categories/setuid/index.xml" rel="self" type="application/rss+xml"/><item><title>Setuid Binaries</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/2026-08-02-setuid-binaries/</link><pubDate>Sun, 02 Aug 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/2026-08-02-setuid-binaries/</guid><description>&lt;h1 id="setuid-binaries"&gt;Setuid Binaries&lt;/h1&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-sh" data-lang="sh"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;# ls -la /bin/su&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;-rwsr-xr-x &lt;span style="color:#ae81ff"&gt;1&lt;/span&gt; root root &lt;span style="color:#ae81ff"&gt;67816&lt;/span&gt; Aug &lt;span style="color:#ae81ff"&gt;1&lt;/span&gt; 20:00 /bin/su
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="types-of-permissions-and-actions"&gt;Types of permissions and actions&lt;/h3&gt;
+&lt;h2 id="1-the-three-types-of-users-who"&gt;1. The Three Types of Users (Who)&lt;/h2&gt;
+&lt;p&gt;Linux divides the entire universe of users into three distinct categories. Permissions are always listed in this exact order:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Owner (User): The specific person who owns the file (usually the creator).&lt;/li&gt;
+&lt;li&gt;Group: A defined collection of users who share access (e.g., a &amp;ldquo;developers&amp;rdquo; or &amp;ldquo;finance&amp;rdquo; group).&lt;/li&gt;
+&lt;li&gt;Others: Everyone else on the system who is not the owner and not in the group.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The owner and group are stored in inode.&lt;/p&gt;</description></item></channel></rss>
