@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Reverse Map on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/reverse-map/</link><description>Recent content in Reverse Map on Sanketh's Blog</description><generator>Hugo -- 0.165.0</generator><language>en-us</language><lastBuildDate>Sat, 22 Aug 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/reverse-map/index.xml" rel="self" type="application/rss+xml"/><item><title>Page Frame Reclaiming</title><link>https://sankethbk.github.io/blog/posts/operating-systems/linux/2026-08-22-page-reclaim/</link><pubDate>Sat, 22 Aug 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/operating-systems/linux/2026-08-22-page-reclaim/</guid><description>&lt;h1 id="page-frame-reclaiming"&gt;Page Frame Reclaiming&lt;/h1&gt;
+&lt;h2 id="the-page-frame-reclaiming-algorithm"&gt;The Page Frame Reclaiming Algorithm&lt;/h2&gt;
+&lt;h3 id="1-unified-page-cache--dual-caching-edge-case"&gt;1. Unified Page Cache &amp;amp; Dual-Caching Edge Case&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Unified Page Cache:&lt;/strong&gt; Linux no longer separates the &amp;ldquo;disk/buffer cache&amp;rdquo; from the &amp;ldquo;page cache.&amp;rdquo; All file and block I/O goes through a &lt;strong&gt;single unified Page Cache&lt;/strong&gt; indexed by &lt;code&gt;(address_space, offset)&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The Dual-Caching Exception:&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Reading via a regular path (e.g., &lt;code&gt;/app/data.db&lt;/code&gt;) uses the &lt;strong&gt;file inode&amp;rsquo;s&lt;/strong&gt; &lt;code&gt;address_space&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Reading via the raw disk node (e.g., &lt;code&gt;/dev/sda1&lt;/code&gt;) uses the &lt;strong&gt;block device inode&amp;rsquo;s&lt;/strong&gt; &lt;code&gt;address_space&lt;/code&gt;.&lt;/p&gt;</description></item></channel></rss>
