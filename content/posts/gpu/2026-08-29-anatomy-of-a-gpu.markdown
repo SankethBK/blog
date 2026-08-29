@@ -37,6 +37,31 @@ GPU die
 
 Everything below this line is either **inside an SM** (the compute engine) or part of the **memory system** that feeds SMs data. Almost everything you'll later tune in CUDA maps to one of these boxes.
 
+Physically laid out on the die, it looks roughly like this — a ring of memory controllers around the edge, a shared L2 in the middle, and GPCs (each holding several SMs) tiling the rest of the chip:
+
+```text
+                         Host Interface (PCIe / NVLink)
+                                     |
+                            GigaThread Engine
+                                     |
+        +--------------------------------------------------------+
+        |  MemCtrl   GPC 0        GPC 1        GPC 2   MemCtrl    |
+        |    |      [SM][SM]    [SM][SM]     [SM][SM]     |       |
+        |    |      [SM][SM]    [SM][SM]     [SM][SM]     |       |
+        |    |                                            |       |
+        |    |               shared  L2  cache            |       |
+        |    |                                            |       |
+        |    |      [SM][SM]    [SM][SM]     [SM][SM]     |       |
+        |    |      [SM][SM]    [SM][SM]     [SM][SM]     |       |
+        |  MemCtrl   GPC 3        GPC 4        GPC 5   MemCtrl    |
+        +--------------------------------------------------------+
+                    |                              |
+                 HBM/GDDR                       HBM/GDDR
+              (device memory)                (device memory)
+```
+
+(Real chips vary in GPC/SM counts and floorplan — this is the *shape* of the design, not a schematic of any specific part.)
+
 ---
 
 ## The Streaming Multiprocessor (SM): the GPU's "core"
@@ -49,6 +74,29 @@ This matters a lot for CUDA later: a **thread block** you launch is scheduled on
 
 ### What's inside an SM
 
+```text
+                         Streaming Multiprocessor (SM)
+   +--------------------------------------------------------------------+
+   |  Instruction Cache / Instruction Buffer                            |
+   |----------------------------------------------------------------    |
+   |  Partition 0        Partition 1        Partition 2   Partition 3   |
+   |  Warp Scheduler     Warp Scheduler     Warp Sched.    Warp Sched.  |
+   |  Dispatch Unit      Dispatch Unit      Dispatch Unit  Dispatch Unit|
+   |                                                                    |
+   |  [CUDA][CUDA][CUDA]  [CUDA][CUDA][CUDA]   ...  repeated per part.  |
+   |  [CUDA][CUDA][CUDA]  [CUDA][CUDA][CUDA]                            |
+   |  [ SFU ]             [ SFU ]                                       |
+   |  [Tensor Core]       [Tensor Core]                                 |
+   |  [LD/ST][LD/ST]      [LD/ST][LD/ST]                                |
+   |----------------------------------------------------------------    |
+   |            Register File (partitioned across resident threads)    |
+   |----------------------------------------------------------------    |
+   |     L1 Data Cache  /  Shared Memory   (same on-chip SRAM)          |
+   +--------------------------------------------------------------------+
+```
+
+Each partition is a self-contained scheduling unit: its warp scheduler picks one ready warp per cycle and dispatches its next instruction to that partition's own slice of CUDA cores, SFU, and Tensor Core — the four partitions run largely independently of each other.
+
 #### CUDA Cores (the ALUs)
 
 These are the basic arithmetic units — the GPU's analog of a CPU's ALU, except there are dozens to over a hundred of them *per SM*, and each one is much simpler than a CPU ALU. A CUDA core typically handles a single FP32 (and/or INT32) operation per cycle; there's no out-of-order execution, no speculation, no branch prediction hardware sitting around one of these — that complexity is exactly what got traded away for sheer count (as covered in the CPU vs GPU note).
@@ -60,6 +108,8 @@ CUDA cores are organized into **partitions** within the SM (commonly 4 per SM in
 Introduced with the Volta architecture (2017) and present in every NVIDIA architecture since, Tensor Cores are specialized units that perform small matrix multiply-accumulate operations (`D = A×B + C`) in a single operation, at much higher throughput than doing the equivalent with regular CUDA cores one multiply-add at a time. They typically operate on reduced/mixed precision (FP16, BF16, INT8, and newer FP8/FP4 formats on later generations) accumulated into higher precision.
 
 These exist specifically because deep learning workloads are dominated by matrix multiplication, and CUDA is now as much a machine-learning substrate as a general HPC one. You won't touch Tensor Cores directly in early CUDA (they're normally reached through libraries like cuBLAS/cuDNN or higher-level frameworks), but it's worth knowing they're a physically distinct unit sitting alongside the regular CUDA cores, not just "the same ALUs running faster."
+
+> CUDA cores perform one `A * B + C` at a time (in 1 clock cycle), while tensor cores perform up to 64 parallel Fused Multiply-Add operations (doing \(4 x 4 x 4) math matrix operations) inside a single core in 1 single clock cycle, . Newer Tensor Cores process even larger dimensions instantly.
 
 #### Special Function Units (SFU)
 
@@ -74,6 +124,21 @@ Handle address calculation and issuing of memory read/write requests for global,
 This is the closest thing an SM has to a CPU's control unit, but it does a very different job. A CPU's control unit exists largely to keep *one* instruction stream moving despite branches, hazards, and stalls — hence branch predictors, out-of-order windows, and speculation. A GPU's warp scheduler instead manages *many* independent instruction streams (warps — groups of 32 threads executing in lockstep) resident on the SM at once, and its main trick is **latency hiding through oversubscription**: when one warp stalls (e.g., waiting on a memory load), the scheduler simply switches to issuing instructions from a different warp that's ready to go, at zero cost — there's no pipeline flush or speculation to unwind, because switching warps is just picking a different, independent instruction stream.
 
 Modern SMs have multiple warp schedulers (e.g., 4 per SM), each with its own dispatch unit, each responsible for a partition of the SM's CUDA cores. This is why an SM can have many more resident warps than it can execute in a single cycle — the extra warps exist specifically as a reservoir to hide memory and instruction latency. This single idea — hide latency by having a huge surplus of parallel work, rather than by predicting/speculating on one thread — is arguably the single biggest philosophical difference between CPU and GPU control logic, and it's why GPUs *want* you to launch far more threads than there are physical ALUs to run them.
+
+```text
+One warp scheduler's issue slot over time, with 4 resident warps (W0-W3):
+
+cycle:   1    2    3    4    5    6    7    8
+W0:     [run][run] stall (waiting on memory) ......... [run]
+W1:                [run][run] stall .............
+W2:                          [run][run] stall ...
+W3:                                    [run][run] stall
+
+issued: W0   W0   W1   W1   W2   W2   W3   W3   <- scheduler always has
+                                                     someone ready to go
+```
+
+No warp individually got faster — but the ALU partition was never idle waiting on any single warp's memory request. This is latency hiding: stalls are covered by switching to *other* independent work, not by predicting or reordering around the stall the way a CPU would.
 
 #### Register File — the GPU's "registers," at a very different scale
 
@@ -120,6 +185,28 @@ A hardware scheduler sitting above all the SMs, responsible for taking the grid 
 ### Host Interface (PCIe / NVLink)
 
 The physical link connecting the GPU to the CPU (and, in multi-GPU systems, to other GPUs). Standard consumer/most workstation setups use **PCIe**; NVIDIA's data-center parts additionally support **NVLink**, a much higher-bandwidth proprietary interconnect for GPU-to-GPU (and in some systems, GPU-to-CPU) communication. As the earlier note flagged, host and device memory are physically separate address spaces — this interface is the (comparatively slow, relative to on-chip bandwidth) pipe all of that host↔device data has to cross, which is why minimizing and batching transfers over it is a recurring CUDA optimization theme.
+
+---
+
+## The memory hierarchy, top to bottom
+
+Pulling every memory-related piece above into one picture, from fastest/smallest/most-private to slowest/largest/most-shared:
+
+```text
+ fast, small, private            Registers (per thread, in the SM's register file)
+        |                               |
+        |                        Shared Memory / L1  (per SM, on-chip SRAM)
+        |                               |
+        |                          L2 Cache  (chip-wide, shared by all SMs)
+        |                               |
+        |                    Device Memory (GDDR/HBM)  (off-chip, on the GPU board)
+        v                               |
+ slow, large, shared           = = = PCIe / NVLink = = =   (the host<->device boundary)
+                                        |
+                                  Host (CPU) Memory
+```
+
+Everything above the PCIe/NVLink line is memory the GPU can touch directly, at speeds ranging from a few cycles (registers) to a few hundred cycles (device memory). Crossing that line to host memory is orders of magnitude slower than any of the on-GPU hops above it — which is exactly why "minimize host↔device traffic" is the first optimization rule in CUDA, before anything about kernels themselves.
 
 ---
 
