@@ -1,0 +1,196 @@
+---
+title:  "CPU vs GPU Architecture"
+date:   2026-08-29
+categories: ["gpu"]
+tags: ["gpu", "cuda", "parallel-computing"]
+
+---
+
+# CPU vs GPU Architecture
+
+## Why GPUs exist
+
+For decades, single-thread CPU performance improved "for free" — you write the same sequential code, and it runs faster on the next generation of chips, because clock speeds kept climbing.
+
+Around the mid-2000s, that stopped. Clock speeds hit a **power wall** — you can't keep cranking frequency without the chip melting. So the industry pivoted from "make one core faster" to "put more cores on the chip." This is the multicore/manycore shift, and it's the reason parallel programming stopped being a niche HPC skill and became something every programmer eventually runs into.
+
+CPUs and GPUs both responded to this shift, but with **different design philosophies**, because they're optimized for different things.
+
+```text
+CPU  → optimized for LATENCY  (finish one task as fast as possible)
+GPU  → optimized for THROUGHPUT (finish many tasks per unit time)
+```
+
+Neither is "better" — they're solving different problems.
+
+---
+
+## CPU: latency-oriented design
+
+A CPU core spends most of its transistor budget on things that make a *single*
+instruction stream run fast:
+
+- large caches (to hide memory latency)
+- branch prediction
+- out-of-order execution
+- speculative execution
+- deep pipelines
+
+```text
+CPU core transistor budget (conceptually):
+
+[ ALU ]  [-------- control + cache --------]
+ small            huge
+```
+
+All this machinery exists to keep one thread of execution fed and moving, even when it's full of branches, dependencies, and irregular memory access. That's expensive in silicon, but it's what you want when the *task itself* is inherently sequential (e.g. parsing, OS scheduling, most everyday application logic).
+
+A CPU has few cores (single digits to a few dozen), but each core is very "smart."
+
+---
+
+# GPU: throughput-oriented design
+
+A GPU assumes something different about the workload: **you have a huge number of independent, simple, similar tasks** (think: apply the same operation to every pixel, every particle, every element of a matrix).
+
+If that's the workload, you don't need each core to be smart — you need *many* cores, each doing simple, predictable work, and you accept **higher latency per task** in exchange for **much higher aggregate throughput**.
+
+```text
+GPU chip transistor budget (conceptually):
+
+[ALU][ALU][ALU][ALU][ALU][ALU][ALU][ALU] ...
+ small control, small cache per ALU, but MANY ALUs
+```
+
+So a GPU trades away:
+
+- large per-core caches
+- branch prediction
+- out-of-order execution
+
+...to spend that silicon on raw arithmetic units instead. A modern GPU has thousands of
+simple cores versus a CPU's dozens of complex ones.
+
+---
+
+## The core tradeoff, restated
+
+```text
+                Latency of ONE task     Throughput of MANY tasks
+CPU             low                     low-ish
+GPU             high                    very high
+```
+
+This is why GPUs are useless for a workload with one long dependent chain of instructions (a GPU core is individually much weaker than a CPU core), but extremely good at a workload like "do this same cheap operation on 10 million data points" — you just don't care that any single one of those operations is a bit slower, because they're all happening at once.
+
+**Rule of thumb:** if your problem is *data-parallel* (same operation, independent data elements), a GPU wins. If it's *control-parallel* with heavy branching and dependencies, a CPU wins.
+
+---
+
+## Flynn's taxonomy, quickly
+
+A useful vocabulary for classifying parallelism:
+
+```text
+SISD — single instruction, single data   → ordinary sequential CPU code
+SIMD — single instruction, multiple data → one instruction, many ALUs, same op
+MISD — multiple instruction, single data → rare (fault tolerance systems)
+MIMD — multiple instruction, multiple data → independent cores doing different things
+```
+
+A CPU core with vector instructions (SSE/AVX) does SIMD *within* a core. A multicore CPU is MIMD *across* cores.
+
+A GPU is best described as **SIMT — single instruction, multiple threads** — NVIDIA's term for a design that looks like SIMD from the hardware's perspective (many lanes executing the same instruction in lockstep) but is programmed like MIMD (you write code per-thread, as if each thread were independent). This distinction matters a lot once you get into CUDA: you'll write scalar-looking code per thread, but the hardware runs groups of those threads (**warps**, 32 threads on NVIDIA GPUs) in lockstep. If threads in a warp take different branches (`if/else`), the warp executes *both* paths serially, masking off inactive threads — this is called **warp divergence**, and it's one of the first performance traps you hit in CUDA.
+
+---
+
+## Why this needed a new programming model
+
+Multicore CPUs let you keep writing mostly-sequential code and use libraries/threads to parallelize across a handful of cores. That doesn't scale to a GPU's execution model: you have thousands of lightweight threads, organized hierarchically, sharing memory in non-obvious ways, and you cannot treat them like OS threads (too much overhead, wrong mental model).
+
+This is why CUDA (and similar models) introduce a new way of thinking:
+
+- You write a single function (a *-kernel**) describing what *one* thread does.
+- You launch it across a huge grid-of threads, organized into **blocks**, organized into a **grid**.
+- The hardware maps that hierarchy-onto physical execution units (an SM — streaming multiprocessor — runs one or more blocks; warps of 32 threads execute together).
+
+```text
+Grid
+ └── Block  (threads in a block can share fast on-chip memory, and sync)
+      └── Warp (32 threads, executed in lockstep on the hardware)
+           └── Thread  (your kernel code, from one thread's point of view)
+```
+
+The key mental shift from CPU programming: you don't write "a loop over N elements,"
+you write "what does element `i` do," and let the hardware launch N of those
+simultaneously.
+
+---
+
+# Memory: bandwidth vs latency, again
+
+Same theme as compute shows up in memory design:
+
+* CPU DRAM is optimized to minimize **latency** for random access (big caches, prefetchers).
+* GPU DRAM (e.g. GDDR/HBM) is optimized to maximize **bandwidth** for large, mostly
+  contiguous/coalesced transfers — individual accesses can be slower, but you move huge
+  volumes of data per second if access is regular.
+
+This is why, once you get into CUDA, **memory coalescing** (having threads in a warp
+access contiguous memory addresses together) is one of the biggest performance levers —
+it's the software-side consequence of the hardware's bandwidth-over-latency bet.
+
+Also worth internalizing before CUDA: the CPU and GPU have **separate physical memory**
+(host memory vs device memory) connected over PCIe/NVLink. Data has to be explicitly
+copied across that link, and that transfer is often the actual bottleneck in a naive GPU
+program — not the compute. This is why real CUDA programs try to do as much work as
+possible per byte transferred, and why "just port the inner loop to the GPU" without
+thinking about data movement often makes things *slower*, not faster.
+
+---
+
+## Amdahl's Law: why you can't parallelize everything
+
+If a fraction `P` of a program can be parallelized (and `1-P` is inherently sequential),
+the maximum possible speedup with infinite processors is:
+
+```text
+Speedup(∞) = 1 / (1 - P)
+```
+
+```text
+P = 0.5  → max speedup 2x
+P = 0.9  → max speedup 10x
+P = 0.99 → max speedup 100x
+```
+
+This is the reason GPU programming is about *finding and isolating the parallel part*
+of your program (usually a hot loop over large data) and offloading just that, while
+the sequential parts stay on the CPU. The CPU and GPU are meant to work **together**
+(heterogeneous computing) — the GPU is not a replacement for the CPU, it's an
+accelerator for the data-parallel portions.
+
+---
+
+## Summary — the mental model to carry into CUDA
+
+```text
+CPU:  few, powerful, latency-optimized cores
+      → good at: sequential logic, branching, low-latency single tasks
+
+GPU:  thousands of simple, throughput-optimized cores (SIMT)
+      → good at: same operation applied to huge independent datasets
+
+Programming model shift:
+      "loop over data"  →  "one thread per data element, launch massively"
+
+Watch out for, once writing CUDA:
+      - warp divergence (branches serialize execution within a warp)
+      - memory coalescing (bandwidth-oriented DRAM rewards regular access patterns)
+      - host↔device transfer cost (separate memory spaces, explicit copies)
+      - Amdahl's law (only the parallel fraction benefits — plan what stays on CPU)
+```
+
+With this frame in place, CUDA's syntax (`__global__` kernels, `<<<blocks, threads>>>`
+launch config, `threadIdx`/`blockIdx`) is really just the *mechanism* for expressing the
+grid/block/thread hierarchy above — the concepts, not the keywords, are the hard part.
