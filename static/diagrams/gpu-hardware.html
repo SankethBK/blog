@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anatomy of a GPU — interactive diagram</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #667085;
+      --paper: #f8fafc;
+      --panel: #ffffff;
+      --line: #dbe3ee;
+      --violet: #6d5dfc;
+      --violet-soft: #eeecff;
+      --cyan: #159db8;
+      --cyan-soft: #e5f8fb;
+      --orange: #e68532;
+      --orange-soft: #fff1e4;
+      --green: #2d9863;
+      --green-soft: #e7f7ee;
+      --pink: #c45484;
+      --pink-soft: #fbeaf2;
+      --shadow: 0 18px 50px rgba(31, 42, 68, .10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--ink); background: var(--paper);
+      font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .gpu-map { max-width: 1180px; margin: 0 auto; padding: 34px 22px 48px; }
+    .eyebrow { color: var(--violet); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: 11px; }
+    h1 { margin: 7px 0 9px; font-size: clamp(29px, 5vw, 52px); line-height: 1.03; letter-spacing: -.045em; max-width: 720px; }
+    .lede { color: var(--muted); max-width: 680px; margin: 0 0 24px; font-size: 17px; }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 22px; }
+    button { font: inherit; cursor: pointer; }
+    .mode { border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 999px; padding: 8px 13px; transition: .18s ease; }
+    .mode:hover, .mode[aria-pressed="true"] { color: var(--ink); border-color: var(--violet); background: var(--violet-soft); }
+    .hint { color: var(--muted); font-size: 12px; align-self: center; }
+    .board { background: var(--panel); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); padding: clamp(16px, 3vw, 30px); overflow: hidden; }
+    .board-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 22px; }
+    .board h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+    .board-head p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 13px; justify-content: flex-end; color: var(--muted); font-size: 11px; }
+    .legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .host { border: 1px solid #cdd7e6; border-radius: 14px; padding: 11px 14px; display: flex; align-items: center; gap: 10px; width: max-content; margin: 0 auto 14px; background: #f9fbff; }
+    .host strong { font-size: 13px; }
+    .host small { display: block; color: var(--muted); font-size: 11px; }
+    .bus { width: 2px; height: 19px; background: linear-gradient(var(--violet), var(--cyan)); margin: 0 auto; position: relative; }
+    .bus:after { content: ""; position: absolute; bottom: -1px; left: -4px; border: 5px solid transparent; border-top-color: var(--cyan); }
+    .die { border: 2px solid #b8c2d3; background: #f7f9fc; border-radius: 17px; padding: 16px; position: relative; }
+    .die-label { position: absolute; top: -12px; left: 18px; background: var(--panel); padding: 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; font-size: 10px; font-weight: 800; }
+    .die-grid { display: grid; grid-template-columns: 1fr 2.25fr 1fr; gap: 12px; align-items: stretch; }
+    .side-stack { display: grid; gap: 10px; }
+    .chip, .sm, .memory-step, .unit { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 11px; min-width: 0; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+    .chip strong, .sm strong, .memory-step strong, .unit strong { display: block; font-size: 12px; }
+    .chip small, .sm small, .memory-step small, .unit small { color: var(--muted); font-size: 11px; line-height: 1.3; }
+    .chip[data-part], .sm[data-part], .memory-step[data-part], .unit[data-part] { cursor: pointer; }
+    .chip:hover, .sm:hover, .memory-step:hover, .unit:hover, .is-active { transform: translateY(-2px); box-shadow: 0 9px 20px rgba(48, 61, 92, .10); border-color: var(--violet) !important; }
+    .violet { background: var(--violet-soft); border-color: #d5d0ff; }
+    .cyan { background: var(--cyan-soft); border-color: #bfe9ef; }
+    .orange { background: var(--orange-soft); border-color: #f5d4b2; }
+    .green { background: var(--green-soft); border-color: #bfe8d0; }
+    .pink { background: var(--pink-soft); border-color: #efc7d9; }
+    .gpc-zone { border: 1px dashed #c7d1df; border-radius: 13px; padding: 12px; background: rgba(255,255,255,.6); }
+    .gpc-zone h3 { margin: 0 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+    .sm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .sm { padding: 9px; min-height: 68px; }
+    .sm strong { color: var(--violet); }
+    .l2 { margin-top: 12px; text-align: center; }
+    .memory-rails { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
+    .rail { display: grid; gap: 8px; }
+    .rail-title { font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: .1em; font-weight: 800; }
+    .memory-step { text-align: center; padding: 10px 8px; }
+    .memory-step:not(:last-child):after { content: "↓"; color: var(--cyan); display: block; font-size: 16px; line-height: 15px; transform: translateY(8px); }
+    .memory-step:last-child { margin-top: 6px; }
+    .caption { color: var(--muted); font-size: 12px; margin: 17px 0 0; text-align: center; }
+    .below { display: grid; grid-template-columns: 1.25fr .75fr; gap: 18px; margin-top: 18px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; }
+    .panel h2 { font-size: 17px; margin: 0 0 4px; }
+    .panel-intro { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
+    .sm-layout { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 10px; align-items: stretch; }
+    .sm-column { display: grid; gap: 8px; align-content: center; }
+    .unit { padding: 10px; }
+    .unit strong { font-size: 11px; }
+    .unit small { font-size: 10px; }
+    .sm-core { border: 2px solid #c7befd; background: var(--violet-soft); border-radius: 15px; padding: 14px 10px; display: grid; gap: 9px; align-content: center; text-align: center; }
+    .sm-core strong { font-size: 13px; }
+    .warp { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin: 3px auto 0; max-width: 160px; }
+    .warp i { display: block; aspect-ratio: 1; border-radius: 3px; background: var(--violet); opacity: .65; }
+    .sm-foot { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #c9c1ff; color: #5c50b5; font-size: 11px; }
+    .detail { min-height: 196px; display: flex; flex-direction: column; justify-content: space-between; }
+    .detail-kicker { color: var(--violet); text-transform: uppercase; letter-spacing: .11em; font-size: 10px; font-weight: 800; }
+    .detail h3 { margin: 5px 0 6px; font-size: 21px; letter-spacing: -.03em; }
+    .detail p { color: var(--muted); font-size: 13px; margin: 0; }
+    .memory-note { margin-top: 16px; padding: 11px 12px; border-left: 3px solid var(--cyan); background: var(--cyan-soft); color: #27616d; font-size: 12px; }
+    .takeaway { margin-top: 18px; padding: 16px 18px; border-radius: 15px; background: #1f2740; color: #eef2ff; }
+    .takeaway strong { color: #bcb5ff; }
+    .takeaway p { margin: 3px 0 0; font-size: 14px; }
+    .path .bus, .path .host, .path .chip, .path .sm, .path .l2, .path .memory-step { animation: pulse 1.35s ease-in-out infinite alternate; }
+    .path .bus { background: linear-gradient(var(--orange), var(--cyan)); }
+    @keyframes pulse { from { filter: saturate(1); } to { filter: saturate(1.8) brightness(1.02); } }
+    @media (max-width: 780px) {
+      .board-head { display: block; }
+      .legend { justify-content: flex-start; margin-top: 13px; }
+      .die-grid { grid-template-columns: 1fr; }
+      .side-stack { grid-template-columns: repeat(2, 1fr); }
+      .memory-rails { grid-template-columns: repeat(2, 1fr); }
+      .below { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 440px) {
+      .gpu-map { padding: 24px 12px 35px; }
+      .board { border-radius: 18px; padding: 13px; }
+      .sm-grid { grid-template-columns: repeat(2, 1fr); }
+      .memory-rails { grid-template-columns: 1fr; }
+      .sm-layout { grid-template-columns: 1fr 1fr; }
+      .sm-core { grid-column: 1 / -1; grid-row: 1; }
+      .sm-column:first-child { grid-column: 1; grid-row: 2; }
+      .sm-column:last-child { grid-column: 2; grid-row: 2; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *:before, *:after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+  </style>
+</head>
+<body>
+<main class="gpu-map" id="gpu-map">
+  <div class="eyebrow">A beginner's mental model</div>
+  <h1>A GPU is a factory of tiny parallel workers.</h1>
+  <p class="lede">Work arrives from the host, gets split into blocks, runs inside Streaming Multiprocessors, and is constantly fed by a memory hierarchy built for bandwidth.</p>
+  <div class="toolbar" aria-label="Diagram modes">
+    <button class="mode" type="button" data-mode="overview" aria-pressed="true">Overview</button>
+    <button class="mode" type="button" data-mode="path" aria-pressed="false">Follow one load</button>
+    <span class="hint">Click any component for a plain-English explanation.</span>
+  </div>
+
+  <section class="board" aria-labelledby="die-title">
+    <div class="board-head">
+      <div><h2 id="die-title">The whole GPU die</h2><p>Many SMs share one cache and many memory channels.</p></div>
+      <div class="legend" aria-label="Color legend">
+        <span><i class="dot" style="background:var(--violet)"></i>control &amp; compute</span>
+        <span><i class="dot" style="background:var(--cyan)"></i>memory</span>
+        <span><i class="dot" style="background:var(--orange)"></i>data movement</span>
+      </div>
+    </div>
+    <div class="host" data-part="host"><span style="font-size:22px">▣</span><div><strong>CPU / host memory</strong><small>launches kernels • owns the program</small></div></div>
+    <div class="bus" aria-hidden="true"></div>
+    <div class="die">
+      <div class="die-label">GPU silicon</div>
+      <div class="die-grid">
+        <div class="side-stack">
+          <div class="chip violet" data-part="giga"><strong>GigaThread Engine</strong><small>assigns blocks to SMs</small></div>
+          <div class="chip orange" data-part="host"><strong>PCIe / NVLink</strong><small>host ↔ device bridge</small></div>
+          <div class="chip cyan" data-part="controller"><strong>Memory controller</strong><small>speaks GDDR / HBM</small></div>
+        </div>
+        <div>
+          <div class="gpc-zone">
+            <h3>GPCs — clusters that tile the chip</h3>
+            <div class="sm-grid">
+              <div class="sm violet" data-part="sm"><strong>SM 0</strong><small>many warps in flight</small></div>
+              <div class="sm violet" data-part="sm"><strong>SM 1</strong><small>many warps in flight</small></div>
+              <div class="sm violet" data-part="sm"><strong>SM 2</strong><small>many warps in flight</small></div>
+              <div class="sm violet" data-part="sm"><strong>SM 3</strong><small>many warps in flight</small></div>
+              <div class="sm violet" data-part="sm"><strong>SM 4</strong><small>many warps in flight</small></div>
+              <div class="sm violet" data-part="sm"><strong>SM 5</strong><small>many warps in flight</small></div>
+              <div class="sm violet" data-part="sm"><strong>SM 6</strong><small>many warps in flight</small></div>
+              <div class="sm violet" data-part="sm"><strong>SM 7</strong><small>many warps in flight</small></div>
+              <div class="sm violet" data-part="sm"><strong>SM 8</strong><small>many warps in flight</small></div>
+            </div>
+          </div>
+          <div class="chip cyan l2" data-part="l2"><strong>L2 cache · chip-wide</strong><small>the common staging area between all SMs and device memory</small></div>
+        </div>
+        <div class="side-stack">
+          <div class="chip cyan" data-part="controller"><strong>Memory controller</strong><small>parallel channel</small></div>
+          <div class="chip cyan" data-part="controller"><strong>Memory controller</strong><small>parallel channel</small></div>
+          <div class="chip cyan" data-part="device"><strong>HBM / GDDR</strong><small>large, bandwidth-first device memory</small></div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">The GigaThread Engine chooses <b>where</b> a block goes. Inside each SM, warp schedulers choose <b>what runs next</b>.</p>
+  </section>
+
+  <div class="below">
+    <section class="panel" aria-labelledby="sm-title">
+      <h2 id="sm-title">Zoom in: one Streaming Multiprocessor</h2>
+      <p class="panel-intro">A block lives on one SM. The SM keeps several warps ready so one can run while another waits on memory.</p>
+      <div class="sm-layout">
+        <div class="sm-column">
+          <div class="unit violet" data-part="scheduler"><strong>Warp scheduler</strong><small>picks a ready warp</small></div>
+          <div class="unit violet" data-part="scheduler"><strong>Dispatch unit</strong><small>sends the instruction</small></div>
+          <div class="unit pink" data-part="instruction"><strong>Instruction cache</strong><small>keeps code close</small></div>
+        </div>
+        <div class="sm-core" data-part="warp">
+          <strong>Warps: 32 threads in lockstep</strong>
+          <div class="warp" aria-label="32 threads represented as squares">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <div class="sm-foot">One instruction • many lanes • same moment</div>
+        </div>
+        <div class="sm-column">
+          <div class="unit violet" data-part="cuda"><strong>CUDA cores</strong><small>FP32 / INT32 arithmetic</small></div>
+          <div class="unit pink" data-part="tensor"><strong>Tensor cores</strong><small>matrix multiply-accumulate</small></div>
+          <div class="unit orange" data-part="loadstore"><strong>Load / Store</strong><small>move data in and out</small></div>
+          <div class="unit orange" data-part="sfu"><strong>SFU</strong><small>sin, exp, reciprocal…</small></div>
+        </div>
+      </div>
+      <div class="unit cyan" data-part="register" style="margin-top:10px"><strong>Register file</strong><small>private per-thread working space; using more registers can reduce how many warps fit</small></div>
+      <div class="unit green" data-part="shared" style="margin-top:8px"><strong>Shared memory + L1 cache</strong><small>fast per-SM SRAM — partly automatic, partly programmer-managed scratchpad</small></div>
+    </section>
+
+    <aside class="panel detail" aria-live="polite" aria-labelledby="detail-title">
+      <div>
+        <div class="detail-kicker" id="detail-kicker">Start here</div>
+        <h3 id="detail-title">The GPU’s core idea</h3>
+        <p id="detail-copy">Keep many independent warps resident. When one stalls on memory, schedule another. The chip wins by keeping its arithmetic lanes busy.</p>
+      </div>
+      <div class="memory-note" id="detail-note"><strong>Beginner shortcut:</strong> think “SM = a small parallel factory floor,” not “SM = one CPU core.”</div>
+    </aside>
+  </div>
+
+  <section class="panel" style="margin-top:18px" aria-labelledby="memory-title">
+    <h2 id="memory-title">The memory ladder</h2>
+    <p class="panel-intro">Closer to the arithmetic usually means smaller and faster. The farther down you go, the more bandwidth and latency matter.</p>
+    <div class="memory-rails">
+      <div class="rail">
+        <div class="rail-title">inside the SM · fastest</div>
+        <div class="memory-step violet" data-part="register"><strong>Registers</strong><small>private to each thread</small></div>
+        <div class="memory-step green" data-part="shared"><strong>Shared memory / L1</strong><small>shared by a block / cached automatically</small></div>
+      </div>
+      <div class="rail">
+        <div class="rail-title">chip and board · biggest</div>
+        <div class="memory-step cyan" data-part="l2"><strong>L2 cache</strong><small>shared by every SM</small></div>
+        <div class="memory-step cyan" data-part="device"><strong>Device memory</strong><small>GDDR or HBM</small></div>
+        <div class="memory-step orange" data-part="host"><strong>PCIe / NVLink → CPU memory</strong><small>crossing this boundary is expensive</small></div>
+      </div>
+    </div>
+    <div class="takeaway"><strong>Remember this:</strong><p>More threads do not make one thread faster. They give the schedulers enough spare work to hide the waiting.</p></div>
+  </section>
+</main>
+<script>
+  (() => {
+    const root = document.getElementById('gpu-map');
+    const details = {
+      host: ['Host boundary', 'CPU / host memory', 'The CPU launches kernels and sends data across PCIe or NVLink. Transfers across this boundary are much slower than on-chip access.', 'Minimize transfers; batch them when possible.'],
+      giga: ['Chip-wide control', 'GigaThread Engine', 'This is the coarse scheduler: it assigns whole thread blocks to SMs with enough register, shared-memory, and warp capacity.', 'It chooses which SM. The warp scheduler chooses what runs inside that SM.'],
+      sm: ['The unit that runs blocks', 'Streaming Multiprocessor (SM)', 'A block is assigned to one SM for its lifetime. An SM contains schedulers, arithmetic units, registers, and fast on-chip memory.', 'A GPU has many SMs; each SM is a small parallel processor.'],
+      l2: ['Shared chip memory', 'L2 cache', 'All SMs can use this cache. It sits between the SM-local memories and the external device-memory channels.', 'L1/shared memory is local to an SM; L2 is shared by the whole chip.'],
+      controller: ['Memory plumbing', 'Memory controller', 'Controllers turn requests from the chip into traffic on many parallel GDDR or HBM channels.', 'This wide parallel path is why coalesced warp accesses matter.'],
+      device: ['Large, bandwidth-first memory', 'GDDR / HBM device memory', 'This is the memory allocated by cudaMalloc. It is much larger than on-chip SRAM, but slower to reach.', 'A GPU prefers moving many bytes in parallel over making one access ultra-low-latency.'],
+      scheduler: ['Control inside an SM', 'Warp scheduler', 'A scheduler selects a ready warp and issues its next instruction. If one warp waits, another can take the issue slot.', 'Latency hiding is the signature trick: switch work instead of making one thread wait.'],
+      instruction: ['Code storage', 'Instruction cache', 'Keeps recently fetched instructions close to the warps resident on the SM.', 'Many concurrent instruction streams share this small cache.'],
+      warp: ['Native execution group', 'Warp · 32 threads', 'Threads are launched individually in CUDA, but the hardware executes them in groups of 32 that normally follow the same instruction.', 'Divergent branches make different lanes take different paths — often reducing efficiency.'],
+      cuda: ['General arithmetic', 'CUDA cores', 'Simple arithmetic lanes for operations such as FP32 and INT32 add, multiply, and fused multiply-add.', 'Thousands of “GPU cores” means these ALUs across all SMs, not thousands of independent CPU-like cores.'],
+      tensor: ['Specialized arithmetic', 'Tensor cores', 'Matrix multiply-accumulate hardware built for dense linear algebra and deep-learning workloads.', 'Libraries such as cuBLAS and cuDNN usually make use of them for you.'],
+      loadstore: ['Data movement', 'Load / Store units', 'Calculate addresses and issue reads and writes for global, local, and shared-memory operations.', 'A kernel can be compute-rich or memory-bound depending on how often it uses these units.'],
+      sfu: ['Special math', 'Special Function Units', 'Fast approximate hardware for functions such as sin, cos, exp, log, and reciprocal.', 'Fast intrinsics trade some precision for speed.'],
+      register: ['SM-local storage', 'Register file', 'A large pool of registers is divided among resident threads. Registers are the fastest working space, but they are finite.', 'Using more registers per thread can lower occupancy — the number of warps resident at once.'],
+      shared: ['SM-local SRAM', 'Shared memory + L1', 'The same on-chip SRAM can serve as an automatic L1 cache or as programmer-managed shared memory for a block.', 'Load once, reuse across threads: this is the classic tiling optimization.']
+    };
+    const title = root.querySelector('#detail-title');
+    const kicker = root.querySelector('#detail-kicker');
+    const copy = root.querySelector('#detail-copy');
+    const note = root.querySelector('#detail-note');
+    const all = [...root.querySelectorAll('[data-part]')];
+    function select(key, element) {
+      const item = details[key] || details.sm;
+      all.forEach(node => node.classList.toggle('is-active', node === element));
+      kicker.textContent = item[0]; title.textContent = item[1]; copy.textContent = item[2]; note.innerHTML = '<strong>Useful connection:</strong> ' + item[3];
+    }
+    all.forEach(node => {
+      node.addEventListener('click', () => select(node.dataset.part, node));
+      node.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select(node.dataset.part, node); } });
+      if (node.tagName !== 'BUTTON') { node.tabIndex = 0; node.setAttribute('role', 'button'); }
+    });
+    root.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
+      const path = button.dataset.mode === 'path';
+      root.classList.toggle('path', path);
+      root.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+      if (path) { select('loadstore'); root.querySelector('#detail-note').innerHTML = '<strong>Follow it:</strong> a load starts at an SM, checks L1/shared memory, then L2, then device memory if needed.'; }
+      else { select('sm'); }
+    }));
+  })();
+</script>
+</body>
+</html>

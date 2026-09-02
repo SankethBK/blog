@@ -12,6 +12,8 @@ The [previous note](/gpu/2026-08-29-cpu-vs-gpu) covered *why* GPUs look the way 
 
 Since GPU architecture details differ across vendors (and even across generations from the same vendor), this note sticks to **NVIDIA's terminology and design**, since that's what CUDA targets. Exact numbers (core counts, cache sizes, register file size) change every generation (Volta → Turing → Ampere → Hopper → Blackwell), but the *categories* of components and their roles have stayed remarkably stable — that stability is what makes this worth learning as a mental model rather than as trivia about one specific chip.
 
+> For an interactive visual of the GPU die layout, see the [GPU hardware diagram](/blog/diagrams/gpu-hardware.html).
+
 ---
 
 ## The 30,000-foot view
