@@ -452,6 +452,13 @@ Backward sensitivities flow from right to left:
 
 The leftward arrows show how gradients flow. Each node receives a gradient from the right, multiplies it by its own local derivative, and passes the result to the left.
 
+> What's the point of this backward graph?
+>
+> This graph is nothing new, its just defining the intuition behind the chain rule. We learnt chain rule in college but never the intuition behind it, this is that part. Chain rule was a shortcut to tell how much a function varies w.r.t each individual variables, this is just making sense of it. 
+>
+> So one line takeaway should be "Chain rule is not some weird derivative algebra trick. It’s a way of composing effects through a sequence of dependencies. Backpropagation is what happens when you systematically apply that idea backwards through a computational graph."
+
+
 ---
 
 ## 14. Forward values vs backward sensitivities
