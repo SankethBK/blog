@@ -48,7 +48,7 @@ In vectorized NumPy this is `X @ w + b`. The bias `b` is broadcast across all ex
 
 $$
 L(w, b) = \frac{1}{n} \sum_{i=1}^{n} (\hat{y}_i - y_i)^2
-        = \frac{1}{n} \\| \hat{y} - y \\|^2
+        = \frac{1}{n} \| \hat{y} - y \|^2
 $$
 
 This measures the average squared distance between predictions and targets. Squaring penalizes large errors more than small ones and makes the gradient smooth.
@@ -134,7 +134,7 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 > and we’re trying to minimize MSE:
 >
 > $$
-> L(w) = \frac{1}{n}\\|Xw - y\\|^2
+> L(w) = \frac{1}{n}\|Xw - y\|^2
 > $$
 >
 > Gradient descent says:
@@ -156,7 +156,7 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 > Say:
 >
 > $$
-> L(w) = \\|Xw - y\\|^2
+> L(w) = \|Xw - y\|^2
 > $$
 >
 > Expand it:
@@ -208,8 +208,8 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 > $$
 > v =
 > \begin{bmatrix}
-> v_1 \\\\
-> v_2 \\\\
+> v_1 \\
+> v_2 \\
 > v_3
 > \end{bmatrix}
 > $$
@@ -217,7 +217,7 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 > then
 >
 > $$
-> \\|v\\|^2 = v_1^2 + v_2^2 + v_3^2
+> \|v\|^2 = v_1^2 + v_2^2 + v_3^2
 > $$
 >
 > Now transpose $v$:
@@ -237,8 +237,8 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 > v_1 & v_2 & v_3
 > \end{bmatrix}
 > \begin{bmatrix}
-> v_1 \\\\
-> v_2 \\\\
+> v_1 \\
+> v_2 \\
 > v_3
 > \end{bmatrix}
 > $$
@@ -252,7 +252,7 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 > So:
 >
 > $$
-> \boxed{\\|v\\|^2 = v^T v}
+> \boxed{\|v\|^2 = v^T v}
 > $$
 >
 > Therefore, if
@@ -264,7 +264,7 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 > then:
 >
 > $$
-> L(w) = \\|Xw - y\\|^2
+> L(w) = \|Xw - y\|^2
 > $$
 >
 > becomes:
@@ -318,7 +318,7 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 > $$
 > \begin{aligned}
 > (Xw - y)^T
-> &= (Xw)^T - y^T \\\\
+> &= (Xw)^T - y^T \\
 > &= w^T X^T - y^T
 > \end{aligned}
 > $$
@@ -539,7 +539,7 @@ Logistic regression: separates the classes
 Models with many parameters can memorize noise in the training data. L2 regularization penalizes large weights:
 
 $$
-L_{\text{reg}} = L + \lambda \\|w\\|^2
+L_{\text{reg}} = L + \lambda \|w\|^2
 $$
 
 The gradient update becomes:

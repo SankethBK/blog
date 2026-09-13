@@ -8,7 +8,7 @@ tags: ["ml", "computational-graphs", "chain-rule", "backpropagation"]
 
 # Computational Graphs, Part 2: Branching — Why Gradients Add
 
-The [previous note](/posts/ml/2026-09-09-1-computational-graphs-and-backpropagation) covered the forward pass, the chain rule, and the backward pass on a graph where every input had exactly one path to the output. This note adds the one remaining piece: what happens when an input feeds into **more than one** operation.
+The [previous note](/posts/ml/2026-09-09-computational-graphs-and-backpropagation) covered the forward pass, the chain rule, and the backward pass on a graph where every input had exactly one path to the output. This note adds the one remaining piece: what happens when an input feeds into **more than one** operation.
 
 When that happens, there are multiple paths from the input to the output. The chain rule tells us to **add** the contributions from those paths.
 

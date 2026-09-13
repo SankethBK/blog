@@ -18,6 +18,18 @@
     throwOnError: false
   });"
 ></script>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+  document.querySelectorAll('pre > code.language-mermaid').forEach((codeEl) => {
+    const host = codeEl.closest('div.highlight') || codeEl.parentElement;
+    const pre = document.createElement('pre');
+    pre.className = 'mermaid';
+    pre.textContent = codeEl.textContent;
+    host.replaceWith(pre);
+  });
+  mermaid.run({ querySelector: '.mermaid' });
+</script>
 
 <article class="post-single">
   <header class="post-header">

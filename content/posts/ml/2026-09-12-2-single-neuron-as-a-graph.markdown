@@ -8,7 +8,7 @@ tags: ["ml", "computational-graphs", "neuron", "logistic-regression", "backpropa
 
 # Computational Graphs, Part 3: A Single Neuron and Logistic Regression
 
-The [previous note](/posts/ml/2026-09-12-1-branching-why-gradients-add) showed how gradients add when one input feeds multiple operations. With that in place, we can now look at a real model: a single neuron. We will draw it as a graph, run the forward pass and backward pass by hand, and then connect it back to the logistic regression from the [first note](/posts/ml/2026-09-07-1-ml-refresher-linear-logistic-regression).
+The [previous note](/posts/ml/2026-09-12-1-branching-why-gradients-add) showed how gradients add when one input feeds multiple operations. With that in place, we can now look at a real model: a single neuron. We will draw it as a graph, run the forward pass and backward pass by hand, and then connect it back to the logistic regression from the [first note](/posts/ml/2026-09-07-ml-refresher-linear-logistic-regression).
 
 ---
 
