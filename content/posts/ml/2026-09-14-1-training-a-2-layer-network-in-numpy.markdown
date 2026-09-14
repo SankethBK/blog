@@ -884,9 +884,6 @@ This is also the map of what `loss.backward()` does in PyTorch. PyTorch builds t
 
 ## 14. What comes next
 
-The next note takes two practical steps forward:
-
-- Replace sigmoid hidden units with ReLU to avoid vanishing gradients, and look at how the backward formulas change.
-- Build deeper networks cleanly by stacking the same `forward/backward` block, leading into modern architectures.
+The [next note](/posts/ml/2026-09-14-2-activation-functions-sigmoid-relu) asks what should fill the `activation_derivative` slot in the loop above: why sigmoid's slope vanishes gradients across depth, why ReLU's slope of exactly 1 fixes it, what dead ReLUs are, and why the output activation is a separate decision from the hidden ones.
 
 
