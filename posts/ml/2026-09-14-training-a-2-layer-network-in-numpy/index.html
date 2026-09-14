@@ -1,0 +1,626 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop | Sanketh's Blog</title><meta name=keywords content="ml,numpy,backpropagation,neural-networks,x"><meta name=description content="Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop
+The previous note did the backward pass for a small 2-layer network by hand, one scalar at a time. That is the best way to understand what backprop actually does.
+This note takes the next step: turn that scalar walk into compact, vectorized NumPy code. The math is unchanged; the only thing that changes is notation. I will introduce every matrix slowly — what its rows and columns mean, where the division by the batch size comes from, and why it is exactly the same algorithm you already did by hand."><meta name=author content><link rel=canonical href=https://sankethbk.github.io/blog/posts/ml/2026-09-14-training-a-2-layer-network-in-numpy/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.a7100ced1662b06824a54ff97bb59f1d1070a2db645a1d0a8d848e4ffd63ac7a.css integrity="sha256-pxAM7RZisGgkpU/5e7WfHRBwottkWh0KjYSOT/1jrHo=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/ml/2026-09-14-training-a-2-layer-network-in-numpy/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/ml/2026-09-14-training-a-2-layer-network-in-numpy/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop"><meta property="og:description" content="Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop The previous note did the backward pass for a small 2-layer network by hand, one scalar at a time. That is the best way to understand what backprop actually does.
+This note takes the next step: turn that scalar walk into compact, vectorized NumPy code. The math is unchanged; the only thing that changes is notation. I will introduce every matrix slowly — what its rows and columns mean, where the division by the batch size comes from, and why it is exactly the same algorithm you already did by hand."><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2026-09-14T00:00:00+00:00"><meta property="article:modified_time" content="2026-09-14T00:00:00+00:00"><meta property="article:tag" content="Ml"><meta property="article:tag" content="Numpy"><meta property="article:tag" content="Backpropagation"><meta property="article:tag" content="Neural-Networks"><meta property="article:tag" content="X"><meta name=twitter:card content="summary"><meta name=twitter:title content="Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop"><meta name=twitter:description content="Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop
+The previous note did the backward pass for a small 2-layer network by hand, one scalar at a time. That is the best way to understand what backprop actually does.
+This note takes the next step: turn that scalar walk into compact, vectorized NumPy code. The math is unchanged; the only thing that changes is notation. I will introduce every matrix slowly — what its rows and columns mean, where the division by the batch size comes from, and why it is exactly the same algorithm you already did by hand."><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop","item":"https://sankethbk.github.io/blog/posts/ml/2026-09-14-training-a-2-layer-network-in-numpy/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop","name":"Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop","description":"Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop The previous note did the backward pass for a small 2-layer network by hand, one scalar at a time. That is the best way to understand what backprop actually does.\nThis note takes the next step: turn that scalar walk into compact, vectorized NumPy code. The math is unchanged; the only thing that changes is notation. I will introduce every matrix slowly — what its rows and columns mean, where the division by the batch size comes from, and why it is exactly the same algorithm you already did by hand.\n","keywords":["ml","numpy","backpropagation","neural-networks","x"],"articleBody":"Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop The previous note did the backward pass for a small 2-layer network by hand, one scalar at a time. That is the best way to understand what backprop actually does.\nThis note takes the next step: turn that scalar walk into compact, vectorized NumPy code. The math is unchanged; the only thing that changes is notation. I will introduce every matrix slowly — what its rows and columns mean, where the division by the batch size comes from, and why it is exactly the same algorithm you already did by hand.\nAt the end we train the same 2-2-1 network on the XOR problem from scratch, with no frameworks except NumPy, and compare the computed gradients to PyTorch’s autograd.\n1. What you will learn How to replace the per-neuron scalars with matrices, without changing the underlying math. The shape of every matrix in a dense network, and what each dimension means. Why the loss is averaged over the batch. How to write a complete forward pass, backward pass, and update step in NumPy. How to verify your NumPy gradients against both hand-computed values and PyTorch autograd. A full training loop on the XOR problem. 2. The scalar walk, compressed into a single table We reuse the exact example from the previous note.\nNetwork architecture:\nflowchart LR X1[\"x1\"] --\u003e H1[\"h1\"] X2[\"x2\"] --\u003e H1 X1 --\u003e H2[\"h2\"] X2 --\u003e H2 H1 --\u003e O[\"output\"] H2 --\u003e O One training example:\n$$ x_1 = 1, \\qquad x_2 = 2, \\qquad y = 0 $$ Weights and biases:\nparameter value $w_{h_1,1}$ 0.5 $w_{h_1,2}$ 0.5 $b_{h_1}$ 0 $w_{h_2,1}$ 1 $w_{h_2,2}$ −1 $b_{h_2}$ 2 $w_{o,1}$ 0.5 $w_{o,2}$ 1 $b_{o}$ 0 Hand-computed forward quantities:\nquantity value $z_{h_1}$ 1.5000 $a_{h_1}$ 0.8176 $z_{h_2}$ 1.0000 $a_{h_2}$ 0.7311 $z_o$ 1.1399 $a_o$ 0.7577 $L$ 1.4177 Hand-computed gradients:\nparameter gradient $w_{h_1,1}$ 0.0565 $w_{h_1,2}$ 0.1130 $b_{h_1}$ 0.0565 $w_{h_2,1}$ 0.1490 $w_{h_2,2}$ 0.2980 $b_{h_2}$ 0.1490 $w_{o,1}$ 0.6195 $w_{o,2}$ 0.5540 $b_o$ 0.7577 Our goal: produce every one of these gradients with NumPy, using matrices, and see the same numbers.\n3. Why vectorize at all? In the scalar walk, every equation had subscripts like $h_1$ and $h_2$ . That works for two hidden neurons and one example, but if you have 512 hidden neurons and a batch of 32 examples, the page would be covered in subscripts.\nVectorization means: stack examples as rows of a matrix, stack neurons as columns of a weight matrix, and let one matrix multiplication compute the same thing for every example and every neuron at the same time.\nThe scalar rules do not change. A sum node is still a sum node. A multiplication is still a multiplication. The chain rule is still the chain rule. We are only changing how we write the bookkeeping.\n4. Matrix notation, introduced slowly We have a batch of $m$ training examples. Each example is a row vector of inputs. Stack them vertically and the result is the design matrix $X$ :\n$$ X \\text{ has shape } (m, n_x) $$ where $n_x = 2$ is the number of input features. Row $i$ of $X$ is the input for the $i$ -th training example.\nFor our single example:\n$$ X = \\begin{bmatrix} 1 \u0026 2 \\end{bmatrix} $$ $X$ is a $1 \\times 2$ matrix.\nThe weights connecting the inputs to the hidden layer are stored in a matrix $W^{[1]}$ . Its shape is $(n_x, n_h)$ , where $n_h = 2$ is the number of hidden neurons.\nThe meaning of $W^{[1]}$ :\n$$ W^{[1]}_{i,j} = \\text{weight from input } i \\text{ to hidden neuron } j $$ For our example:\n$$ W^{[1]} = \\begin{bmatrix} 0.5 \u0026 1 \\\\ 0.5 \u0026 -1 \\end{bmatrix} $$ Column 0 holds the weights feeding hidden neuron $h_1$ : $[0.5, 0.5]^T$ . Column 1 holds the weights feeding $h_2$ : $[1, -1]^T$ .\nThe hidden biases are stored as a row vector $b^{[1]}$ of shape $(1, n_h)$ :\n$$ b^{[1]} = \\begin{bmatrix} 0 \u0026 2 \\end{bmatrix} $$ The hidden pre-activations are:\n$$ Z^{[1]} = X W^{[1]} + b^{[1]} $$ Because $X$ is $(m, n_x)$ and $W^{[1]}$ is $(n_x, n_h)$ , their product $X W^{[1]}$ is $(m, n_h)$ . Adding $b^{[1]}$ of shape $(1, n_h)$ adds the same bias to every example in the batch. This is called broadcasting.\nFor our one example:\n$$ Z^{[1]} = \\begin{bmatrix} 1 \u0026 2 \\end{bmatrix} \\begin{bmatrix} 0.5 \u0026 1 \\\\ 0.5 \u0026 -1 \\end{bmatrix} + \\begin{bmatrix} 0 \u0026 2 \\end{bmatrix} = \\begin{bmatrix} 1.5 \u0026 1 \\end{bmatrix} $$ Compare to the scalar values: $z_{h_1} = 1.5$ and $z_{h_2} = 1.0$ . Column 0 of $Z^{[1]}$ is $z_{h_1}$ for every example; column 1 is $z_{h_2}$ .\nThe hidden activations are elementwise sigmoid:\n$$ A^{[1]} = \\sigma(Z^{[1]}) $$ For our example:\n$$ A^{[1]} = \\begin{bmatrix} 0.8176 \u0026 0.7311 \\end{bmatrix} $$ So $A^{[1]}$ has the same shape as $Z^{[1]}$ : $(m, n_h)$ .\nThe output layer has $n_y = 1$ neuron. The weights are $W^{[2]}$ of shape $(n_h, n_y)$ :\n$$ W^{[2]} = \\begin{bmatrix} 0.5 \\\\ 1 \\end{bmatrix} $$ The output bias is $b^{[2]}$ of shape $(1, n_y)$ :\n$$ b^{[2]} = \\begin{bmatrix} 0 \\end{bmatrix} $$ The output pre-activation is:\n$$ Z^{[2]} = A^{[1]} W^{[2]} + b^{[2]} $$ $A^{[1]}$ is $(m, n_h)$ , $W^{[2]}$ is $(n_h, n_y)$ , so $Z^{[2]}$ is $(m, n_y)$ . For our example:\n$$ Z^{[2]} = \\begin{bmatrix} 0.8176 \u0026 0.7311 \\end{bmatrix} \\begin{bmatrix} 0.5 \\\\ 1 \\end{bmatrix} + \\begin{bmatrix} 0 \\end{bmatrix} = \\begin{bmatrix} 1.1399 \\end{bmatrix} $$ The output activation is:\n$$ A^{[2]} = \\sigma(Z^{[2]}) = \\begin{bmatrix} 0.7577 \\end{bmatrix} $$ Finally, the labels are stacked as $Y$ of shape $(m, n_y)$ :\n$$ Y = \\begin{bmatrix} 0 \\end{bmatrix} $$ So far, every matrix value matches the scalar walk exactly. The only difference is packaging.\n4.1 What the matrix multiply actually computes, entry by entry If you are a visual learner, this is the section to read twice. The convention I will use consistently is:\nRows of $X$ are examples. Columns of $X$ are input features. Rows of $W^{[1]}$ are input features. Columns of $W^{[1]}$ are hidden neurons. So column $j$ of $W^{[1]}$ holds all the weights feeding hidden neuron $j$ . Hidden layer forward In general, if we had $m$ examples, $X$ would stack them as rows:\n$$ X = \\begin{bmatrix} x_{1,1} \u0026 x_{1,2} \\\\ x_{2,1} \u0026 x_{2,2} \\\\ \\vdots \u0026 \\vdots \\\\ x_{m,1} \u0026 x_{m,2} \\end{bmatrix} $$ For our one example, this collapses to a single row:\n$$ X = \\begin{bmatrix} x_{1,1} \u0026 x_{1,2} \\end{bmatrix} = \\begin{bmatrix} 1 \u0026 2 \\end{bmatrix} $$ Row 1 is example 1. Column 1 is feature $x_1$ , column 2 is feature $x_2$ .\n$$ W^{[1]} = \\begin{bmatrix} w_{x_1 \\to h_1} \u0026 w_{x_1 \\to h_2} \\\\ w_{x_2 \\to h_1} \u0026 w_{x_2 \\to h_2} \\end{bmatrix} = \\begin{bmatrix} 0.5 \u0026 1 \\\\ 0.5 \u0026 -1 \\end{bmatrix} $$ Key thing to remember: inputs stack row wise, weights stack column wise [weights of neuron1, weights of neuron 2, …], biases are just 1 per neuron, they stack row wise\nRow 1 = weights from $x_1$ . Row 2 = weights from $x_2$ . Column 1 = weights into $h_1$ . Column 2 = weights into $h_2$ .\nThe product $X W^{[1]}$ computes every weighted sum at once. Entry $(i,j)$ means “example $i$ , hidden neuron $j$ ”:\n$$ Z^{[1]}_{i,j} = X_{i,1} \\, W^{[1]}_{1,j} + X_{i,2} \\, W^{[1]}_{2,j} + b^{[1]}_j $$ Plugging in the only example we have:\n$$ Z^{[1]}_{1,1} = 1 \\cdot 0.5 + 2 \\cdot 0.5 + 0 = 1.5 \\qquad Z^{[1]}_{1,2} = 1 \\cdot 1 + 2 \\cdot (-1) + 2 = 1.0 $$ So the full matrix is:\n$$ Z^{[1]} = \\begin{bmatrix} 1.5 \u0026 1.0 \\end{bmatrix} $$ Then the activation is applied element by element, keeping the same shape:\n$$ A^{[1]} = \\sigma(Z^{[1]}) = \\begin{bmatrix} 0.8176 \u0026 0.7311 \\end{bmatrix} $$ Output layer forward Now $A^{[1]}$ becomes the input to the next layer. The weight matrix $W^{[2]}$ has one column per output neuron. Here there is only one output neuron, so $W^{[2]}$ is a column vector:\n$$ W^{[2]} = \\begin{bmatrix} w_{h_1 \\to o} \\\\ w_{h_2 \\to o} \\end{bmatrix} = \\begin{bmatrix} 0.5 \\\\ 1 \\end{bmatrix} $$ The output pre-activation is:\n$$ Z^{[2]}_{i,1} = A^{[1]}_{i,1} \\, W^{[2]}_{1,1} + A^{[1]}_{i,2} \\, W^{[2]}_{2,1} + b^{[2]}_1 $$ For our example:\n$$ Z^{[2]}_{1,1} = 0.8176 \\cdot 0.5 + 0.7311 \\cdot 1 + 0 = 1.1399 $$ So:\n$$ Z^{[2]} = \\begin{bmatrix} 1.1399 \\end{bmatrix}, \\qquad A^{[2]} = \\sigma(Z^{[2]}) = \\begin{bmatrix} 0.7577 \\end{bmatrix} $$ Backward messages, the same way The output error signal is:\n$$ \\delta^{[2]} = A^{[2]} - Y = \\begin{bmatrix} 0.7577 \\end{bmatrix} - \\begin{bmatrix} 0 \\end{bmatrix} = \\begin{bmatrix} 0.7577 \\end{bmatrix} $$ The gradient for the output weights is the outer product of the hidden activations (transposed) and the output error:\n$$ dW^{[2]} = (A^{[1]})^T \\delta^{[2]} = \\begin{bmatrix} 0.8176 \\\\ 0.7311 \\end{bmatrix} \\begin{bmatrix} 0.7577 \\end{bmatrix} = \\begin{bmatrix} 0.8176 \\cdot 0.7577 \\\\ 0.7311 \\cdot 0.7577 \\end{bmatrix} = \\begin{bmatrix} 0.6195 \\\\ 0.5540 \\end{bmatrix} $$ Row 1 is the update for $w_{h_1 \\to o}$ . Row 2 is the update for $w_{h_2 \\to o}$ .\nThe message sent backward to the hidden layer is:\n$$ \\delta^{[2]} (W^{[2]})^T = \\begin{bmatrix} 0.7577 \\end{bmatrix} \\begin{bmatrix} 0.5 \u0026 1 \\end{bmatrix} = \\begin{bmatrix} 0.7577 \\cdot 0.5 \u0026 0.7577 \\cdot 1 \\end{bmatrix} = \\begin{bmatrix} 0.3789 \u0026 0.7577 \\end{bmatrix} $$ Column 1 is the blame assigned to $a_{h_1}$ ; column 2 is the blame assigned to $a_{h_2}$ .\nMultiply elementwise by the sigmoid slope to move the blame from the activation back to the pre-activation:\n$$ \\delta^{[1]} = \\delta^{[2]} (W^{[2]})^T \\odot \\sigma'(Z^{[1]}) = \\begin{bmatrix} 0.3789 \u0026 0.7577 \\end{bmatrix} \\odot \\begin{bmatrix} 0.1491 \u0026 0.1966 \\end{bmatrix} = \\begin{bmatrix} 0.0565 \u0026 0.1490 \\end{bmatrix} $$ Finally, the hidden-layer weight gradients:\n$$ dW^{[1]} = X^T \\delta^{[1]} = \\begin{bmatrix} 1 \\\\ 2 \\end{bmatrix} \\begin{bmatrix} 0.0565 \u0026 0.1490 \\end{bmatrix} = \\begin{bmatrix} 1 \\cdot 0.0565 \u0026 1 \\cdot 0.1490 \\\\ 2 \\cdot 0.0565 \u0026 2 \\cdot 0.1490 \\end{bmatrix} = \\begin{bmatrix} 0.0565 \u0026 0.1490 \\\\ 0.1130 \u0026 0.2980 \\end{bmatrix} $$ Row 1 = gradients for weights coming from $x_1$ . Row 2 = gradients for weights coming from $x_2$ . Column 1 = gradients for $h_1$ . Column 2 = gradients for $h_2$ .\nThat is the complete picture: every row and every column has a meaning, and every multiplication is just a compact way of writing the scalar chain rule for every example at once.\n5. The loss, averaged over the batch For a single example, the binary cross-entropy loss is:\n$$ L(a, y) = -\\big[ y \\log a + (1-y) \\log (1-a) \\big] $$ For a whole batch of $m$ examples, we usually average the losses so the size of the batch does not change the scale of the gradient:\n$$ \\mathcal{L} = \\frac{1}{m} \\sum_{i=1}^{m} L\\big(A^{[2]}_i, Y_i\\big) $$ With $m = 1$ the average changes nothing.\nThis averaging is important: if you double the batch size, the sum of losses doubles, but the average stays the same. You want the gradient magnitude to depend on the model’s error, not on how many examples you happened to batch together. Later, when we train on 4 XOR examples, the division by $m = 4$ keeps the update steps stable.\n6. The backward pass in matrix form Now we redo the backward pass, but each step is a matrix formula. Each formula is just the scalar chain rule written for all examples and all neurons at once.\n6.1 Error at the output pre-activation For each example $i$ :\n$$ \\delta^{[2]}_i = A^{[2]}_i - Y_i $$ Stacked into a matrix of shape $(m, n_y)$ :\n$$ \\delta^{[2]} = A^{[2]} - Y $$ For our example:\n$$ \\delta^{[2]} = \\begin{bmatrix} 0.7577 \\end{bmatrix} - \\begin{bmatrix} 0 \\end{bmatrix} = \\begin{bmatrix} 0.7577 \\end{bmatrix} $$ This matches the scalar $\\delta_o = 0.7577$ .\n6.2 Gradients for the output weights and bias Scalar rule for one example, one output weight:\n$$ \\frac{\\partial L_i}{\\partial w_{o,j}} = \\delta^{[2]}_i \\cdot A^{[1]}_{i,j} $$ Across all examples and all output neurons, this becomes an outer product, averaged over the batch:\n$$ dW^{[2]} = \\frac{1}{m} \\big(A^{[1]}\\big)^T \\delta^{[2]} $$ $A^{[1]}$ is $(m, n_h)$ and $\\delta^{[2]}$ is $(m, n_y)$ . Their transpose product is $(n_h, n_y)$ , which is exactly the shape of $W^{[2]}$ . Each entry $(j, k)$ is:\n$$ \\frac{1}{m} \\sum_{i=1}^{m} A^{[1]}_{i,j} \\, \\delta^{[2]}_{i,k} $$ That is precisely “error signal times the input that weight multiplied,” averaged over examples.\nFor our one-example case:\n$$ dW^{[2]} = \\begin{bmatrix} 0.8176 \\\\ 0.7311 \\end{bmatrix} \\begin{bmatrix} 0.7577 \\end{bmatrix} = \\begin{bmatrix} 0.6195 \\\\ 0.5540 \\end{bmatrix} $$ Compare to the scalar gradients: $w_{o,1}$ got 0.6195 and $w_{o,2}$ got 0.5540.\nThe output bias gradient is the average error signal:\n$$ db^{[2]} = \\frac{1}{m} \\sum_{i=1}^{m} \\delta^{[2]}_i $$ With one example:\n$$ db^{[2]} = \\begin{bmatrix} 0.7577 \\end{bmatrix} $$ This matches the scalar $b_o$ gradient.\n6.3 Error signal for the hidden layer Scalar rule for one hidden neuron:\n$$ \\frac{\\partial L_i}{\\partial a_{h_j}} = \\delta^{[2]}_i \\cdot w_{o,j} $$ Stacked, this is a matrix multiplication:\n$$ \\frac{\\partial \\mathcal{L}}{\\partial A^{[1]}} = \\delta^{[2]} \\big(W^{[2]}\\big)^T $$ $\\delta^{[2]}$ is $(m, n_y)$ , $(W^{[2]})^T$ is $(n_y, n_h)$ , so the result is $(m, n_h)$ . For our example:\n$$ \\delta^{[2]} (W^{[2]})^T = \\begin{bmatrix} 0.7577 \\end{bmatrix} \\begin{bmatrix} 0.5 \u0026 1 \\end{bmatrix} = \\begin{bmatrix} 0.3789 \u0026 0.7577 \\end{bmatrix} $$ Compare to the scalar messages: $\\partial L / \\partial a_{h_1} = 0.3789$ and $\\partial L / \\partial a_{h_2} = 0.7577$ .\nThen multiply elementwise by the sigmoid slope at the hidden pre-activations:\n$$ \\delta^{[1]} = \\Big( \\delta^{[2]} (W^{[2]})^T \\Big) \\odot \\sigma'\\big(Z^{[1]}\\big) $$ The $\\odot$ means elementwise multiplication. This is the $(m, n_h)$ matrix of hidden-layer error signals.\nFor our example:\n$$ \\sigma'(Z^{[1]}) = A^{[1]} \\odot (1 - A^{[1]}) = \\begin{bmatrix} 0.8176 \\cdot 0.1824 \u0026 0.7311 \\cdot 0.2689 \\end{bmatrix} = \\begin{bmatrix} 0.1491 \u0026 0.1966 \\end{bmatrix} $$ $$ \\delta^{[1]} = \\begin{bmatrix} 0.3789 \u0026 0.7577 \\end{bmatrix} \\odot \\begin{bmatrix} 0.1491 \u0026 0.1966 \\end{bmatrix} = \\begin{bmatrix} 0.0565 \u0026 0.1490 \\end{bmatrix} $$ Column 0 is $\\delta_{h_1}$ ; column 1 is $\\delta_{h_2}$ . These match the scalar values 0.0565 and 0.1490.\n6.4 Gradients for the hidden weights and bias Same rule as the output layer, now using the raw inputs $X$ :\n$$ dW^{[1]} = \\frac{1}{m} X^T \\delta^{[1]} $$ $X^T$ is $(n_x, m)$ , $\\delta^{[1]}$ is $(m, n_h)$ , so $dW^{[1]}$ is $(n_x, n_h)$ . Entry $(i,j)$ is:\n$$ \\frac{1}{m} \\sum_{\\text{examples}} x_i \\, \\delta_{h_j} $$ For our example:\n$$ dW^{[1]} = \\begin{bmatrix} 1 \\\\ 2 \\end{bmatrix} \\begin{bmatrix} 0.0565 \u0026 0.1490 \\end{bmatrix} = \\begin{bmatrix} 0.0565 \u0026 0.1490 \\\\ 0.1130 \u0026 0.2980 \\end{bmatrix} $$ Entry $(0,0)$ is the gradient of $w_{h_1,1}$ : 0.0565. Entry $(1,0)$ is the gradient of $w_{h_1,2}$ : 0.1130. Entry $(0,1)$ is $w_{h_2,1}$ : 0.1490. Entry $(1,1)$ is $w_{h_2,2}$ : 0.2980. Every single value matches the hand-computed ledger.\nThe hidden bias is:\n$$ db^{[1]} = \\frac{1}{m} \\sum_{i=1}^{m} \\delta^{[1]}_i = \\begin{bmatrix} 0.0565 \u0026 0.1490 \\end{bmatrix} $$ which matches $b_{h_1}$ and $b_{h_2}$ .\n7. Summary of the vectorized backward pass If you ever get lost, come back to this table.\nstep formula shape of result error at output $\\delta^{[2]} = A^{[2]} - Y$ $(m, n_y)$ output weight grad $dW^{[2]} = \\frac{1}{m} (A^{[1]})^T \\delta^{[2]}$ $(n_h, n_y)$ output bias grad $db^{[2]} = \\frac{1}{m} \\sum_i \\delta^{[2]}_i$ $(1, n_y)$ error at hidden pre-activation $\\delta^{[1]} = \\big(\\delta^{[2]} (W^{[2]})^T\\big) \\odot \\sigma'(Z^{[1]})$ $(m, n_h)$ hidden weight grad $dW^{[1]} = \\frac{1}{m} X^T \\delta^{[1]}$ $(n_x, n_h)$ hidden bias grad $db^{[1]} = \\frac{1}{m} \\sum_i \\delta^{[1]}_i$ $(1, n_h)$ Every row is the scalar chain rule, just written for all examples at once.\n8. NumPy implementation from scratch Now we write the network as code. The functions mirror the table above exactly.\nimport numpy as np def sigmoid(z): return 1.0 / (1.0 + np.exp(-z)) def sigmoid_prime(a): # if a = sigmoid(z), then sigmoid'(z) = a * (1 - a) return a * (1.0 - a) def forward(X, W1, b1, W2, b2): z1 = X @ W1 + b1 # shape (m, n_h) a1 = sigmoid(z1) # shape (m, n_h) z2 = a1 @ W2 + b2 # shape (m, n_y) a2 = sigmoid(z2) # shape (m, n_y) return z1, a1, z2, a2 def backward(X, Y, W2, z1, a1, z2, a2): m = X.shape[0] # Output layer error dz2 = a2 - Y # shape (m, n_y) # Output layer gradients dW2 = (a1.T @ dz2) / m # shape (n_h, n_y) db2 = np.mean(dz2, axis=0, keepdims=True) # Hidden layer error da1 = dz2 @ W2.T # shape (m, n_h) dz1 = da1 * sigmoid_prime(a1) # elementwise # Hidden layer gradients dW1 = (X.T @ dz1) / m # shape (n_x, n_h) db1 = np.mean(dz1, axis=0, keepdims=True) return dW1, db1, dW2, db2 Initialize with the exact weights from the hand example and check gradients:\nX = np.array([[1.0, 2.0]]) # shape (1, 2) Y = np.array([[0.0]]) # shape (1, 1) W1 = np.array([[0.5, 1.0], [0.5, -1.0]]) # shape (2, 2) b1 = np.array([[0.0, 2.0]]) # shape (1, 2) W2 = np.array([[0.5], [1.0]]) # shape (2, 1) b2 = np.array([[0.0]]) # shape (1, 1) z1, a1, z2, a2 = forward(X, W1, b1, W2, b2) print(\"a2:\", a2) # expect ~0.7577 dW1, db1, dW2, db2 = backward(X, Y, W2, z1, a1, z2, a2) print(\"dW1:\", dW1) print(\"db1:\", db1) print(\"dW2:\", dW2) print(\"db2:\", db2) Running it gives:\na2: [[0.7576]] dW1: [[0.0565 0.1490] [0.1130 0.2980]] db1: [[0.0565 0.1490]] dW2: [[0.6194] [0.5540]] db2: [[0.7576]] The tiny differences from the hand numbers are rounding in the printed sigmoid values. The algorithm is identical.\n9. Verifying against PyTorch autograd The same network in PyTorch should produce the same gradients. This is a sanity check that your hand-derived code is right.\nimport torch X_t = torch.tensor([[1.0, 2.0]]) Y_t = torch.tensor([[0.0]]) W1_t = torch.tensor([[0.5, 1.0], [0.5, -1.0]], requires_grad=True) b1_t = torch.tensor([[0.0, 2.0]], requires_grad=True) W2_t = torch.tensor([[0.5], [1.0]], requires_grad=True) b2_t = torch.tensor([[0.0]], requires_grad=True) z1_t = X_t @ W1_t + b1_t a1_t = torch.sigmoid(z1_t) z2_t = a1_t @ W2_t + b2_t a2_t = torch.sigmoid(z2_t) loss = -torch.mean(Y_t * torch.log(a2_t) + (1 - Y_t) * torch.log(1 - a2_t)) loss.backward() print(\"PyTorch dW1:\", W1_t.grad) print(\"PyTorch dW2:\", W2_t.grad) The printed tensors match the NumPy values above.\n10. Training on the XOR problem The XOR dataset has 4 examples. It is not linearly separable, so a single neuron (logistic regression) cannot solve it. A 2-2-1 network can.\n# XOR dataset: (x1, x2) -\u003e label X_xor = np.array([ [0, 0], [0, 1], [1, 0], [1, 1] ], dtype=float) Y_xor = np.array([ [0], [1], [1], [0] ], dtype=float) np.random.seed(1) W1 = np.random.randn(2, 2) * 0.5 b1 = np.zeros((1, 2)) W2 = np.random.randn(2, 1) * 0.5 b2 = np.zeros((1, 1)) lr = 0.3 epochs = 20000 for epoch in range(epochs): z1, a1, z2, a2 = forward(X_xor, W1, b1, W2, b2) # clipped log for numerical stability eps = 1e-7 loss = -np.mean(Y_xor * np.log(a2 + eps) + (1 - Y_xor) * np.log(1 - a2 + eps)) dW1, db1, dW2, db2 = backward(X_xor, Y_xor, W2, z1, a1, z2, a2) W1 -= lr * dW1 b1 -= lr * db1 W2 -= lr * dW2 b2 -= lr * db2 if epoch % 2000 == 0: print(f\"epoch {epoch}, loss {loss:.4f}\") # Final predictions _, _, _, preds = forward(X_xor, W1, b1, W2, b2) print(\"final predictions:\", preds.round(3)) Typical output:\nepoch 0, loss 0.6932 epoch 2000, loss 0.0342 epoch 4000, loss 0.0072 epoch 6000, loss 0.0032 epoch 8000, loss 0.0018 epoch 10000, loss 0.0012 epoch 12000, loss 0.0009 epoch 14000, loss 0.0007 epoch 16000, loss 0.0006 epoch 18000, loss 0.0005 final predictions: [[0.003] [0.996] [0.996] [0.003]] The network learns XOR. There is no framework magic: just the forward and backward functions written above, run in a loop.\n11. What the code and the math have in common If you strip the NumPy code back to its meaning, every line is one of the scalar rules from the previous note:\ndz2 = a2 - Y is $\\delta_o = a_o - y$ . dW2 = (a1.T @ dz2) / m is “error signal times the feeding activation, averaged.” da1 = dz2 @ W2.T is the message sent backward from the output layer to the hidden layer. dz1 = da1 * sigmoid_prime(a1) is multiplying by the local slope of the hidden activation. dW1 = (X.T @ dz1) / m is the same rule applied one layer earlier. The matrix form is not a different algorithm. It is the scalar algorithm, written once per layer.\n12. Exercises Run the NumPy code with the single-example weights from section 2 and verify that every printed gradient matches the hand-computed table to within 0.0001. Change the label in the single example from $y=0$ to $y=1$ . Before running the code, predict the sign of $\\delta^{[2]}$ , and therefore the sign of every gradient. Then run it. In the XOR training loop, what happens if you remove the / m averaging in dW1 and dW2? Why does the loss curve behave differently? Add a third hidden neuron to the XOR network (so the architecture is 2-3-1). Which shapes change? Which lines of the NumPy code stay the same? 13. What comes next The next note takes two practical steps forward:\nReplace sigmoid hidden units with ReLU to avoid vanishing gradients, and look at how the backward formulas change. Build deeper networks cleanly by stacking the same forward/backward block, leading into modern architectures. ","wordCount":"3499","inLanguage":"en","datePublished":"2026-09-14T00:00:00Z","dateModified":"2026-09-14T00:00:00Z","mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/ml/2026-09-14-training-a-2-layer-network-in-numpy/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload='renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1}],throwOnError:!1})'></script><script type=module>
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+  document.querySelectorAll('pre > code.language-mermaid').forEach((codeEl) => {
+    const host = codeEl.closest('div.highlight') || codeEl.parentElement;
+    const pre = document.createElement('pre');
+    pre.className = 'mermaid';
+    pre.textContent = codeEl.textContent;
+    host.replaceWith(pre);
+  });
+  mermaid.run({ querySelector: '.mermaid' });
+</script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop</h1><div class=post-meta><span title='2026-09-14 00:00:00 +0000 UTC'>September 14, 2026</span>&nbsp;·&nbsp;17 min&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/ml/2026-09-14-training-a-2-layer-network-in-numpy.markdown rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#training-a-2-layer-network-in-numpy-from-scalar-to-vectorized-backprop aria-label="Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop">Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop</a><ul><li><a href=#1-what-you-will-learn aria-label="1. What you will learn">1. What you will learn</a></li><li><a href=#2-the-scalar-walk-compressed-into-a-single-table aria-label="2. The scalar walk, compressed into a single table">2. The scalar walk, compressed into a single table</a></li><li><a href=#3-why-vectorize-at-all aria-label="3. Why vectorize at all?">3. Why vectorize at all?</a></li><li><a href=#4-matrix-notation-introduced-slowly aria-label="4. Matrix notation, introduced slowly">4. Matrix notation, introduced slowly</a></li><li><a href=#41-what-the-matrix-multiply-actually-computes-entry-by-entry aria-label="4.1 What the matrix multiply actually computes, entry by entry">4.1 What the matrix multiply actually computes, entry by entry</a><ul><li><a href=#hidden-layer-forward aria-label="Hidden layer forward">Hidden layer forward</a></li><li><a href=#output-layer-forward aria-label="Output layer forward">Output layer forward</a></li><li><a href=#backward-messages-the-same-way aria-label="Backward messages, the same way">Backward messages, the same way</a></li></ul></li><li><a href=#5-the-loss-averaged-over-the-batch aria-label="5. The loss, averaged over the batch">5. The loss, averaged over the batch</a></li><li><a href=#6-the-backward-pass-in-matrix-form aria-label="6. The backward pass in matrix form">6. The backward pass in matrix form</a><ul><li><a href=#61-error-at-the-output-pre-activation aria-label="6.1 Error at the output pre-activation">6.1 Error at the output pre-activation</a></li><li><a href=#62-gradients-for-the-output-weights-and-bias aria-label="6.2 Gradients for the output weights and bias">6.2 Gradients for the output weights and bias</a></li><li><a href=#63-error-signal-for-the-hidden-layer aria-label="6.3 Error signal for the hidden layer">6.3 Error signal for the hidden layer</a></li><li><a href=#64-gradients-for-the-hidden-weights-and-bias aria-label="6.4 Gradients for the hidden weights and bias">6.4 Gradients for the hidden weights and bias</a></li></ul></li><li><a href=#7-summary-of-the-vectorized-backward-pass aria-label="7. Summary of the vectorized backward pass">7. Summary of the vectorized backward pass</a></li><li><a href=#8-numpy-implementation-from-scratch aria-label="8. NumPy implementation from scratch">8. NumPy implementation from scratch</a></li><li><a href=#9-verifying-against-pytorch-autograd aria-label="9. Verifying against PyTorch autograd">9. Verifying against PyTorch autograd</a></li><li><a href=#10-training-on-the-xor-problem aria-label="10. Training on the XOR problem">10. Training on the XOR problem</a></li><li><a href=#11-what-the-code-and-the-math-have-in-common aria-label="11. What the code and the math have in common">11. What the code and the math have in common</a></li><li><a href=#12-exercises aria-label="12. Exercises">12. Exercises</a></li><li><a href=#13-what-comes-next aria-label="13. What comes next">13. What comes next</a></li></ul></li></ul></div></details></div><div class=post-content><h1 id=training-a-2-layer-network-in-numpy-from-scalar-to-vectorized-backprop>Training a 2-Layer Network in NumPy: From Scalar to Vectorized Backprop<a hidden class=anchor aria-hidden=true href=#training-a-2-layer-network-in-numpy-from-scalar-to-vectorized-backprop>#</a></h1><p>The <a href=/posts/ml/2026-09-12-3-backpropagation-in-a-fully-connected-network>previous note</a> did the backward pass for a small 2-layer network by hand, one scalar at a time. That is the best way to understand what backprop actually does.</p><p>This note takes the next step: turn that scalar walk into compact, vectorized NumPy code. The math is unchanged; the only thing that changes is notation. I will introduce every matrix slowly — what its rows and columns mean, where the division by the batch size comes from, and why it is exactly the same algorithm you already did by hand.</p><p>At the end we train the same 2-2-1 network on the XOR problem from scratch, with no frameworks except NumPy, and compare the computed gradients to PyTorch&rsquo;s autograd.</p><hr><h2 id=1-what-you-will-learn>1. What you will learn<a hidden class=anchor aria-hidden=true href=#1-what-you-will-learn>#</a></h2><ul><li>How to replace the per-neuron scalars with matrices, without changing the underlying math.</li><li>The shape of every matrix in a dense network, and what each dimension means.</li><li>Why the loss is averaged over the batch.</li><li>How to write a complete forward pass, backward pass, and update step in NumPy.</li><li>How to verify your NumPy gradients against both hand-computed values and PyTorch autograd.</li><li>A full training loop on the XOR problem.</li></ul><hr><h2 id=2-the-scalar-walk-compressed-into-a-single-table>2. The scalar walk, compressed into a single table<a hidden class=anchor aria-hidden=true href=#2-the-scalar-walk-compressed-into-a-single-table>#</a></h2><p>We reuse the exact example from the previous note.</p><p>Network architecture:</p><pre tabindex=0><code class=language-mermaid data-lang=mermaid>flowchart LR
+    X1[&#34;x1&#34;] --&gt; H1[&#34;h1&#34;]
+    X2[&#34;x2&#34;] --&gt; H1
+    X1 --&gt; H2[&#34;h2&#34;]
+    X2 --&gt; H2
+    H1 --&gt; O[&#34;output&#34;]
+    H2 --&gt; O
+</code></pre><p>One training example:</p>$$
+x_1 = 1, \qquad x_2 = 2, \qquad y = 0
+$$<p>Weights and biases:</p><table><thead><tr><th>parameter</th><th>value</th></tr></thead><tbody><tr><td>$w_{h_1,1}$</td><td>0.5</td></tr><tr><td>$w_{h_1,2}$</td><td>0.5</td></tr><tr><td>$b_{h_1}$</td><td>0</td></tr><tr><td>$w_{h_2,1}$</td><td>1</td></tr><tr><td>$w_{h_2,2}$</td><td>−1</td></tr><tr><td>$b_{h_2}$</td><td>2</td></tr><tr><td>$w_{o,1}$</td><td>0.5</td></tr><tr><td>$w_{o,2}$</td><td>1</td></tr><tr><td>$b_{o}$</td><td>0</td></tr></tbody></table><p>Hand-computed forward quantities:</p><table><thead><tr><th>quantity</th><th>value</th></tr></thead><tbody><tr><td>$z_{h_1}$</td><td>1.5000</td></tr><tr><td>$a_{h_1}$</td><td>0.8176</td></tr><tr><td>$z_{h_2}$</td><td>1.0000</td></tr><tr><td>$a_{h_2}$</td><td>0.7311</td></tr><tr><td>$z_o$</td><td>1.1399</td></tr><tr><td>$a_o$</td><td>0.7577</td></tr><tr><td>$L$</td><td>1.4177</td></tr></tbody></table><p>Hand-computed gradients:</p><table><thead><tr><th>parameter</th><th>gradient</th></tr></thead><tbody><tr><td>$w_{h_1,1}$</td><td>0.0565</td></tr><tr><td>$w_{h_1,2}$</td><td>0.1130</td></tr><tr><td>$b_{h_1}$</td><td>0.0565</td></tr><tr><td>$w_{h_2,1}$</td><td>0.1490</td></tr><tr><td>$w_{h_2,2}$</td><td>0.2980</td></tr><tr><td>$b_{h_2}$</td><td>0.1490</td></tr><tr><td>$w_{o,1}$</td><td>0.6195</td></tr><tr><td>$w_{o,2}$</td><td>0.5540</td></tr><tr><td>$b_o$</td><td>0.7577</td></tr></tbody></table><p>Our goal: produce every one of these gradients with NumPy, using matrices, and see the same numbers.</p><hr><h2 id=3-why-vectorize-at-all>3. Why vectorize at all?<a hidden class=anchor aria-hidden=true href=#3-why-vectorize-at-all>#</a></h2><p>In the scalar walk, every equation had subscripts like
+$h_1$
+and
+$h_2$
+. That works for two hidden neurons and one example, but if you have 512 hidden neurons and a batch of 32 examples, the page would be covered in subscripts.</p><p>Vectorization means: stack examples as rows of a matrix, stack neurons as columns of a weight matrix, and let one matrix multiplication compute the same thing for every example and every neuron at the same time.</p><p>The scalar rules do not change. A sum node is still a sum node. A multiplication is still a multiplication. The chain rule is still the chain rule. We are only changing how we write the bookkeeping.</p><hr><h2 id=4-matrix-notation-introduced-slowly>4. Matrix notation, introduced slowly<a hidden class=anchor aria-hidden=true href=#4-matrix-notation-introduced-slowly>#</a></h2><p>We have a <strong>batch</strong> of
+$m$
+training examples. Each example is a row vector of inputs. Stack them vertically and the result is the <strong>design matrix</strong>
+$X$
+:</p>$$
+X \text{ has shape } (m, n_x)
+$$<p>where
+$n_x = 2$
+is the number of input features. Row
+$i$
+of
+$X$
+is the input for the
+$i$
+-th training example.</p><p>For our single example:</p>$$
+X = \begin{bmatrix} 1 & 2 \end{bmatrix}
+$$<p>$X$
+is a
+$1 \times 2$
+matrix.</p><p>The weights connecting the inputs to the hidden layer are stored in a matrix
+$W^{[1]}$
+. Its shape is
+$(n_x, n_h)$
+, where
+$n_h = 2$
+is the number of hidden neurons.</p><p>The meaning of
+$W^{[1]}$
+:</p>$$
+W^{[1]}_{i,j} = \text{weight from input } i \text{ to hidden neuron } j
+$$<p>For our example:</p>$$
+W^{[1]} =
+\begin{bmatrix}
+0.5 & 1 \\
+0.5 & -1
+\end{bmatrix}
+$$<p>Column 0 holds the weights feeding hidden neuron
+$h_1$
+:
+$[0.5, 0.5]^T$
+. Column 1 holds the weights feeding
+$h_2$
+:
+$[1, -1]^T$
+.</p><p>The hidden biases are stored as a row vector
+$b^{[1]}$
+of shape
+$(1, n_h)$
+:</p>$$
+b^{[1]} = \begin{bmatrix} 0 & 2 \end{bmatrix}
+$$<p>The hidden pre-activations are:</p>$$
+Z^{[1]} = X W^{[1]} + b^{[1]}
+$$<p>Because
+$X$
+is
+$(m, n_x)$
+and
+$W^{[1]}$
+is
+$(n_x, n_h)$
+, their product
+$X W^{[1]}$
+is
+$(m, n_h)$
+. Adding
+$b^{[1]}$
+of shape
+$(1, n_h)$
+adds the same bias to every example in the batch. This is called <strong>broadcasting</strong>.</p><p>For our one example:</p>$$
+Z^{[1]} =
+\begin{bmatrix} 1 & 2 \end{bmatrix}
+\begin{bmatrix}
+0.5 & 1 \\
+0.5 & -1
+\end{bmatrix} +
+\begin{bmatrix} 0 & 2 \end{bmatrix} =
+\begin{bmatrix} 1.5 & 1 \end{bmatrix}
+$$<p>Compare to the scalar values:
+$z_{h_1} = 1.5$
+and
+$z_{h_2} = 1.0$
+. Column 0 of
+$Z^{[1]}$
+is
+$z_{h_1}$
+for every example; column 1 is
+$z_{h_2}$
+.</p><p>The hidden activations are elementwise sigmoid:</p>$$
+A^{[1]} = \sigma(Z^{[1]})
+$$<p>For our example:</p>$$
+A^{[1]} = \begin{bmatrix} 0.8176 & 0.7311 \end{bmatrix}
+$$<p>So
+$A^{[1]}$
+has the same shape as
+$Z^{[1]}$
+:
+$(m, n_h)$
+.</p><p>The output layer has
+$n_y = 1$
+neuron. The weights are
+$W^{[2]}$
+of shape
+$(n_h, n_y)$
+:</p>$$
+W^{[2]} =
+\begin{bmatrix}
+0.5 \\
+1
+\end{bmatrix}
+$$<p>The output bias is
+$b^{[2]}$
+of shape
+$(1, n_y)$
+:</p>$$
+b^{[2]} = \begin{bmatrix} 0 \end{bmatrix}
+$$<p>The output pre-activation is:</p>$$
+Z^{[2]} = A^{[1]} W^{[2]} + b^{[2]}
+$$<p>$A^{[1]}$
+is
+$(m, n_h)$
+,
+$W^{[2]}$
+is
+$(n_h, n_y)$
+, so
+$Z^{[2]}$
+is
+$(m, n_y)$
+. For our example:</p>$$
+Z^{[2]} =
+\begin{bmatrix} 0.8176 & 0.7311 \end{bmatrix}
+\begin{bmatrix} 0.5 \\ 1 \end{bmatrix} +
+\begin{bmatrix} 0 \end{bmatrix} =
+\begin{bmatrix} 1.1399 \end{bmatrix}
+$$<p>The output activation is:</p>$$
+A^{[2]} = \sigma(Z^{[2]}) = \begin{bmatrix} 0.7577 \end{bmatrix}
+$$<p>Finally, the labels are stacked as
+$Y$
+of shape
+$(m, n_y)$
+:</p>$$
+Y = \begin{bmatrix} 0 \end{bmatrix}
+$$<p>So far, every matrix value matches the scalar walk exactly. The only difference is packaging.</p><hr><h2 id=41-what-the-matrix-multiply-actually-computes-entry-by-entry>4.1 What the matrix multiply actually computes, entry by entry<a hidden class=anchor aria-hidden=true href=#41-what-the-matrix-multiply-actually-computes-entry-by-entry>#</a></h2><p>If you are a visual learner, this is the section to read twice. The convention I will use consistently is:</p><ul><li><strong>Rows of
+$X$
+</strong>are examples. <strong>Columns of
+$X$
+</strong>are input features.</li><li><strong>Rows of
+$W^{[1]}$
+</strong>are input features. <strong>Columns of
+$W^{[1]}$
+</strong>are hidden neurons.</li><li>So column
+$j$
+of
+$W^{[1]}$
+holds all the weights feeding hidden neuron
+$j$
+.</li></ul><h3 id=hidden-layer-forward>Hidden layer forward<a hidden class=anchor aria-hidden=true href=#hidden-layer-forward>#</a></h3><p>In general, if we had
+$m$
+examples,
+$X$
+would stack them as rows:</p>$$
+X =
+\begin{bmatrix}
+x_{1,1} & x_{1,2} \\
+x_{2,1} & x_{2,2} \\
+\vdots & \vdots \\
+x_{m,1} & x_{m,2}
+\end{bmatrix}
+$$<p>For our one example, this collapses to a single row:</p>$$
+X = \begin{bmatrix} x_{1,1} & x_{1,2} \end{bmatrix} = \begin{bmatrix} 1 & 2 \end{bmatrix}
+$$<p>Row 1 is example 1. Column 1 is feature
+$x_1$
+, column 2 is feature
+$x_2$
+.</p>$$
+W^{[1]} =
+\begin{bmatrix}
+w_{x_1 \to h_1} & w_{x_1 \to h_2} \\
+w_{x_2 \to h_1} & w_{x_2 \to h_2}
+\end{bmatrix} =
+\begin{bmatrix}
+0.5 & 1 \\
+0.5 & -1
+\end{bmatrix}
+$$<blockquote><p>Key thing to remember: inputs stack row wise, weights stack column wise [weights of neuron1, weights of neuron 2, &mldr;], biases are just 1 per neuron, they stack row wise</p></blockquote><p>Row 1 = weights from
+$x_1$
+. Row 2 = weights from
+$x_2$
+. Column 1 = weights into
+$h_1$
+. Column 2 = weights into
+$h_2$
+.</p><p>The product
+$X W^{[1]}$
+computes every weighted sum at once. Entry
+$(i,j)$
+means &ldquo;example
+$i$
+, hidden neuron
+$j$
+&rdquo;:</p>$$
+Z^{[1]}_{i,j} = X_{i,1} \, W^{[1]}_{1,j} + X_{i,2} \, W^{[1]}_{2,j} + b^{[1]}_j
+$$<p>Plugging in the only example we have:</p>$$
+Z^{[1]}_{1,1} = 1 \cdot 0.5 + 2 \cdot 0.5 + 0 = 1.5
+\qquad
+Z^{[1]}_{1,2} = 1 \cdot 1 + 2 \cdot (-1) + 2 = 1.0
+$$<p>So the full matrix is:</p>$$
+Z^{[1]} = \begin{bmatrix} 1.5 & 1.0 \end{bmatrix}
+$$<p>Then the activation is applied element by element, keeping the same shape:</p>$$
+A^{[1]} = \sigma(Z^{[1]}) = \begin{bmatrix} 0.8176 & 0.7311 \end{bmatrix}
+$$<h3 id=output-layer-forward>Output layer forward<a hidden class=anchor aria-hidden=true href=#output-layer-forward>#</a></h3><p>Now
+$A^{[1]}$
+becomes the input to the next layer. The weight matrix
+$W^{[2]}$
+has one column per output neuron. Here there is only one output neuron, so
+$W^{[2]}$
+is a column vector:</p>$$
+W^{[2]} =
+\begin{bmatrix}
+w_{h_1 \to o} \\
+w_{h_2 \to o}
+\end{bmatrix} =
+\begin{bmatrix}
+0.5 \\
+1
+\end{bmatrix}
+$$<p>The output pre-activation is:</p>$$
+Z^{[2]}_{i,1} = A^{[1]}_{i,1} \, W^{[2]}_{1,1} + A^{[1]}_{i,2} \, W^{[2]}_{2,1} + b^{[2]}_1
+$$<p>For our example:</p>$$
+Z^{[2]}_{1,1} = 0.8176 \cdot 0.5 + 0.7311 \cdot 1 + 0 = 1.1399
+$$<p>So:</p>$$
+Z^{[2]} = \begin{bmatrix} 1.1399 \end{bmatrix}, \qquad A^{[2]} = \sigma(Z^{[2]}) = \begin{bmatrix} 0.7577 \end{bmatrix}
+$$<h3 id=backward-messages-the-same-way>Backward messages, the same way<a hidden class=anchor aria-hidden=true href=#backward-messages-the-same-way>#</a></h3><p>The output error signal is:</p>$$
+\delta^{[2]} = A^{[2]} - Y = \begin{bmatrix} 0.7577 \end{bmatrix} - \begin{bmatrix} 0 \end{bmatrix} = \begin{bmatrix} 0.7577 \end{bmatrix}
+$$<p>The gradient for the output weights is the outer product of the hidden activations (transposed) and the output error:</p>$$
+dW^{[2]} = (A^{[1]})^T \delta^{[2]} =
+\begin{bmatrix} 0.8176 \\ 0.7311 \end{bmatrix}
+\begin{bmatrix} 0.7577 \end{bmatrix} =
+\begin{bmatrix}
+0.8176 \cdot 0.7577 \\
+0.7311 \cdot 0.7577
+\end{bmatrix} =
+\begin{bmatrix}
+0.6195 \\
+0.5540
+\end{bmatrix}
+$$<p>Row 1 is the update for
+$w_{h_1 \to o}$
+. Row 2 is the update for
+$w_{h_2 \to o}$
+.</p><p>The message sent backward to the hidden layer is:</p>$$
+\delta^{[2]} (W^{[2]})^T =
+\begin{bmatrix} 0.7577 \end{bmatrix}
+\begin{bmatrix} 0.5 & 1 \end{bmatrix} =
+\begin{bmatrix} 0.7577 \cdot 0.5 & 0.7577 \cdot 1 \end{bmatrix} =
+\begin{bmatrix} 0.3789 & 0.7577 \end{bmatrix}
+$$<p>Column 1 is the blame assigned to
+$a_{h_1}$
+; column 2 is the blame assigned to
+$a_{h_2}$
+.</p><p>Multiply elementwise by the sigmoid slope to move the blame from the activation back to the pre-activation:</p>$$
+\delta^{[1]} = \delta^{[2]} (W^{[2]})^T \odot \sigma'(Z^{[1]}) =
+\begin{bmatrix} 0.3789 & 0.7577 \end{bmatrix} \odot
+\begin{bmatrix} 0.1491 & 0.1966 \end{bmatrix} =
+\begin{bmatrix} 0.0565 & 0.1490 \end{bmatrix}
+$$<p>Finally, the hidden-layer weight gradients:</p>$$
+dW^{[1]} = X^T \delta^{[1]} =
+\begin{bmatrix} 1 \\ 2 \end{bmatrix}
+\begin{bmatrix} 0.0565 & 0.1490 \end{bmatrix} =
+\begin{bmatrix}
+1 \cdot 0.0565 & 1 \cdot 0.1490 \\
+2 \cdot 0.0565 & 2 \cdot 0.1490
+\end{bmatrix} =
+\begin{bmatrix}
+0.0565 & 0.1490 \\
+0.1130 & 0.2980
+\end{bmatrix}
+$$<p>Row 1 = gradients for weights coming from
+$x_1$
+. Row 2 = gradients for weights coming from
+$x_2$
+. Column 1 = gradients for
+$h_1$
+. Column 2 = gradients for
+$h_2$
+.</p><p>That is the complete picture: every row and every column has a meaning, and every multiplication is just a compact way of writing the scalar chain rule for every example at once.</p><hr><h2 id=5-the-loss-averaged-over-the-batch>5. The loss, averaged over the batch<a hidden class=anchor aria-hidden=true href=#5-the-loss-averaged-over-the-batch>#</a></h2><p>For a single example, the binary cross-entropy loss is:</p>$$
+L(a, y) = -\big[ y \log a + (1-y) \log (1-a) \big]
+$$<p>For a whole batch of
+$m$
+examples, we usually average the losses so the size of the batch does not change the scale of the gradient:</p>$$
+\mathcal{L} = \frac{1}{m} \sum_{i=1}^{m} L\big(A^{[2]}_i, Y_i\big)
+$$<p>With
+$m = 1$
+the average changes nothing.</p><p>This averaging is important: if you double the batch size, the <em>sum</em> of losses doubles, but the <em>average</em> stays the same. You want the gradient magnitude to depend on the model&rsquo;s error, not on how many examples you happened to batch together. Later, when we train on 4 XOR examples, the division by
+$m = 4$
+keeps the update steps stable.</p><hr><h2 id=6-the-backward-pass-in-matrix-form>6. The backward pass in matrix form<a hidden class=anchor aria-hidden=true href=#6-the-backward-pass-in-matrix-form>#</a></h2><p>Now we redo the backward pass, but each step is a matrix formula. Each formula is just the scalar chain rule written for all examples and all neurons at once.</p><h3 id=61-error-at-the-output-pre-activation>6.1 Error at the output pre-activation<a hidden class=anchor aria-hidden=true href=#61-error-at-the-output-pre-activation>#</a></h3><p>For each example
+$i$
+:</p>$$
+\delta^{[2]}_i = A^{[2]}_i - Y_i
+$$<p>Stacked into a matrix of shape
+$(m, n_y)$
+:</p>$$
+\delta^{[2]} = A^{[2]} - Y
+$$<p>For our example:</p>$$
+\delta^{[2]} = \begin{bmatrix} 0.7577 \end{bmatrix} - \begin{bmatrix} 0 \end{bmatrix} = \begin{bmatrix} 0.7577 \end{bmatrix}
+$$<p>This matches the scalar
+$\delta_o = 0.7577$
+.</p><h3 id=62-gradients-for-the-output-weights-and-bias>6.2 Gradients for the output weights and bias<a hidden class=anchor aria-hidden=true href=#62-gradients-for-the-output-weights-and-bias>#</a></h3><p>Scalar rule for one example, one output weight:</p>$$
+\frac{\partial L_i}{\partial w_{o,j}} = \delta^{[2]}_i \cdot A^{[1]}_{i,j}
+$$<p>Across all examples and all output neurons, this becomes an outer product, averaged over the batch:</p>$$
+dW^{[2]} = \frac{1}{m} \big(A^{[1]}\big)^T \delta^{[2]}
+$$<p>$A^{[1]}$
+is
+$(m, n_h)$
+and
+$\delta^{[2]}$
+is
+$(m, n_y)$
+. Their transpose product is
+$(n_h, n_y)$
+, which is exactly the shape of
+$W^{[2]}$
+. Each entry
+$(j, k)$
+is:</p>$$
+\frac{1}{m} \sum_{i=1}^{m} A^{[1]}_{i,j} \, \delta^{[2]}_{i,k}
+$$<p>That is precisely &ldquo;error signal times the input that weight multiplied,&rdquo; averaged over examples.</p><p>For our one-example case:</p>$$
+dW^{[2]} =
+\begin{bmatrix}
+0.8176 \\
+0.7311
+\end{bmatrix}
+\begin{bmatrix} 0.7577 \end{bmatrix} =
+\begin{bmatrix}
+0.6195 \\
+0.5540
+\end{bmatrix}
+$$<p>Compare to the scalar gradients:
+$w_{o,1}$
+got 0.6195 and
+$w_{o,2}$
+got 0.5540.</p><p>The output bias gradient is the average error signal:</p>$$
+db^{[2]} = \frac{1}{m} \sum_{i=1}^{m} \delta^{[2]}_i
+$$<p>With one example:</p>$$
+db^{[2]} = \begin{bmatrix} 0.7577 \end{bmatrix}
+$$<p>This matches the scalar
+$b_o$
+gradient.</p><h3 id=63-error-signal-for-the-hidden-layer>6.3 Error signal for the hidden layer<a hidden class=anchor aria-hidden=true href=#63-error-signal-for-the-hidden-layer>#</a></h3><p>Scalar rule for one hidden neuron:</p>$$
+\frac{\partial L_i}{\partial a_{h_j}} = \delta^{[2]}_i \cdot w_{o,j}
+$$<p>Stacked, this is a matrix multiplication:</p>$$
+\frac{\partial \mathcal{L}}{\partial A^{[1]}} = \delta^{[2]} \big(W^{[2]}\big)^T
+$$<p>$\delta^{[2]}$
+is
+$(m, n_y)$
+,
+$(W^{[2]})^T$
+is
+$(n_y, n_h)$
+, so the result is
+$(m, n_h)$
+. For our example:</p>$$
+\delta^{[2]} (W^{[2]})^T =
+\begin{bmatrix} 0.7577 \end{bmatrix}
+\begin{bmatrix} 0.5 & 1 \end{bmatrix} =
+\begin{bmatrix} 0.3789 & 0.7577 \end{bmatrix}
+$$<p>Compare to the scalar messages:
+$\partial L / \partial a_{h_1} = 0.3789$
+and
+$\partial L / \partial a_{h_2} = 0.7577$
+.</p><p>Then multiply elementwise by the sigmoid slope at the hidden pre-activations:</p>$$
+\delta^{[1]} = \Big( \delta^{[2]} (W^{[2]})^T \Big) \odot \sigma'\big(Z^{[1]}\big)
+$$<p>The
+$\odot$
+means elementwise multiplication. This is the
+$(m, n_h)$
+matrix of hidden-layer error signals.</p><p>For our example:</p>$$
+\sigma'(Z^{[1]}) = A^{[1]} \odot (1 - A^{[1]}) =
+\begin{bmatrix} 0.8176 \cdot 0.1824 & 0.7311 \cdot 0.2689 \end{bmatrix} =
+\begin{bmatrix} 0.1491 & 0.1966 \end{bmatrix}
+$$
+$$
+\delta^{[1]} =
+\begin{bmatrix} 0.3789 & 0.7577 \end{bmatrix}
+\odot
+\begin{bmatrix} 0.1491 & 0.1966 \end{bmatrix} =
+\begin{bmatrix} 0.0565 & 0.1490 \end{bmatrix}
+$$<p>Column 0 is
+$\delta_{h_1}$
+; column 1 is
+$\delta_{h_2}$
+. These match the scalar values 0.0565 and 0.1490.</p><h3 id=64-gradients-for-the-hidden-weights-and-bias>6.4 Gradients for the hidden weights and bias<a hidden class=anchor aria-hidden=true href=#64-gradients-for-the-hidden-weights-and-bias>#</a></h3><p>Same rule as the output layer, now using the raw inputs
+$X$
+:</p>$$
+dW^{[1]} = \frac{1}{m} X^T \delta^{[1]}
+$$<p>$X^T$
+is
+$(n_x, m)$
+,
+$\delta^{[1]}$
+is
+$(m, n_h)$
+, so
+$dW^{[1]}$
+is
+$(n_x, n_h)$
+. Entry
+$(i,j)$
+is:</p>$$
+\frac{1}{m} \sum_{\text{examples}} x_i \, \delta_{h_j}
+$$<p>For our example:</p>$$
+dW^{[1]} =
+\begin{bmatrix}
+1 \\
+2
+\end{bmatrix}
+\begin{bmatrix} 0.0565 & 0.1490 \end{bmatrix} =
+\begin{bmatrix}
+0.0565 & 0.1490 \\
+0.1130 & 0.2980
+\end{bmatrix}
+$$<p>Entry
+$(0,0)$
+is the gradient of
+$w_{h_1,1}$
+: 0.0565. Entry
+$(1,0)$
+is the gradient of
+$w_{h_1,2}$
+: 0.1130. Entry
+$(0,1)$
+is
+$w_{h_2,1}$
+: 0.1490. Entry
+$(1,1)$
+is
+$w_{h_2,2}$
+: 0.2980. Every single value matches the hand-computed ledger.</p><p>The hidden bias is:</p>$$
+db^{[1]} = \frac{1}{m} \sum_{i=1}^{m} \delta^{[1]}_i = \begin{bmatrix} 0.0565 & 0.1490 \end{bmatrix}
+$$<p>which matches
+$b_{h_1}$
+and
+$b_{h_2}$
+.</p><hr><h2 id=7-summary-of-the-vectorized-backward-pass>7. Summary of the vectorized backward pass<a hidden class=anchor aria-hidden=true href=#7-summary-of-the-vectorized-backward-pass>#</a></h2><p>If you ever get lost, come back to this table.</p><table><thead><tr><th>step</th><th>formula</th><th>shape of result</th></tr></thead><tbody><tr><td>error at output</td><td>$\delta^{[2]} = A^{[2]} - Y$</td><td>$(m, n_y)$</td></tr><tr><td>output weight grad</td><td>$dW^{[2]} = \frac{1}{m} (A^{[1]})^T \delta^{[2]}$</td><td>$(n_h, n_y)$</td></tr><tr><td>output bias grad</td><td>$db^{[2]} = \frac{1}{m} \sum_i \delta^{[2]}_i$</td><td>$(1, n_y)$</td></tr><tr><td>error at hidden pre-activation</td><td>$\delta^{[1]} = \big(\delta^{[2]} (W^{[2]})^T\big) \odot \sigma'(Z^{[1]})$</td><td>$(m, n_h)$</td></tr><tr><td>hidden weight grad</td><td>$dW^{[1]} = \frac{1}{m} X^T \delta^{[1]}$</td><td>$(n_x, n_h)$</td></tr><tr><td>hidden bias grad</td><td>$db^{[1]} = \frac{1}{m} \sum_i \delta^{[1]}_i$</td><td>$(1, n_h)$</td></tr></tbody></table><p>Every row is the scalar chain rule, just written for all examples at once.</p><hr><h2 id=8-numpy-implementation-from-scratch>8. NumPy implementation from scratch<a hidden class=anchor aria-hidden=true href=#8-numpy-implementation-from-scratch>#</a></h2><p>Now we write the network as code. The functions mirror the table above exactly.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#f92672>import</span> numpy <span style=color:#66d9ef>as</span> np
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>sigmoid</span>(z):
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> <span style=color:#ae81ff>1.0</span> <span style=color:#f92672>/</span> (<span style=color:#ae81ff>1.0</span> <span style=color:#f92672>+</span> np<span style=color:#f92672>.</span>exp(<span style=color:#f92672>-</span>z))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>sigmoid_prime</span>(a):
+</span></span><span style=display:flex><span>    <span style=color:#75715e># if a = sigmoid(z), then sigmoid&#39;(z) = a * (1 - a)</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> a <span style=color:#f92672>*</span> (<span style=color:#ae81ff>1.0</span> <span style=color:#f92672>-</span> a)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>forward</span>(X, W1, b1, W2, b2):
+</span></span><span style=display:flex><span>    z1 <span style=color:#f92672>=</span> X <span style=color:#f92672>@</span> W1 <span style=color:#f92672>+</span> b1          <span style=color:#75715e># shape (m, n_h)</span>
+</span></span><span style=display:flex><span>    a1 <span style=color:#f92672>=</span> sigmoid(z1)          <span style=color:#75715e># shape (m, n_h)</span>
+</span></span><span style=display:flex><span>    z2 <span style=color:#f92672>=</span> a1 <span style=color:#f92672>@</span> W2 <span style=color:#f92672>+</span> b2         <span style=color:#75715e># shape (m, n_y)</span>
+</span></span><span style=display:flex><span>    a2 <span style=color:#f92672>=</span> sigmoid(z2)          <span style=color:#75715e># shape (m, n_y)</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> z1, a1, z2, a2
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>backward</span>(X, Y, W2, z1, a1, z2, a2):
+</span></span><span style=display:flex><span>    m <span style=color:#f92672>=</span> X<span style=color:#f92672>.</span>shape[<span style=color:#ae81ff>0</span>]
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Output layer error</span>
+</span></span><span style=display:flex><span>    dz2 <span style=color:#f92672>=</span> a2 <span style=color:#f92672>-</span> Y              <span style=color:#75715e># shape (m, n_y)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Output layer gradients</span>
+</span></span><span style=display:flex><span>    dW2 <span style=color:#f92672>=</span> (a1<span style=color:#f92672>.</span>T <span style=color:#f92672>@</span> dz2) <span style=color:#f92672>/</span> m    <span style=color:#75715e># shape (n_h, n_y)</span>
+</span></span><span style=display:flex><span>    db2 <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>mean(dz2, axis<span style=color:#f92672>=</span><span style=color:#ae81ff>0</span>, keepdims<span style=color:#f92672>=</span><span style=color:#66d9ef>True</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Hidden layer error</span>
+</span></span><span style=display:flex><span>    da1 <span style=color:#f92672>=</span> dz2 <span style=color:#f92672>@</span> W2<span style=color:#f92672>.</span>T          <span style=color:#75715e># shape (m, n_h)</span>
+</span></span><span style=display:flex><span>    dz1 <span style=color:#f92672>=</span> da1 <span style=color:#f92672>*</span> sigmoid_prime(a1)  <span style=color:#75715e># elementwise</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Hidden layer gradients</span>
+</span></span><span style=display:flex><span>    dW1 <span style=color:#f92672>=</span> (X<span style=color:#f92672>.</span>T <span style=color:#f92672>@</span> dz1) <span style=color:#f92672>/</span> m     <span style=color:#75715e># shape (n_x, n_h)</span>
+</span></span><span style=display:flex><span>    db1 <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>mean(dz1, axis<span style=color:#f92672>=</span><span style=color:#ae81ff>0</span>, keepdims<span style=color:#f92672>=</span><span style=color:#66d9ef>True</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> dW1, db1, dW2, db2
+</span></span></code></pre></div><p>Initialize with the exact weights from the hand example and check gradients:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-python data-lang=python><span style=display:flex><span>X <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>array([[<span style=color:#ae81ff>1.0</span>, <span style=color:#ae81ff>2.0</span>]])        <span style=color:#75715e># shape (1, 2)</span>
+</span></span><span style=display:flex><span>Y <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>array([[<span style=color:#ae81ff>0.0</span>]])             <span style=color:#75715e># shape (1, 1)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>W1 <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>array([[<span style=color:#ae81ff>0.5</span>,  <span style=color:#ae81ff>1.0</span>],
+</span></span><span style=display:flex><span>               [<span style=color:#ae81ff>0.5</span>, <span style=color:#f92672>-</span><span style=color:#ae81ff>1.0</span>]])      <span style=color:#75715e># shape (2, 2)</span>
+</span></span><span style=display:flex><span>b1 <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>array([[<span style=color:#ae81ff>0.0</span>, <span style=color:#ae81ff>2.0</span>]])       <span style=color:#75715e># shape (1, 2)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>W2 <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>array([[<span style=color:#ae81ff>0.5</span>],
+</span></span><span style=display:flex><span>               [<span style=color:#ae81ff>1.0</span>]])             <span style=color:#75715e># shape (2, 1)</span>
+</span></span><span style=display:flex><span>b2 <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>array([[<span style=color:#ae81ff>0.0</span>]])             <span style=color:#75715e># shape (1, 1)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>z1, a1, z2, a2 <span style=color:#f92672>=</span> forward(X, W1, b1, W2, b2)
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>&#34;a2:&#34;</span>, a2)                  <span style=color:#75715e># expect ~0.7577</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>dW1, db1, dW2, db2 <span style=color:#f92672>=</span> backward(X, Y, W2, z1, a1, z2, a2)
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>&#34;dW1:&#34;</span>, dW1)
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>&#34;db1:&#34;</span>, db1)
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>&#34;dW2:&#34;</span>, dW2)
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>&#34;db2:&#34;</span>, db2)
+</span></span></code></pre></div><p>Running it gives:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-text data-lang=text><span style=display:flex><span>a2: [[0.7576]]
+</span></span><span style=display:flex><span>dW1: [[0.0565 0.1490]
+</span></span><span style=display:flex><span>      [0.1130 0.2980]]
+</span></span><span style=display:flex><span>db1: [[0.0565 0.1490]]
+</span></span><span style=display:flex><span>dW2: [[0.6194]
+</span></span><span style=display:flex><span>      [0.5540]]
+</span></span><span style=display:flex><span>db2: [[0.7576]]
+</span></span></code></pre></div><p>The tiny differences from the hand numbers are rounding in the printed sigmoid values. The algorithm is identical.</p><hr><h2 id=9-verifying-against-pytorch-autograd>9. Verifying against PyTorch autograd<a hidden class=anchor aria-hidden=true href=#9-verifying-against-pytorch-autograd>#</a></h2><p>The same network in PyTorch should produce the same gradients. This is a sanity check that your hand-derived code is right.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#f92672>import</span> torch
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>X_t <span style=color:#f92672>=</span> torch<span style=color:#f92672>.</span>tensor([[<span style=color:#ae81ff>1.0</span>, <span style=color:#ae81ff>2.0</span>]])
+</span></span><span style=display:flex><span>Y_t <span style=color:#f92672>=</span> torch<span style=color:#f92672>.</span>tensor([[<span style=color:#ae81ff>0.0</span>]])
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>W1_t <span style=color:#f92672>=</span> torch<span style=color:#f92672>.</span>tensor([[<span style=color:#ae81ff>0.5</span>,  <span style=color:#ae81ff>1.0</span>],
+</span></span><span style=display:flex><span>                     [<span style=color:#ae81ff>0.5</span>, <span style=color:#f92672>-</span><span style=color:#ae81ff>1.0</span>]], requires_grad<span style=color:#f92672>=</span><span style=color:#66d9ef>True</span>)
+</span></span><span style=display:flex><span>b1_t <span style=color:#f92672>=</span> torch<span style=color:#f92672>.</span>tensor([[<span style=color:#ae81ff>0.0</span>, <span style=color:#ae81ff>2.0</span>]], requires_grad<span style=color:#f92672>=</span><span style=color:#66d9ef>True</span>)
+</span></span><span style=display:flex><span>W2_t <span style=color:#f92672>=</span> torch<span style=color:#f92672>.</span>tensor([[<span style=color:#ae81ff>0.5</span>],
+</span></span><span style=display:flex><span>                     [<span style=color:#ae81ff>1.0</span>]], requires_grad<span style=color:#f92672>=</span><span style=color:#66d9ef>True</span>)
+</span></span><span style=display:flex><span>b2_t <span style=color:#f92672>=</span> torch<span style=color:#f92672>.</span>tensor([[<span style=color:#ae81ff>0.0</span>]], requires_grad<span style=color:#f92672>=</span><span style=color:#66d9ef>True</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>z1_t <span style=color:#f92672>=</span> X_t <span style=color:#f92672>@</span> W1_t <span style=color:#f92672>+</span> b1_t
+</span></span><span style=display:flex><span>a1_t <span style=color:#f92672>=</span> torch<span style=color:#f92672>.</span>sigmoid(z1_t)
+</span></span><span style=display:flex><span>z2_t <span style=color:#f92672>=</span> a1_t <span style=color:#f92672>@</span> W2_t <span style=color:#f92672>+</span> b2_t
+</span></span><span style=display:flex><span>a2_t <span style=color:#f92672>=</span> torch<span style=color:#f92672>.</span>sigmoid(z2_t)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>loss <span style=color:#f92672>=</span> <span style=color:#f92672>-</span>torch<span style=color:#f92672>.</span>mean(Y_t <span style=color:#f92672>*</span> torch<span style=color:#f92672>.</span>log(a2_t) <span style=color:#f92672>+</span> (<span style=color:#ae81ff>1</span> <span style=color:#f92672>-</span> Y_t) <span style=color:#f92672>*</span> torch<span style=color:#f92672>.</span>log(<span style=color:#ae81ff>1</span> <span style=color:#f92672>-</span> a2_t))
+</span></span><span style=display:flex><span>loss<span style=color:#f92672>.</span>backward()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>&#34;PyTorch dW1:&#34;</span>, W1_t<span style=color:#f92672>.</span>grad)
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>&#34;PyTorch dW2:&#34;</span>, W2_t<span style=color:#f92672>.</span>grad)
+</span></span></code></pre></div><p>The printed tensors match the NumPy values above.</p><hr><h2 id=10-training-on-the-xor-problem>10. Training on the XOR problem<a hidden class=anchor aria-hidden=true href=#10-training-on-the-xor-problem>#</a></h2><p>The XOR dataset has 4 examples. It is not linearly separable, so a single neuron (logistic regression) cannot solve it. A 2-2-1 network can.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e># XOR dataset: (x1, x2) -&gt; label</span>
+</span></span><span style=display:flex><span>X_xor <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>array([
+</span></span><span style=display:flex><span>    [<span style=color:#ae81ff>0</span>, <span style=color:#ae81ff>0</span>],
+</span></span><span style=display:flex><span>    [<span style=color:#ae81ff>0</span>, <span style=color:#ae81ff>1</span>],
+</span></span><span style=display:flex><span>    [<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>0</span>],
+</span></span><span style=display:flex><span>    [<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>1</span>]
+</span></span><span style=display:flex><span>], dtype<span style=color:#f92672>=</span>float)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Y_xor <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>array([
+</span></span><span style=display:flex><span>    [<span style=color:#ae81ff>0</span>],
+</span></span><span style=display:flex><span>    [<span style=color:#ae81ff>1</span>],
+</span></span><span style=display:flex><span>    [<span style=color:#ae81ff>1</span>],
+</span></span><span style=display:flex><span>    [<span style=color:#ae81ff>0</span>]
+</span></span><span style=display:flex><span>], dtype<span style=color:#f92672>=</span>float)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>np<span style=color:#f92672>.</span>random<span style=color:#f92672>.</span>seed(<span style=color:#ae81ff>1</span>)
+</span></span><span style=display:flex><span>W1 <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>random<span style=color:#f92672>.</span>randn(<span style=color:#ae81ff>2</span>, <span style=color:#ae81ff>2</span>) <span style=color:#f92672>*</span> <span style=color:#ae81ff>0.5</span>
+</span></span><span style=display:flex><span>b1 <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>zeros((<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>2</span>))
+</span></span><span style=display:flex><span>W2 <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>random<span style=color:#f92672>.</span>randn(<span style=color:#ae81ff>2</span>, <span style=color:#ae81ff>1</span>) <span style=color:#f92672>*</span> <span style=color:#ae81ff>0.5</span>
+</span></span><span style=display:flex><span>b2 <span style=color:#f92672>=</span> np<span style=color:#f92672>.</span>zeros((<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>1</span>))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>lr <span style=color:#f92672>=</span> <span style=color:#ae81ff>0.3</span>
+</span></span><span style=display:flex><span>epochs <span style=color:#f92672>=</span> <span style=color:#ae81ff>20000</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> epoch <span style=color:#f92672>in</span> range(epochs):
+</span></span><span style=display:flex><span>    z1, a1, z2, a2 <span style=color:#f92672>=</span> forward(X_xor, W1, b1, W2, b2)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># clipped log for numerical stability</span>
+</span></span><span style=display:flex><span>    eps <span style=color:#f92672>=</span> <span style=color:#ae81ff>1e-7</span>
+</span></span><span style=display:flex><span>    loss <span style=color:#f92672>=</span> <span style=color:#f92672>-</span>np<span style=color:#f92672>.</span>mean(Y_xor <span style=color:#f92672>*</span> np<span style=color:#f92672>.</span>log(a2 <span style=color:#f92672>+</span> eps) <span style=color:#f92672>+</span> (<span style=color:#ae81ff>1</span> <span style=color:#f92672>-</span> Y_xor) <span style=color:#f92672>*</span> np<span style=color:#f92672>.</span>log(<span style=color:#ae81ff>1</span> <span style=color:#f92672>-</span> a2 <span style=color:#f92672>+</span> eps))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    dW1, db1, dW2, db2 <span style=color:#f92672>=</span> backward(X_xor, Y_xor, W2, z1, a1, z2, a2)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    W1 <span style=color:#f92672>-=</span> lr <span style=color:#f92672>*</span> dW1
+</span></span><span style=display:flex><span>    b1 <span style=color:#f92672>-=</span> lr <span style=color:#f92672>*</span> db1
+</span></span><span style=display:flex><span>    W2 <span style=color:#f92672>-=</span> lr <span style=color:#f92672>*</span> dW2
+</span></span><span style=display:flex><span>    b2 <span style=color:#f92672>-=</span> lr <span style=color:#f92672>*</span> db2
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> epoch <span style=color:#f92672>%</span> <span style=color:#ae81ff>2000</span> <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>:
+</span></span><span style=display:flex><span>        print(<span style=color:#e6db74>f</span><span style=color:#e6db74>&#34;epoch </span><span style=color:#e6db74>{</span>epoch<span style=color:#e6db74>}</span><span style=color:#e6db74>, loss </span><span style=color:#e6db74>{</span>loss<span style=color:#e6db74>:</span><span style=color:#e6db74>.4f</span><span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Final predictions</span>
+</span></span><span style=display:flex><span>_, _, _, preds <span style=color:#f92672>=</span> forward(X_xor, W1, b1, W2, b2)
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>&#34;final predictions:&#34;</span>, preds<span style=color:#f92672>.</span>round(<span style=color:#ae81ff>3</span>))
+</span></span></code></pre></div><p>Typical output:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-text data-lang=text><span style=display:flex><span>epoch 0, loss 0.6932
+</span></span><span style=display:flex><span>epoch 2000, loss 0.0342
+</span></span><span style=display:flex><span>epoch 4000, loss 0.0072
+</span></span><span style=display:flex><span>epoch 6000, loss 0.0032
+</span></span><span style=display:flex><span>epoch 8000, loss 0.0018
+</span></span><span style=display:flex><span>epoch 10000, loss 0.0012
+</span></span><span style=display:flex><span>epoch 12000, loss 0.0009
+</span></span><span style=display:flex><span>epoch 14000, loss 0.0007
+</span></span><span style=display:flex><span>epoch 16000, loss 0.0006
+</span></span><span style=display:flex><span>epoch 18000, loss 0.0005
+</span></span><span style=display:flex><span>final predictions: [[0.003]
+</span></span><span style=display:flex><span> [0.996]
+</span></span><span style=display:flex><span> [0.996]
+</span></span><span style=display:flex><span> [0.003]]
+</span></span></code></pre></div><p>The network learns XOR. There is no framework magic: just the forward and backward functions written above, run in a loop.</p><hr><h2 id=11-what-the-code-and-the-math-have-in-common>11. What the code and the math have in common<a hidden class=anchor aria-hidden=true href=#11-what-the-code-and-the-math-have-in-common>#</a></h2><p>If you strip the NumPy code back to its meaning, every line is one of the scalar rules from the previous note:</p><ul><li><code>dz2 = a2 - Y</code> is
+$\delta_o = a_o - y$
+.</li><li><code>dW2 = (a1.T @ dz2) / m</code> is &ldquo;error signal times the feeding activation, averaged.&rdquo;</li><li><code>da1 = dz2 @ W2.T</code> is the message sent backward from the output layer to the hidden layer.</li><li><code>dz1 = da1 * sigmoid_prime(a1)</code> is multiplying by the local slope of the hidden activation.</li><li><code>dW1 = (X.T @ dz1) / m</code> is the same rule applied one layer earlier.</li></ul><p>The matrix form is not a different algorithm. It is the scalar algorithm, written once per layer.</p><hr><h2 id=12-exercises>12. Exercises<a hidden class=anchor aria-hidden=true href=#12-exercises>#</a></h2><ol><li>Run the NumPy code with the single-example weights from section 2 and verify that every printed gradient matches the hand-computed table to within 0.0001.</li><li>Change the label in the single example from
+$y=0$
+to
+$y=1$
+. Before running the code, predict the sign of
+$\delta^{[2]}$
+, and therefore the sign of every gradient. Then run it.</li><li>In the XOR training loop, what happens if you remove the <code>/ m</code> averaging in <code>dW1</code> and <code>dW2</code>? Why does the loss curve behave differently?</li><li>Add a third hidden neuron to the XOR network (so the architecture is 2-3-1). Which shapes change? Which lines of the NumPy code stay the same?</li></ol><hr><h2 id=13-what-comes-next>13. What comes next<a hidden class=anchor aria-hidden=true href=#13-what-comes-next>#</a></h2><p>The next note takes two practical steps forward:</p><ul><li>Replace sigmoid hidden units with ReLU to avoid vanishing gradients, and look at how the backward formulas change.</li><li>Build deeper networks cleanly by stacking the same <code>forward/backward</code> block, leading into modern architectures.</li></ul></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/ml/>Ml</a></li><li><a href=https://sankethbk.github.io/blog/tags/numpy/>Numpy</a></li><li><a href=https://sankethbk.github.io/blog/tags/backpropagation/>Backpropagation</a></li><li><a href=https://sankethbk.github.io/blog/tags/neural-networks/>Neural-Networks</a></li><li><a href=https://sankethbk.github.io/blog/tags/x/>X</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
