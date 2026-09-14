@@ -1,0 +1,281 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities | Sanketh's Blog</title><meta name=keywords content="ml,softmax,cross-entropy,classification,neural-networks,logits"><meta name=description content="Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities
+So far, every classification in these notes has been binary — spam or not, XOR&rsquo;s 0 or 1 — and the output has been single sigmoid feeding binary cross-entropy, whose gradient collapsed to the beautiful 
+$\delta = a - y$
+
+.
+Real classifiers rarely answer two-way questions. &ldquo;Which of 10 digits is this image?&rdquo; &ldquo;Which of 50,000 tokens comes next?&rdquo; &ldquo;Is this a cat, a dog, or a bird?&rdquo; This note generalizes the output of a neural network to 
+$k$
+
+ classes, and it turns out almost everything we know carries over — with soft-max doing the job sigmoid did."><meta name=author content><link rel=canonical href=https://sankethbk.github.io/blog/posts/ml/2026-09-14-3-softmax-and-multiclass-cross-entropy/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.a7100ced1662b06824a54ff97bb59f1d1070a2db645a1d0a8d848e4ffd63ac7a.css integrity="sha256-pxAM7RZisGgkpU/5e7WfHRBwottkWh0KjYSOT/1jrHo=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/ml/2026-09-14-3-softmax-and-multiclass-cross-entropy/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/ml/2026-09-14-3-softmax-and-multiclass-cross-entropy/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities"><meta property="og:description" content="Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities So far, every classification in these notes has been binary — spam or not, XOR’s 0 or 1 — and the output has been single sigmoid feeding binary cross-entropy, whose gradient collapsed to the beautiful $\delta = a - y$ .
+Real classifiers rarely answer two-way questions. “Which of 10 digits is this image?” “Which of 50,000 tokens comes next?” “Is this a cat, a dog, or a bird?” This note generalizes the output of a neural network to $k$ classes, and it turns out almost everything we know carries over — with soft-max doing the job sigmoid did."><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2026-09-14T00:00:00+00:00"><meta property="article:modified_time" content="2026-09-14T00:00:00+00:00"><meta property="article:tag" content="Ml"><meta property="article:tag" content="Softmax"><meta property="article:tag" content="Cross-Entropy"><meta property="article:tag" content="Classification"><meta property="article:tag" content="Neural-Networks"><meta property="article:tag" content="Logits"><meta name=twitter:card content="summary"><meta name=twitter:title content="Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities"><meta name=twitter:description content="Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities
+So far, every classification in these notes has been binary — spam or not, XOR&rsquo;s 0 or 1 — and the output has been single sigmoid feeding binary cross-entropy, whose gradient collapsed to the beautiful 
+$\delta = a - y$
+
+.
+Real classifiers rarely answer two-way questions. &ldquo;Which of 10 digits is this image?&rdquo; &ldquo;Which of 50,000 tokens comes next?&rdquo; &ldquo;Is this a cat, a dog, or a bird?&rdquo; This note generalizes the output of a neural network to 
+$k$
+
+ classes, and it turns out almost everything we know carries over — with soft-max doing the job sigmoid did."><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities","item":"https://sankethbk.github.io/blog/posts/ml/2026-09-14-3-softmax-and-multiclass-cross-entropy/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities","name":"Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities","description":"Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities So far, every classification in these notes has been binary — spam or not, XOR\u0026rsquo;s 0 or 1 — and the output has been single sigmoid feeding binary cross-entropy, whose gradient collapsed to the beautiful $\\delta = a - y$ .\nReal classifiers rarely answer two-way questions. \u0026ldquo;Which of 10 digits is this image?\u0026rdquo; \u0026ldquo;Which of 50,000 tokens comes next?\u0026rdquo; \u0026ldquo;Is this a cat, a dog, or a bird?\u0026rdquo; This note generalizes the output of a neural network to $k$ classes, and it turns out almost everything we know carries over — with soft-max doing the job sigmoid did.\n","keywords":["ml","softmax","cross-entropy","classification","neural-networks","logits"],"articleBody":"Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities So far, every classification in these notes has been binary — spam or not, XOR’s 0 or 1 — and the output has been single sigmoid feeding binary cross-entropy, whose gradient collapsed to the beautiful $\\delta = a - y$ .\nReal classifiers rarely answer two-way questions. “Which of 10 digits is this image?” “Which of 50,000 tokens comes next?” “Is this a cat, a dog, or a bird?” This note generalizes the output of a neural network to $k$ classes, and it turns out almost everything we know carries over — with soft-max doing the job sigmoid did.\nAssumptions: you know the backprop pass on dense layers, sigmoid+BCE, and the $\\delta = a - y$ result (activation functions note). We will not redo those derivations; we’ll do the new parts numerically, on ONE small example the whole way through.\n1. From one output to k outputs: logits A binary classifier ends in one neuron producing one number. A 3-class classifier ends in three neurons producing three numbers. In our running example (same network, but three output neurons), suppose the last linear step produces:\n$$ z_1 = 2, \\qquad z_2 = 1, \\qquad z_3 = 0 $$ These numbers are called logits — the raw network output right before any activation is applied. Three observations matter before we do anything to them:\nLogits feel like scores: bigger means “network is more partial to this class.” The network currently prefers class 1 the most, class 3 the least. They are unbounded. They can be $-50$ , $3$ , or $10{,}000$ . That alone means they cannot be probabilities, which must live in $[0, 1]$ . They do not sum to anything in particular. $2 + 1 + 0 = 3$ . Probabilities across mutually exclusive classes must sum to $1$ . Note also what logits are not: they are not “log-odds” and not anything inherently probabilistic yet. “Logit” is just the field’s conventional name for “the value right before the output squashing activation,” pure bookkeeping.\nOur job: transform $(2, 1, 0)$ into a probability distribution over classes $(p_1, p_2, p_3)$ with $p_i \\geq 0$ and $\\sum p_i = 1$ , such that bigger logit → bigger probability and the ordering of preference is preserved.\nMany functions could do that. The field picked softmax, and the rest of the note is why — and what the consequences are.\n2. Softmax, computed on our example The softmax of a logit vector $z = (z_1, \\dots, z_k)$ is:\n$$ p_i = \\operatorname{softmax}(z)_i = \\frac{e^{z_i}}{\\sum_{j=1}^{k} e^{z_j}} $$ Every probability is $e^{z_i}$ normalized by the sum of all the exponentials. Compute it step by step for $z = (2, 1, 0)$ :\n$$ e^{z_1} = e^{2} \\approx 7.389 \\qquad e^{z_2} = e^{1} \\approx 2.718 \\qquad e^{z_3} = e^{0} = 1.000 $$ The “sum of exponentials,” sometimes called the partition function:\n$$ S = 7.389 + 2.718 + 1.000 = 11.107 $$ Normalize:\n$$ p_1 = \\frac{7.389}{11.107} = 0.665 \\qquad p_2 = \\frac{2.718}{11.107} = 0.245 \\qquad p_3 = \\frac{1.000}{11.107} = 0.090 $$ So:\n$$ \\operatorname{softmax}(2, 1, 0) = (0.665, 0.245, 0.090) $$ Sanity checks, all passed:\nEvery $p_i$ is between 0 and 1. $0.665 + 0.245 + 0.090 = 1.000$ . Ordering preserved: class 1, with the biggest logit, got the biggest probability. The role of the exponential Why $e^{z}$ and not something else? Two reasons, one mathematical, one behavioral:\nPositivity, guaranteed. $e^{z} \u003e 0$ for every finite $z$ , so no probability can ever go negative no matter what scores the network outputs. Amplification of differences. A gap of 1 unit between logits becomes a factor of $e$ between probabilities. Logits $2$ and $1$ differ by one unit; their exponentials $7.389$ and $2.718$ have ratio $\\approx 2.7$ . Bigger logit gaps produce geometrically bigger probability gaps. Softmax is “soft arg+max”: argmax would zero out the losers entirely; softmax lets them keep a share, with an exponential bias toward the winner. One logit moves every probability This is the property that distinguishes softmax from doing $k$ independent sigmoids, and it comes straight from the denominator. Suppose we nudge $z_3$ up from $0 \\to 2$ and leave the others alone:\n$$ e^{z} = (7.389,\\, 2.718,\\, 7.389), \\qquad S = 17.496 $$ $$ p = \\left(\\frac{7.389}{17.496},\\, \\frac{2.718}{17.496},\\, \\frac{7.389}{17.496}\\right) = (0.422,\\, 0.155,\\, 0.422) $$ $p_3$ more than quadrupled ( $0.090 \\to 0.422$ ) — but $p_1$ and $p_2$ were also forced to change ( $0.665 \\to 0.422$ and $0.245 \\to 0.155$ ), even though their logits never moved. The probabilities are coupled through the denominator, like slices of a fixed-size pie: one slice getting bigger forces all the others to shrink.\nThis is exactly what “the classes are mutually exclusive” means when formalized. Compare with sigmoid-per-class: each sigmoid answers “is it this class, yes/no, independently of the others,” and you can get $(0.9, 0.8, 0.7)$ — “confidently all three” — which is a contradiction for a mutually exclusive problem but a perfectly sensible answer for multi-label problems (an image can contain a cat and a dog). Choose sigmoid-per-class for multi-label; softmax for single-label.\n3. Temperature: sharpening or flattening One logit-scaling trick you meet everywhere (especially in Transformer decoding) is to divide the logits by a number $T \u003e 0$ before softmax:\n$$ p_i = \\frac{e^{z_i / T}}{\\sum_{j} e^{z_j / T}} $$ This parameter is called temperature. Two regimes worth seeing concretely with our example:\nLow temperature ( $T = 0.5$ ) divides logits by a small number, equivalently scales them up: $(4, 2, 0)$ . Exponentials $(54.60, 7.39, 1.00)$ , sum $62.99$ :\n$$ p = (0.866, 0.117, 0.016) $$ Sharper distribution, closer to argmax. Logit gaps of 1 unit behaved like gaps of 2.\nHigh temperature ( $T = 2$ ) flattens: logits $(1, 0.5, 0)$ . Exponentials $(2.72, 1.65, 1.00)$ , sum $5.37$ :\n$$ p = (0.506, 0.307, 0.186) $$ Flatter, closer to uniform $(0.333, 0.333, 0.333)$ .\n$T = 1$ is vanilla softmax. The limits are: $T \\to 0$ collapses onto argmax; $T \\to \\infty$ collapses onto uniform. Training temperatures are almost invariably 1; temperature mostly appears at generation/inference time, where cranking it up injects variety into sampled outputs and dropping it makes outputs more boring-but-conservative.\n4. Multiclass cross-entropy Now the loss. With binary classification we had $L = -(y \\log a + (1 - y) \\log (1-a))$ . For $k$ classes, the label becomes a one-hot vector $y$ — a vector of $k-1$ zeros and one $1$ at the true class. The natural generalization:\n$$ L = - \\sum_{j=1}^{k} y_j \\log p_j $$ Because $y$ is one-hot, this whole sum collapses: if the true class is $c$ , then $y_c = 1$ and every other $y_j = 0$ , so all terms vanish except one:\n$$ L = - y_c \\log p_c = - \\log p_c $$ Just “the negative log of the probability the network assigned to the correct class.” Compute it for our example, supposing the true class is $c = 2$ :\n$$ L = - \\log(0.245) = 1.409 $$ This function punishes underestimating the true class, brutally at the extremes: if the network gives the correct class probability $0.99$ , the loss is $-\\log(0.99) \\approx 0.01$ ; if it gives $0.01$ , the loss is $-\\log(0.01) = 4.6$ . As the network’s correct-class probability tends to $0$ , the loss explodes to infinity. Cross-entropy is a harsh teacher: nothing matters to it except the probability on the right answer.\n5. Why this pairing is chosen: the gradient is $p - y$ Combine the loss and the softmax, and take the derivative with respect to a logit $z_i$ . The softmax has derivatives that couple every pair of classes — this is the Jacobian of softmax, and its $(i, j)$ entry is:\n$$ \\frac{\\partial p_j}{\\partial z_i} = p_j (\\delta_{ij} - p_i) $$ where $\\delta_{ij}$ is $1$ if $i = j$ and $0$ otherwise. Now chain it into the loss:\n$$ \\frac{\\partial L}{\\partial z_i} = \\sum_{j} \\frac{\\partial L}{\\partial p_j} \\cdot \\frac{\\partial p_j}{\\partial z_i} = \\sum_{j} \\left( -\\frac{y_j}{p_j} \\right) \\cdot p_j (\\delta_{ij} - p_i) $$ The $p_j$ in the denominator cancels the $p_j$ factor — exactly the same magical cancellation we saw with sigmoid+BCE, only now it happens across the whole Jacobian:\n$$ \\frac{\\partial L}{\\partial z_i} = - \\sum_{j} y_j (\\delta_{ij} - p_i) = -y_i + p_i \\sum_{j} y_j = -y_i + p_i \\cdot 1 $$ and therefore:\n$$ \\frac{\\partial L}{\\partial z_i} = p_i - y_i $$ The gradient of softmax-cross-entropy with respect to the logits is just prediction minus target. For our example with $y = (0, 1, 0)$ :\n$$ \\delta^{(out)} = p - y = (0.665 - 0,\\; 0.245 - 1,\\; 0.090 - 0) = (0.665,\\; -0.755,\\; 0.090) $$ Read this vector: the gradient is positive on the classes the network over-rated and negative on the true class it under-rated. Gradient descent adds $-\\eta \\, \\delta^{(out)}$ to the upstream weight gradient computation, which pushes $z_2$ up and pushes $z_1, z_3$ down, in precisely the amounts proportional to the current probability errors. The bigger the probability over-assigned to class 1, the harder its logit gets pushed down. Elegant, and exactly parallel to $\\delta = a - y$ in the binary case — which is in fact the special case $k=2$ .\nOne nuance worth noticing: unlike what you might guess (“only the true class should get a gradient”), every logit receives a signal. That is the price of the coupled denominator — raising one probability necessarily steals mass from the others, so the optimizer must be told about all of them.\n6. One production detail: numerical stability You will see this in every implementation, so it deserves 30 seconds. Logits can be as large as, say, $1000$ . Then $e^{1000}$ is overflow → inf → NaN, and your entire training run is dead. The standard fix is to subtract the largest logit first:\n$$ \\operatorname{softmax}(z)_i = \\frac{e^{z_i - m}}{\\sum_j e^{z_j - m}}, \\qquad m = \\max_j z_j $$ This is mathematically identical — numerator and denominator are both multiplied by $e^{-m}$ , which cancels — but now the biggest exponent is $e^{0} = 1$ , so nothing can overflow. In PyTorch, nn.CrossEntropyLoss takes logits directly (never softmaxed probabilities) precisely so it can do this internally via log-sum-exp. If you ever write softmax() yourself just to feed log(), you are setting a NaN trap for future-you.\n7. Plugging it into the general backward loop In the layer-loop pseudocode from the NumPy note, exactly one symbolic line changes:\ndZ[L] = output_error(A[L], Y) With softmax outputs and cross-entropy, output_error is A[L] - Y — where now Y is a batch of one-hot rows instead of binary labels. That’s it. The loop, the matrix shapes (now $(m, k)$ at the output instead of $(m, 1)$ ), the updates, everything else is untouched. The general machinery did not notice.\nBinary sigmoid+BCE and multiclass softmax+CE are the same algorithm viewed at two different output widths — and that’s not a coincidence, because sigmoid is just the 2-class special case of softmax with one degree of freedom removed.\n8. Summary The network’s raw outputs are logits: unbounded scores that encode preference order but are not probabilities. Softmax turns logits into a probability distribution: exponentiate (guaranteed positive, exaggerates gaps), normalize by the sum. Bigger logit → exponentially bigger share. The shared denominator couples all classes: moving any one logit changes every probability. That’s the right semantics for single-label classification; use per-class sigmoid for multi-label. Temperature $T$ scales the logits pre-softmax: $T \u003c 1$ sharpens, $T \u003e 1$ flattens; used mostly at sampling/decode time. Multiclass cross-entropy is $-\\log p_{\\text{true}}$ : only the network’s probability on the correct class matters, and the cost of being confidently wrong is unbounded. The pair’s gradient with respect to the logits is once again $p - y$ — now a vector, positive on over-rated classes, negative on the true one, and every logit gets a gradient. Practical: subtract the max logit before exponentiating; in practice feed raw logits to the loss function (PyTorch’s CrossEntropyLoss) and let it do the stable computation. 9. Exercises For logits $(2, 1, 0)$ we got $p = (0.665, 0.245, 0.090)$ . Compute softmax for $(3, 2, 1)$ — same gaps, shifted by 1. You should get exactly the same distribution. In one sentence, what property of softmax makes shifts irrelevant? If logits were scaled from $(2,1,0)$ to $(20,10,0)$ , describe in one sentence what happens to the distribution — and why feeding such logits straight into $e^{z}$ might get your program killed. We saw $p - y = (0.665, -0.755, 0.090)$ for $y = (0,1,0)$ . Why does the term for class 3 — a class that shouldn’t win, and isn’t the true class — still get a positive gradient on its logit (meaning its logit gets pushed down)? Would that happen with per-class independent sigmoids + per-class BCE? Suppose all logits are equal, $(c, c, c)$ . What is softmax’s output? What is $p - y$ if the true class is $c_1$ ? Interpret: which classes get pushed up, which get pushed down, and by how much — and why this is a reasonable “doing nothing is punished” signal. In the limits $T \\to 0$ and $T \\to \\infty$ , what does softmax converge to? For both limits, describe in one sentence what sampling next-token from a language model would look like. A colleague proposes “just normalize the logits directly: $p_i = z_i / \\sum_j z_j$ .” It breaks for more than one reason. Name at least two distinct ways this proposal fails as a distribution. (At least one failure should be about negative logits.) 10. What comes next Neural networks can only process numbers, yet language, product catalogs, user graphs — the interesting data — is made of discrete symbols. The bridge is the embedding layer: a learned lookup table that turns each symbol into a dense trainable vector. The next note builds it from one-hot encodings (which we already have), shows that the embedding “lookup” is literally a linear layer, and follows the gradient back to show how the rows get learned.\n","wordCount":"2353","inLanguage":"en","datePublished":"2026-09-14T00:00:00Z","dateModified":"2026-09-14T00:00:00Z","mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/ml/2026-09-14-3-softmax-and-multiclass-cross-entropy/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload='renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1}],throwOnError:!1})'></script><script type=module>
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+  document.querySelectorAll('pre > code.language-mermaid').forEach((codeEl) => {
+    const host = codeEl.closest('div.highlight') || codeEl.parentElement;
+    const pre = document.createElement('pre');
+    pre.className = 'mermaid';
+    pre.textContent = codeEl.textContent;
+    host.replaceWith(pre);
+  });
+  mermaid.run({ querySelector: '.mermaid' });
+</script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities</h1><div class=post-meta><span title='2026-09-14 00:00:00 +0000 UTC'>September 14, 2026</span>&nbsp;·&nbsp;12 min&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/ml/2026-09-14-3-softmax-and-multiclass-cross-entropy.markdown rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#softmax-and-multiclass-cross-entropy-turning-raw-scores-into-probabilities aria-label="Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities">Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities</a><ul><li><a href=#1-from-one-output-to-k-outputs-logits aria-label="1. From one output to k outputs: logits">1. From one output to k outputs: logits</a></li><li><a href=#2-softmax-computed-on-our-example aria-label="2. Softmax, computed on our example">2. Softmax, computed on our example</a><ul><li><a href=#the-role-of-the-exponential aria-label="The role of the exponential">The role of the exponential</a></li><li><a href=#one-logit-moves-every-probability aria-label="One logit moves every probability">One logit moves every probability</a></li></ul></li><li><a href=#3-temperature-sharpening-or-flattening aria-label="3. Temperature: sharpening or flattening">3. Temperature: sharpening or flattening</a></li><li><a href=#4-multiclass-cross-entropy aria-label="4. Multiclass cross-entropy">4. Multiclass cross-entropy</a></li><li><a href=#6-one-production-detail-numerical-stability aria-label="6. One production detail: numerical stability">6. One production detail: numerical stability</a></li><li><a href=#7-plugging-it-into-the-general-backward-loop aria-label="7. Plugging it into the general backward loop">7. Plugging it into the general backward loop</a></li><li><a href=#8-summary aria-label="8. Summary">8. Summary</a></li><li><a href=#9-exercises aria-label="9. Exercises">9. Exercises</a></li><li><a href=#10-what-comes-next aria-label="10. What comes next">10. What comes next</a></li></ul></li></ul></div></details></div><div class=post-content><h1 id=softmax-and-multiclass-cross-entropy-turning-raw-scores-into-probabilities>Softmax and Multiclass Cross-Entropy: Turning Raw Scores Into Probabilities<a hidden class=anchor aria-hidden=true href=#softmax-and-multiclass-cross-entropy-turning-raw-scores-into-probabilities>#</a></h1><p>So far, every classification in these notes has been binary — spam or not, XOR&rsquo;s 0 or 1 — and the output has been single sigmoid feeding binary cross-entropy, whose gradient collapsed to the beautiful
+$\delta = a - y$
+.</p><p>Real classifiers rarely answer two-way questions. &ldquo;Which of 10 digits is this image?&rdquo; &ldquo;Which of 50,000 tokens comes next?&rdquo; &ldquo;Is this a cat, a dog, or a bird?&rdquo; This note generalizes the output of a neural network to
+$k$
+classes, and it turns out almost everything we know carries over — with soft-max doing the job sigmoid did.</p><p>Assumptions: you know the backprop pass on dense layers, sigmoid+BCE, and the
+$\delta = a - y$
+result (<a href=/posts/ml/2026-09-14-2-activation-functions-sigmoid-relu>activation functions note</a>). We will not redo those derivations; we&rsquo;ll do the new parts numerically, on ONE small example the whole way through.</p><hr><h2 id=1-from-one-output-to-k-outputs-logits>1. From one output to k outputs: logits<a hidden class=anchor aria-hidden=true href=#1-from-one-output-to-k-outputs-logits>#</a></h2><p>A binary classifier ends in one neuron producing one number. A 3-class classifier ends in three neurons producing three numbers. In our running example (same network, but three output neurons), suppose the last linear step produces:</p>$$
+z_1 = 2, \qquad z_2 = 1, \qquad z_3 = 0
+$$<p>These numbers are called <strong>logits</strong> — the raw network output right before any activation is applied. Three observations matter before we do anything to them:</p><ol><li><strong>Logits feel like scores</strong>: bigger means &ldquo;network is more partial to this class.&rdquo; The network currently prefers class 1 the most, class 3 the least.</li><li><strong>They are unbounded.</strong> They can be
+$-50$
+,
+$3$
+, or
+$10{,}000$
+. That alone means they cannot be probabilities, which must live in
+$[0, 1]$
+.</li><li><strong>They do not sum to anything in particular.</strong>
+$2 + 1 + 0 = 3$
+. Probabilities across mutually exclusive classes must sum to
+$1$
+.</li></ol><p>Note also what logits are <em>not</em>: they are not &ldquo;log-odds&rdquo; and not anything inherently probabilistic yet. &ldquo;Logit&rdquo; is just the field&rsquo;s conventional name for &ldquo;the value right before the output squashing activation,&rdquo; pure bookkeeping.</p><p>Our job: transform
+$(2, 1, 0)$
+into a probability distribution over classes
+$(p_1, p_2, p_3)$
+with
+$p_i \geq 0$
+and
+$\sum p_i = 1$
+, such that bigger logit → bigger probability and the ordering of preference is preserved.</p><p>Many functions could do that. The field picked softmax, and the rest of the note is why — and what the consequences are.</p><hr><h2 id=2-softmax-computed-on-our-example>2. Softmax, computed on our example<a hidden class=anchor aria-hidden=true href=#2-softmax-computed-on-our-example>#</a></h2><p>The softmax of a logit vector
+$z = (z_1, \dots, z_k)$
+is:</p>$$
+p_i = \operatorname{softmax}(z)_i = \frac{e^{z_i}}{\sum_{j=1}^{k} e^{z_j}}
+$$<p>Every probability is
+$e^{z_i}$
+normalized by the sum of all the exponentials. Compute it step by step for
+$z = (2, 1, 0)$
+:</p>$$
+e^{z_1} = e^{2} \approx 7.389 \qquad e^{z_2} = e^{1} \approx 2.718 \qquad e^{z_3} = e^{0} = 1.000
+$$<p>The &ldquo;sum of exponentials,&rdquo; sometimes called the partition function:</p>$$
+S = 7.389 + 2.718 + 1.000 = 11.107
+$$<p>Normalize:</p>$$
+p_1 = \frac{7.389}{11.107} = 0.665 \qquad p_2 = \frac{2.718}{11.107} = 0.245 \qquad p_3 = \frac{1.000}{11.107} = 0.090
+$$<p>So:</p>$$
+\operatorname{softmax}(2, 1, 0) = (0.665, 0.245, 0.090)
+$$<p>Sanity checks, all passed:</p><ul><li>Every
+$p_i$
+is between 0 and 1.</li><li>$0.665 + 0.245 + 0.090 = 1.000$
+.</li><li>Ordering preserved: class 1, with the biggest logit, got the biggest probability.</li></ul><h3 id=the-role-of-the-exponential>The role of the exponential<a hidden class=anchor aria-hidden=true href=#the-role-of-the-exponential>#</a></h3><p>Why
+$e^{z}$
+and not something else? Two reasons, one mathematical, one behavioral:</p><ul><li><strong>Positivity, guaranteed.</strong>
+$e^{z} > 0$
+for every finite
+$z$
+, so no probability can ever go negative no matter what scores the network outputs.</li><li><strong>Amplification of differences.</strong> A gap of 1 unit between logits becomes a <em>factor of
+$e$
+</em>between probabilities. Logits
+$2$
+and
+$1$
+differ by one unit; their exponentials
+$7.389$
+and
+$2.718$
+have ratio
+$\approx 2.7$
+. Bigger logit gaps produce geometrically bigger probability gaps. Softmax is &ldquo;soft arg+max&rdquo;: argmax would zero out the losers entirely; softmax lets them keep a share, with an exponential bias toward the winner.</li></ul><h3 id=one-logit-moves-every-probability>One logit moves every probability<a hidden class=anchor aria-hidden=true href=#one-logit-moves-every-probability>#</a></h3><p>This is the property that distinguishes softmax from doing
+$k$
+independent sigmoids, and it comes straight from the denominator. Suppose we nudge
+$z_3$
+up from
+$0 \to 2$
+and leave the others alone:</p>$$
+e^{z} = (7.389,\, 2.718,\, 7.389), \qquad S = 17.496
+$$<p></p>$$
+p = \left(\frac{7.389}{17.496},\, \frac{2.718}{17.496},\, \frac{7.389}{17.496}\right) = (0.422,\, 0.155,\, 0.422)
+$$<p>$p_3$
+more than quadrupled (
+$0.090 \to 0.422$
+) — but
+$p_1$
+and
+$p_2$
+were <em>also</em> forced to change (
+$0.665 \to 0.422$
+and
+$0.245 \to 0.155$
+), even though their logits never moved. The probabilities are coupled through the denominator, like slices of a fixed-size pie: one slice getting bigger forces all the others to shrink.</p><p>This is exactly what &ldquo;the classes are mutually exclusive&rdquo; means when formalized. Compare with sigmoid-per-class: each sigmoid answers &ldquo;is it this class, yes/no, independently of the others,&rdquo; and you can get
+$(0.9, 0.8, 0.7)$
+— &ldquo;confidently all three&rdquo; — which is a contradiction for a mutually exclusive problem but a perfectly sensible answer for multi-label problems (an image can contain a cat and a dog). Choose sigmoid-per-class for multi-label; softmax for single-label.</p><hr><h2 id=3-temperature-sharpening-or-flattening>3. Temperature: sharpening or flattening<a hidden class=anchor aria-hidden=true href=#3-temperature-sharpening-or-flattening>#</a></h2><p>One logit-scaling trick you meet everywhere (especially in Transformer decoding) is to divide the logits by a number
+$T > 0$
+before softmax:</p>$$
+p_i = \frac{e^{z_i / T}}{\sum_{j} e^{z_j / T}}
+$$<p>This parameter is called <strong>temperature</strong>. Two regimes worth seeing concretely with our example:</p><p><strong>Low temperature (
+$T = 0.5$
+)</strong> divides logits by a small number, equivalently scales them up:
+$(4, 2, 0)$
+. Exponentials
+$(54.60, 7.39, 1.00)$
+, sum
+$62.99$
+:</p>$$
+p = (0.866, 0.117, 0.016)
+$$<p>Sharper distribution, closer to argmax. Logit gaps of 1 unit behaved like gaps of 2.</p><p><strong>High temperature (
+$T = 2$
+)</strong> flattens: logits
+$(1, 0.5, 0)$
+. Exponentials
+$(2.72, 1.65, 1.00)$
+, sum
+$5.37$
+:</p>$$
+p = (0.506, 0.307, 0.186)
+$$<p>Flatter, closer to uniform
+$(0.333, 0.333, 0.333)$
+.</p><p>$T = 1$
+is vanilla softmax. The limits are:
+$T \to 0$
+collapses onto argmax;
+$T \to \infty$
+collapses onto uniform. Training temperatures are almost invariably 1; temperature mostly appears at <em>generation/inference</em> time, where cranking it up injects variety into sampled outputs and dropping it makes outputs more boring-but-conservative.</p><hr><h2 id=4-multiclass-cross-entropy>4. Multiclass cross-entropy<a hidden class=anchor aria-hidden=true href=#4-multiclass-cross-entropy>#</a></h2><p>Now the loss. With binary classification we had
+$L = -(y \log a + (1 - y) \log (1-a))$
+. For
+$k$
+classes, the label becomes a <strong>one-hot vector</strong>
+$y$
+— a vector of
+$k-1$
+zeros and one
+$1$
+at the true class. The natural generalization:</p>$$
+L = - \sum_{j=1}^{k} y_j \log p_j
+$$<p>Because
+$y$
+is one-hot, this whole sum collapses: if the true class is
+$c$
+, then
+$y_c = 1$
+and every other
+$y_j = 0$
+, so all terms vanish except one:</p>$$
+L = - y_c \log p_c = - \log p_c
+$$<p>Just &ldquo;the negative log of the probability the network assigned to the correct class.&rdquo; Compute it for our example, supposing the true class is
+$c = 2$
+:</p>$$
+L = - \log(0.245) = 1.409
+$$<p>This function punishes <em>underestimating the true class</em>, brutally at the extremes: if the network gives the correct class probability
+$0.99$
+, the loss is
+$-\log(0.99) \approx 0.01$
+; if it gives
+$0.01$
+, the loss is
+$-\log(0.01) = 4.6$
+. As the network&rsquo;s correct-class probability tends to
+$0$
+, the loss explodes to infinity. Cross-entropy is a harsh teacher: nothing matters to it except the probability on the right answer.</p><hr><h2 id=5-why-this-pairing-is-chosen-the-gradient-is>5. Why this pairing is chosen: the gradient is
+$p - y$</h2><p>Combine the loss and the softmax, and take the derivative with respect to a logit
+$z_i$
+. The softmax has derivatives that couple every pair of classes — this is the Jacobian of softmax, and its
+$(i, j)$
+entry is:</p>$$
+\frac{\partial p_j}{\partial z_i} = p_j (\delta_{ij} - p_i)
+$$<p>where
+$\delta_{ij}$
+is
+$1$
+if
+$i = j$
+and
+$0$
+otherwise. Now chain it into the loss:</p>$$
+\frac{\partial L}{\partial z_i} = \sum_{j} \frac{\partial L}{\partial p_j} \cdot \frac{\partial p_j}{\partial z_i} = \sum_{j} \left( -\frac{y_j}{p_j} \right) \cdot p_j (\delta_{ij} - p_i)
+$$<p>The
+$p_j$
+in the denominator cancels the
+$p_j$
+factor — exactly the same magical cancellation we saw with sigmoid+BCE, only now it happens across the whole Jacobian:</p>$$
+\frac{\partial L}{\partial z_i} = - \sum_{j} y_j (\delta_{ij} - p_i) = -y_i + p_i \sum_{j} y_j = -y_i + p_i \cdot 1
+$$<p>and therefore:</p>$$
+\frac{\partial L}{\partial z_i} = p_i - y_i
+$$<p>The gradient of softmax-cross-entropy with respect to the logits is just <strong>prediction minus target</strong>. For our example with
+$y = (0, 1, 0)$
+:</p>$$
+\delta^{(out)} = p - y = (0.665 - 0,\; 0.245 - 1,\; 0.090 - 0) = (0.665,\; -0.755,\; 0.090)
+$$<p>Read this vector: the gradient is positive on the classes the network over-rated and negative on the true class it under-rated. Gradient descent adds
+$-\eta \, \delta^{(out)}$
+to the upstream weight gradient computation, which pushes
+$z_2$
+up and pushes
+$z_1, z_3$
+down, in precisely the amounts proportional to the current probability errors. The bigger the probability over-assigned to class 1, the harder its logit gets pushed down. Elegant, and exactly parallel to
+$\delta = a - y$
+in the binary case — which is in fact the special case
+$k=2$
+.</p><p>One nuance worth noticing: unlike what you might guess (&ldquo;only the true class should get a gradient&rdquo;), <strong>every logit receives a signal</strong>. That is the price of the coupled denominator — raising one probability necessarily steals mass from the others, so the optimizer must be told about all of them.</p><hr><h2 id=6-one-production-detail-numerical-stability>6. One production detail: numerical stability<a hidden class=anchor aria-hidden=true href=#6-one-production-detail-numerical-stability>#</a></h2><p>You will see this in every implementation, so it deserves 30 seconds. Logits can be as large as, say,
+$1000$
+. Then
+$e^{1000}$
+is overflow → <code>inf</code> → NaN, and your entire training run is dead. The standard fix is to subtract the largest logit first:</p>$$
+\operatorname{softmax}(z)_i = \frac{e^{z_i - m}}{\sum_j e^{z_j - m}}, \qquad m = \max_j z_j
+$$<p>This is mathematically identical — numerator and denominator are both multiplied by
+$e^{-m}$
+, which cancels — but now the biggest exponent is
+$e^{0} = 1$
+, so nothing can overflow. In PyTorch, <code>nn.CrossEntropyLoss</code> takes <strong>logits directly</strong> (never softmaxed probabilities) precisely so it can do this internally via log-sum-exp. If you ever write <code>softmax()</code> yourself just to feed <code>log()</code>, you are setting a NaN trap for future-you.</p><hr><h2 id=7-plugging-it-into-the-general-backward-loop>7. Plugging it into the general backward loop<a hidden class=anchor aria-hidden=true href=#7-plugging-it-into-the-general-backward-loop>#</a></h2><p>In the layer-loop pseudocode from the NumPy note, exactly one symbolic line changes:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-text data-lang=text><span style=display:flex><span>dZ[L] = output_error(A[L], Y)
+</span></span></code></pre></div><p>With softmax outputs and cross-entropy, <code>output_error</code> is <code>A[L] - Y</code> — where now <code>Y</code> is a batch of one-hot rows instead of binary labels. That&rsquo;s it. The loop, the matrix shapes (now
+$(m, k)$
+at the output instead of
+$(m, 1)$
+), the updates, everything else is untouched. The general machinery did not notice.</p><p>Binary sigmoid+BCE and multiclass softmax+CE are the same algorithm viewed at two different output widths — and that&rsquo;s not a coincidence, because sigmoid is just the 2-class special case of softmax with one degree of freedom removed.</p><hr><h2 id=8-summary>8. Summary<a hidden class=anchor aria-hidden=true href=#8-summary>#</a></h2><ul><li>The network&rsquo;s raw outputs are <strong>logits</strong>: unbounded scores that encode preference order but are not probabilities.</li><li><strong>Softmax</strong> turns logits into a probability distribution: exponentiate (guaranteed positive, exaggerates gaps), normalize by the sum. Bigger logit → exponentially bigger share.</li><li>The shared denominator <strong>couples all classes</strong>: moving any one logit changes every probability. That&rsquo;s the right semantics for single-label classification; use per-class sigmoid for multi-label.</li><li><strong>Temperature</strong>
+$T$
+scales the logits pre-softmax:
+$T < 1$
+sharpens,
+$T > 1$
+flattens; used mostly at sampling/decode time.</li><li>Multiclass <strong>cross-entropy</strong> is
+$-\log p_{\text{true}}$
+: only the network&rsquo;s probability on the correct class matters, and the cost of being confidently wrong is unbounded.</li><li>The pair&rsquo;s gradient with respect to the logits is once again <strong>$p - y$
+</strong>— now a vector, positive on over-rated classes, negative on the true one, and every logit gets a gradient.</li><li>Practical: subtract the max logit before exponentiating; in practice feed raw logits to the loss function (PyTorch&rsquo;s <code>CrossEntropyLoss</code>) and let it do the stable computation.</li></ul><hr><h2 id=9-exercises>9. Exercises<a hidden class=anchor aria-hidden=true href=#9-exercises>#</a></h2><ol><li>For logits
+$(2, 1, 0)$
+we got
+$p = (0.665, 0.245, 0.090)$
+. Compute softmax for
+$(3, 2, 1)$
+— same gaps, shifted by 1. You should get <em>exactly the same distribution</em>. In one sentence, what property of softmax makes shifts irrelevant?</li><li>If logits were scaled from
+$(2,1,0)$
+to
+$(20,10,0)$
+, describe in one sentence what happens to the distribution — and why feeding such logits straight into
+$e^{z}$
+might get your program killed.</li><li>We saw
+$p - y = (0.665, -0.755, 0.090)$
+for
+$y = (0,1,0)$
+. Why does the term for class 3 — a class that shouldn&rsquo;t win, and isn&rsquo;t the true class — still get a positive gradient on its logit (meaning its logit gets pushed down)? Would that happen with per-class independent sigmoids + per-class BCE?</li><li>Suppose all logits are equal,
+$(c, c, c)$
+. What is softmax&rsquo;s output? What is
+$p - y$
+if the true class is
+$c_1$
+? Interpret: which classes get pushed up, which get pushed down, and by how much — and why this is a reasonable &ldquo;doing nothing is punished&rdquo; signal.</li><li>In the limits
+$T \to 0$
+and
+$T \to \infty$
+, what does softmax converge to? For both limits, describe in one sentence what sampling next-token from a language model would look like.</li><li>A colleague proposes &ldquo;just normalize the logits directly:
+$p_i = z_i / \sum_j z_j$
+.&rdquo; It breaks for more than one reason. Name at least two distinct ways this proposal fails as a distribution. (At least one failure should be about negative logits.)</li></ol><hr><h2 id=10-what-comes-next>10. What comes next<a hidden class=anchor aria-hidden=true href=#10-what-comes-next>#</a></h2><p>Neural networks can only process numbers, yet language, product catalogs, user graphs — the interesting data — is made of discrete symbols. The bridge is the <strong>embedding layer</strong>: a learned lookup table that turns each symbol into a dense trainable vector. The <a href=/posts/ml/2026-09-14-4-embeddings-from-one-hot-to-learned-representations>next note</a> builds it from one-hot encodings (which we already have), shows that the embedding &ldquo;lookup&rdquo; is literally a linear layer, and follows the gradient back to show how the rows get learned.</p></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/ml/>Ml</a></li><li><a href=https://sankethbk.github.io/blog/tags/softmax/>Softmax</a></li><li><a href=https://sankethbk.github.io/blog/tags/cross-entropy/>Cross-Entropy</a></li><li><a href=https://sankethbk.github.io/blog/tags/classification/>Classification</a></li><li><a href=https://sankethbk.github.io/blog/tags/neural-networks/>Neural-Networks</a></li><li><a href=https://sankethbk.github.io/blog/tags/logits/>Logits</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
