@@ -1,0 +1,5 @@
+{{ if eq .Type "block" }}
+{{ printf "$$%s$$" .Inner | safeHTML }}
+{{ else }}
+{{ printf "$%s$" .Inner | safeHTML }}
+{{ end }}
