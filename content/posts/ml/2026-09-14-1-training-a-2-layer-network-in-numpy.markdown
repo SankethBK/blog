@@ -864,6 +864,8 @@ for l = 1 to L:
     b[l] -= learning_rate * db[l]
 ```
 
+> Simple way to remember this: Z is the thing that moves forward from layer l to layer l + 1 (activation function is common, so not considering A), Z is used to calculate W and b for that layer. dZ is the thing that moves backward from layer l to layer l - 1 in backpropagation, dZ is used to calculate dW and db for that layer.
+
 That is the whole of backpropagation. The inner loop body never changes; only the depth $L$ changes. If you want a 5-layer network, set `layer_sizes = [2, 4, 4, 4, 1]`. If you want a 100-layer network, make the list 100 entries long. The loop runs more times, but the code stays the same.
 
 Notice what we cache during the forward pass: every $Z$ and every $A$. The backward pass needs them because each local derivative depends on the values computed forward. Without those caches, we would have to re-run forward passes repeatedly, which is exactly what finite-difference methods do.
