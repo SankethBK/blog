@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Neuron on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/neuron/</link><description>Recent content in Neuron on Sanketh's Blog</description><generator>Hugo -- 0.166.0</generator><language>en-us</language><lastBuildDate>Sat, 12 Sep 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/neuron/index.xml" rel="self" type="application/rss+xml"/><item><title>Computational Graphs, Part 3: A Single Neuron and Logistic Regression</title><link>https://sankethbk.github.io/blog/posts/ml/2026-09-12-2-single-neuron-as-a-graph/</link><pubDate>Sat, 12 Sep 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/2026-09-12-2-single-neuron-as-a-graph/</guid><description>&lt;h1 id="computational-graphs-part-3-a-single-neuron-and-logistic-regression"&gt;Computational Graphs, Part 3: A Single Neuron and Logistic Regression&lt;/h1&gt;
+&lt;p&gt;The &lt;a href="https://sankethbk.github.io/blog/posts/ml/2026-09-12-1-branching-why-gradients-add"&gt;previous note&lt;/a&gt; showed how gradients add when one input feeds multiple operations. With that in place, we can now look at a real model: a single neuron. We will draw it as a graph, run the forward pass and backward pass by hand, and then connect it back to the logistic regression from the &lt;a href="https://sankethbk.github.io/blog/posts/ml/2026-09-07-ml-refresher-linear-logistic-regression"&gt;first note&lt;/a&gt;.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-what-you-will-learn"&gt;1. What you will learn&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;How a single neuron is a small computational graph.&lt;/li&gt;
+&lt;li&gt;The forward pass through a weighted sum and an activation function.&lt;/li&gt;
+&lt;li&gt;The backward pass through the same graph.&lt;/li&gt;
+&lt;li&gt;Why logistic regression is exactly a one-neuron network with sigmoid activation.&lt;/li&gt;
+&lt;li&gt;How the cross-entropy loss fits into the graph as an extra node.&lt;/li&gt;
+&lt;li&gt;Why the gradient formula from logistic regression matches the chain-rule result.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-a-single-neuron"&gt;2. A single neuron&lt;/h2&gt;
+&lt;p&gt;A neuron with two inputs has three steps:&lt;/p&gt;</description></item></channel></rss>
