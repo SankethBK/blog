@@ -818,18 +818,75 @@ The matrix form is not a different algorithm. It is the scalar algorithm, writte
 
 ---
 
-## 12. Exercises
+## 12. The general L-layer version: why we never handwrite each layer
+
+So far we have written `forward` and `backward` for exactly two layers. But the whole point of deep learning is that the same block can be stacked many times. A 5-layer network does not need five separate forward functions and five separate backward functions; it needs **one loop** that runs five times.
+
+Here is the complete algorithm for a network with $L$ layers, in plain pseudocode. This is exactly what NumPy, PyTorch, and every other framework do at their core.
+
+```text
+# Model definition: list the sizes of every layer
+layer_sizes = [n_0, n_1, n_2, ..., n_L]
+# n_0 = number of input features
+# n_L = number of output neurons
+# For our 2-2-1 network: layer_sizes = [2, 2, 1]
+
+# Initialize parameters
+for l = 1 to L:
+    W[l] = random matrix of shape (n_{l-1}, n_l)
+    b[l] = zeros of shape (1, n_l)
+
+# Forward pass: compute and cache every Z and A
+A[0] = X
+for l = 1 to L:
+    Z[l] = A[l-1] @ W[l] + b[l]
+    if l == L:
+        A[l] = output_activation(Z[l])      # sigmoid for binary classification
+    else:
+        A[l] = hidden_activation(Z[l])          # sigmoid or ReLU
+
+# Backward pass: start from the loss and walk left
+# dZ[L] is the derivative of the loss with respect to the output pre-activation.
+# For BCE + sigmoid output, it simplifies to A[L] - Y.
+dZ[L] = output_error(A[L], Y)
+
+for l = L down to 1:
+    dW[l] = (A[l-1].T @ dZ[l]) / m
+    db[l] = mean(dZ[l], axis=0)
+
+    if l > 1:
+        dA[l-1] = dZ[l] @ W[l].T
+        dZ[l-1] = dA[l-1] * activation_derivative(A[l-1])
+
+# Parameter update: everyone moves at the same time
+for l = 1 to L:
+    W[l] -= learning_rate * dW[l]
+    b[l] -= learning_rate * db[l]
+```
+
+That is the whole of backpropagation. The inner loop body never changes; only the depth $L$ changes. If you want a 5-layer network, set `layer_sizes = [2, 4, 4, 4, 1]`. If you want a 100-layer network, make the list 100 entries long. The loop runs more times, but the code stays the same.
+
+Notice what we cache during the forward pass: every $Z$ and every $A$. The backward pass needs them because each local derivative depends on the values computed forward. Without those caches, we would have to re-run forward passes repeatedly, which is exactly what finite-difference methods do.
+
+This is also the map of what `loss.backward()` does in PyTorch. PyTorch builds the equivalent of the `Z` and `A` cache dynamically as your forward code runs, then walks it backward when you call `.backward()`. Your job is to write the forward computation; the framework supplies the loop above.
+
+---
+
+## 13. Exercises
 
 1. Run the NumPy code with the single-example weights from section 2 and verify that every printed gradient matches the hand-computed table to within 0.0001.
 2. Change the label in the single example from $y=0$ to $y=1$. Before running the code, predict the sign of $\delta^{[2]}$, and therefore the sign of every gradient. Then run it.
 3. In the XOR training loop, what happens if you remove the `/ m` averaging in `dW1` and `dW2`? Why does the loss curve behave differently?
 4. Add a third hidden neuron to the XOR network (so the architecture is 2-3-1). Which shapes change? Which lines of the NumPy code stay the same?
+5. Look at the L-layer pseudocode above. Which lines would change if you switched the hidden activation from sigmoid to ReLU? Which lines would stay exactly the same?
 
 ---
 
-## 13. What comes next
+## 14. What comes next
 
 The next note takes two practical steps forward:
 
 - Replace sigmoid hidden units with ReLU to avoid vanishing gradients, and look at how the backward formulas change.
 - Build deeper networks cleanly by stacking the same `forward/backward` block, leading into modern architectures.
+
+
