@@ -92,22 +92,34 @@ $$
 > Now to extend this idea to multi-dimension input, differentiating the function w.r.t to one of the input parameter means freezing all the planes and considering only one plane at a time. 
 > For a model like
 >
-> $$
-> \hat{y} = w_0x_0 + w_1x_1 + w_2x_2 + \cdots + w_dx_d + b
-> $$
+
+$$
+\hat{y} = w_0x_0 + w_1x_1 + w_2x_2 + \cdots + w_dx_d + b
+$$
+
+>
 >
 > you can absolutely think of gradient descent as computing each parameter’s update independently:
-> $$
-> w_0 \leftarrow w_0 - \alpha\frac{\partial L}{\partial w_0}
-> $$
-> $$
-> w_1 \leftarrow w_1 - \alpha\frac{\partial L}{\partial w_1}
-> $$
+
+$$
+w_0 \leftarrow w_0 - \alpha\frac{\partial L}{\partial w_0}
+$$
+
+>
+
+$$
+w_1 \leftarrow w_1 - \alpha\frac{\partial L}{\partial w_1}
+$$
+
+>
 >
 > The vectorized version:
-> $$
-> \mathbf{w} \leftarrow \mathbf{w} - \alpha\nabla_{\mathbf{w}} L
-> $$
+
+$$
+\mathbf{w} \leftarrow \mathbf{w} - \alpha\nabla_{\mathbf{w}} L
+$$
+
+>
 > is essentially doing all those scalar updates in one operation.
 >
 > The reason b (bias) is treated as separate parameter is because its $x^{0}$ and the formula for its partial derivate is different compared to all other inputs. 
@@ -127,15 +139,21 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 >
 > For linear regression:
 >
-> $$
-> \hat{y} = Xw + b
-> $$
+
+$$
+\hat{y} = Xw + b
+$$
+
+>
 >
 > and we’re trying to minimize MSE:
 >
-> $$
-> L(w) = \frac{1}{n}\|Xw - y\|^2
-> $$
+
+$$
+L(w) = \frac{1}{n}\|Xw - y\|^2
+$$
+
+>
 >
 > Gradient descent says:
 >
@@ -143,9 +161,12 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 >
 > So at the minimum:
 >
-> $$
-> \nabla L(w) = 0
-> $$
+
+$$
+\nabla L(w) = 0
+$$
+
+>
 >
 > For linear regression, we can actually solve that equation algebraically instead of taking thousands of little steps.
 >
@@ -155,47 +176,68 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 >
 > Say:
 >
-> $$
-> L(w) = \|Xw - y\|^2
-> $$
+
+$$
+L(w) = \|Xw - y\|^2
+$$
+
+>
 >
 > Expand it:
 >
-> $$
-> L(w) = (Xw - y)^T(Xw - y)
-> $$
+
+$$
+L(w) = (Xw - y)^T(Xw - y)
+$$
+
+>
 >
 > which becomes:
 >
-> $$
-> w^T X^T X w - 2y^T Xw + y^T y
-> $$
+
+$$
+w^T X^T X w - 2y^T Xw + y^T y
+$$
+
+>
 >
 > Now differentiate with respect to $w$:
 >
-> $$
-> \nabla L = 2X^T Xw - 2X^T y
-> $$
+
+$$
+\nabla L = 2X^T Xw - 2X^T y
+$$
+
+>
 >
 > At the minimum:
 >
-> $$
-> 2X^T Xw - 2X^T y = 0
-> $$
+
+$$
+2X^T Xw - 2X^T y = 0
+$$
+
+>
 >
 > Cancel 2:
 >
-> $$
-> X^T Xw = X^T y
-> $$
+
+$$
+X^T Xw = X^T y
+$$
+
+>
 >
 > And now this is just a system of linear equations.
 >
 > Multiply both sides by $(X^T X)^{-1}$:
 >
-> $$
-> \boxed{w = (X^T X)^{-1} X^T y}
-> $$
+
+$$
+\boxed{w = (X^T X)^{-1} X^T y}
+$$
+
+>
 >
 > That’s the normal equation.
 
@@ -205,73 +247,100 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 >
 > If
 >
-> $$
-> v =
-> \begin{bmatrix}
-> v_1 \\
-> v_2 \\
-> v_3
-> \end{bmatrix}
-> $$
+
+$$
+v =
+\begin{bmatrix}
+v_1 \\
+v_2 \\
+v_3
+\end{bmatrix}
+$$
+
+>
 >
 > then
 >
-> $$
-> \|v\|^2 = v_1^2 + v_2^2 + v_3^2
-> $$
+
+$$
+\|v\|^2 = v_1^2 + v_2^2 + v_3^2
+$$
+
+>
 >
 > Now transpose $v$:
 >
-> $$
-> v^T =
-> \begin{bmatrix}
-> v_1 & v_2 & v_3
-> \end{bmatrix}
-> $$
+
+$$
+v^T =
+\begin{bmatrix}
+v_1 & v_2 & v_3
+\end{bmatrix}
+$$
+
+>
 >
 > Multiply:
 >
-> $$
-> v^T v =
-> \begin{bmatrix}
-> v_1 & v_2 & v_3
-> \end{bmatrix}
-> \begin{bmatrix}
-> v_1 \\
-> v_2 \\
-> v_3
-> \end{bmatrix}
-> $$
+
+$$
+v^T v =
+\begin{bmatrix}
+v_1 & v_2 & v_3
+\end{bmatrix}
+\begin{bmatrix}
+v_1 \\
+v_2 \\
+v_3
+\end{bmatrix}
+$$
+
+>
 >
 > which gives:
 >
-> $$
-> v_1^2 + v_2^2 + v_3^2
-> $$
+
+$$
+v_1^2 + v_2^2 + v_3^2
+$$
+
+>
 >
 > So:
 >
-> $$
-> \boxed{\|v\|^2 = v^T v}
-> $$
+
+$$
+\boxed{\|v\|^2 = v^T v}
+$$
+
+>
 >
 > Therefore, if
 >
-> $$
-> v = Xw - y
-> $$
+
+$$
+v = Xw - y
+$$
+
+>
 >
 > then:
 >
-> $$
-> L(w) = \|Xw - y\|^2
-> $$
+
+$$
+L(w) = \|Xw - y\|^2
+$$
+
+>
 >
 > becomes:
 >
-> $$
-> L(w) = (Xw - y)^T(Xw - y)
-> $$
+
+$$
+L(w) = (Xw - y)^T(Xw - y)
+$$
+
+>
 >
 > Nothing fancy yet.
 >
@@ -281,29 +350,41 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 >
 > We have:
 >
-> $$
-> (Xw - y)^T
-> $$
+
+$$
+(Xw - y)^T
+$$
+
+>
 >
 > There is a very important rule:
 >
-> $$
-> \boxed{(ABC)^T = C^T B^T A^T}
-> $$
+
+$$
+\boxed{(ABC)^T = C^T B^T A^T}
+$$
+
+>
 >
 > Transpose reverses the order.
 >
 > For example:
 >
-> $$
-> (AB)^T = B^T A^T
-> $$
+
+$$
+(AB)^T = B^T A^T
+$$
+
+>
 >
 > So:
 >
-> $$
-> (Xw)^T = w^T X^T
-> $$
+
+$$
+(Xw)^T = w^T X^T
+$$
+
+>
 >
 > because the original order is:
 >
@@ -315,19 +396,25 @@ This gives the exact minimum in one step, but it costs $O(d^3)$ to invert and fa
 >
 > Therefore:
 >
-> $$
-> \begin{aligned}
-> (Xw - y)^T
-> &= (Xw)^T - y^T \\
-> &= w^T X^T - y^T
-> \end{aligned}
-> $$
+
+$$
+\begin{aligned}
+(Xw - y)^T
+&= (Xw)^T - y^T \\
+&= w^T X^T - y^T
+\end{aligned}
+$$
+
+>
 >
 > So our expression becomes:
 >
-> $$
-> (w^T X^T - y^T)(Xw - y)
-> $$
+
+$$
+(w^T X^T - y^T)(Xw - y)
+$$
+
+>
 >
 > Now it’s just FOIL, exactly like ordinary algebra.
 
@@ -435,9 +522,12 @@ Logistic regression: separates the classes
 >
 > If we assume the equation of line to be **Ax + By + C = 0**, then the magnitude of perpendicular distance b/w any point **(x1, y1)** and the line is given by 
 >
-> $$
-> d = \frac{|Ax_1 + By_1 + C|}{\sqrt{A^2 + B^2}}
-> $$
+
+$$
+d = \frac{|Ax_1 + By_1 + C|}{\sqrt{A^2 + B^2}}
+$$
+
+>
 >
 > Now this formula is difficult to make sense of for someone who has vector algebra knowledge is rusty from 10 years ago, but i trust the math and take it granted because i already spent 1 night trying to understand it. 
 >
@@ -446,90 +536,106 @@ Logistic regression: separates the classes
 > That means all we are doing is plugging the point into the equation of the line, if the point lies on the line it will give us 0, because that's the equation, otherwise it will give us something proportional to the perpendicular signed distance. 
 >
 > Now extending the same logic, the perpendicular signed distance for **z = wᵀx + b** would have been  
-> $$
-> d = \frac{{|w^Tx + b|}}{||w||}
-> $$
+
+$$
+d = \frac{{|w^Tx + b|}}{||w||}
+$$
+
+>
 >
 > With same logic we can simplify it to 
 >
-> $$d = w^Tx + b$$
+
+$$
+
+Till now we were talking about z = wᵀx + b, now we need a function h(z), what are the requirements for our function?
+1. h(z) ∈ (0, 1)          must be a valid probability
+2. h(0) = 0.5             on the boundary, maximum uncertainty
+3. h(z) → 1 as z → +∞    far on one side → very confident
+4. h(z) → 0 as z → -∞    far on other side → very confident the other way
+5. monotone, smooth        so gradient descent can work through it (This is a whole next level problem, we will get here)
+
+Now all the properties above are exactly the properties of the sigmoid function. It has an **S** shape, crosses the y-axis at 0.5, approaches 1 as $x \to +\infty$, and approaches 0 as $x \to -\infty$.
+
+The sigmoid is defined as:
+
+$$
+
 >
-> Till now we were talking about z = wᵀx + b, now we need a function h(z), what are the requirements for our function?
-> 1. h(z) ∈ (0, 1)          must be a valid probability
-> 2. h(0) = 0.5             on the boundary, maximum uncertainty
-> 3. h(z) → 1 as z → +∞    far on one side → very confident
-> 4. h(z) → 0 as z → -∞    far on other side → very confident the other way
-> 5. monotone, smooth        so gradient descent can work through it (This is a whole next level problem, we will get here)
->
-> Now all the properties above are exactly the properties of the sigmoid function. It has an **S** shape, crosses the y-axis at 0.5, approaches 1 as $x \to +\infty$, and approaches 0 as $x \to -\infty$.
->
-> The sigmoid is defined as:
->
-> $$
 > \sigma(z) = \frac{1}{1 + e^{-z}}
-> $$
+
+$$
+
+Now we encode the signed distance into the sigmoid.
+$$
+
 >
-> Now we encode the signed distance into the sigmoid.
-> $$
 > h(z) = \frac{1}{1 + e^{-(w^Tx + b)}}
-> $$
+
+$$
+
+**Many diagrams and youtube videos show sigmoid as a decision boundary, showing that sigmoid does not mess up when there are outliers, this is wrong! this is what started confusing me yesterday. Sigmoid is never the decision boundary, it's the way we express the distance to decision boundary as probability.**
+
+### Now the loss function
+
+Let's see what happens if we try to use the same loss function as regression
+
+$$
+
 >
-> **Many diagrams and youtube videos show sigmoid as a decision boundary, showing that sigmoid does not mess up when there are outliers, this is wrong! this is what started confusing me yesterday. Sigmoid is never the decision boundary, it's the way we express the distance to decision boundary as probability.**
->
-> ### Now the loss function
->
-> Let's see what happens if we try to use the same loss function as regression
->
-> $$
 > L(w, b) = \frac{1}{n} \sum_{i=1}^{n} (h(z) - y_i)^2
-> $$
+
+$$
+
+Now this let's try to identify the issues with it. 
+
+Let;s say we have 2 classes y ∈ {0,1}. We refine the meaning of `h(z)` as` p(y = 1|x,w,b)` meaning its output is indication of what's the probability that this point belongs to the class `y = 1`, if `p = 0.8` it means we are 80% sure it belongs to the class `y = 1`. Similarly `p = 0.2` means, we are 20% sure that it belongs to the class `y = 1`. See how are are not talkign about `y = 0` at all, but for a binary classification, it automatically means the probability of class `y = 0` is `1 - p`. 
+
+Now the reason, MSE seems to work is because if the model predicts the class correctly `h(z) = 0.9` and `y = 1` will only get a tiny penalty. `h(z) = 0.1` and `y = 0` is a similar case. Notice the neat hack where p apporaching 0 also means `y = 0`. So penalty wise we seem sorted. 
+
+Let's see some more cases
+```
+h(z) = 0.9,  y = 1   →   (0.9 - 1)²  = 0.01   ✓ low penalty, correct
+h(z) = 0.1,  y = 0   →   (0.1 - 0)²  = 0.01   ✓ low penalty, correct
+h(z) = 0.1,  y = 1   →   (0.1 - 1)²  = 0.81   wrong, gets penalty 
+h(z) = 0.9,  y = 0   →   (0.9 - 0)²  = 0.81   wrong, gets penalty
+```
+So far MSE looks reasonable. Here's the actual problem.
+
+The worst case under MSE is `(0 - 1)² = 1` or `(1 - 0)² = 1`. No matter how confidently wrong the model is, the loss never exceeds 1. The model can be 99% sure of the wrong class and the penalty is just `0.99² ≈ 0.98` — barely worse than being 90% sure of the wrong class `(0.81)`.
+
+MSE doesn't scream when the model is confidently wrong. It just shrugs.
+
+What you actually want from a loss for classification:
+
+```
+confidently correct   →   loss near 0
+uncertain             →   moderate loss
+confidently wrong     →   loss → ∞
+```
+That last line is what MSE can never give you, because it's a squared difference between two numbers that both live in `(0, 1)`.
+
+Cross-entropy gives you exactly this:
+`L = -log(h(z))        when y = 1`
+
+If `h(z) = 0.99` (confidently correct) → `-log(0.99) ≈ 0.01`, tiny.
+If `h(z) = 0.5` (uncertain) → `-log(0.5) ≈ 0.69`, moderate.
+If `h(z) = 0.01` (confidently wrong) → `-log(0.01) ≈ 4.6`, huge.
+If `h(z) → 0` (maximally wrong) → `-log(0) → ∞, explodes`.
+
+When `y = 0`, we can tweak the formula to `L = -log(1 - h(z))`. 
+
+We can encode both of them in a single formula 
+
+$$
+
 >
-> Now this let's try to identify the issues with it. 
->
-> Let;s say we have 2 classes y ∈ {0,1}. We refine the meaning of `h(z)` as` p(y = 1|x,w,b)` meaning its output is indication of what's the probability that this point belongs to the class `y = 1`, if `p = 0.8` it means we are 80% sure it belongs to the class `y = 1`. Similarly `p = 0.2` means, we are 20% sure that it belongs to the class `y = 1`. See how are are not talkign about `y = 0` at all, but for a binary classification, it automatically means the probability of class `y = 0` is `1 - p`. 
->
-> Now the reason, MSE seems to work is because if the model predicts the class correctly `h(z) = 0.9` and `y = 1` will only get a tiny penalty. `h(z) = 0.1` and `y = 0` is a similar case. Notice the neat hack where p apporaching 0 also means `y = 0`. So penalty wise we seem sorted. 
->
-> Let's see some more cases
-> ```
-> h(z) = 0.9,  y = 1   →   (0.9 - 1)²  = 0.01   ✓ low penalty, correct
-> h(z) = 0.1,  y = 0   →   (0.1 - 0)²  = 0.01   ✓ low penalty, correct
-> h(z) = 0.1,  y = 1   →   (0.1 - 1)²  = 0.81   wrong, gets penalty 
-> h(z) = 0.9,  y = 0   →   (0.9 - 0)²  = 0.81   wrong, gets penalty
-> ```
-> So far MSE looks reasonable. Here's the actual problem.
->
-> The worst case under MSE is `(0 - 1)² = 1` or `(1 - 0)² = 1`. No matter how confidently wrong the model is, the loss never exceeds 1. The model can be 99% sure of the wrong class and the penalty is just `0.99² ≈ 0.98` — barely worse than being 90% sure of the wrong class `(0.81)`.
->
-> MSE doesn't scream when the model is confidently wrong. It just shrugs.
->
-> What you actually want from a loss for classification:
->
-> ```
-> confidently correct   →   loss near 0
-> uncertain             →   moderate loss
-> confidently wrong     →   loss → ∞
-> ```
-> That last line is what MSE can never give you, because it's a squared difference between two numbers that both live in `(0, 1)`.
->
-> Cross-entropy gives you exactly this:
-> `L = -log(h(z))        when y = 1`
-> 
-> If `h(z) = 0.99` (confidently correct) → `-log(0.99) ≈ 0.01`, tiny.
-> If `h(z) = 0.5` (uncertain) → `-log(0.5) ≈ 0.69`, moderate.
-> If `h(z) = 0.01` (confidently wrong) → `-log(0.01) ≈ 4.6`, huge.
-> If `h(z) → 0` (maximally wrong) → `-log(0) → ∞, explodes`.
->
-> When `y = 0`, we can tweak the formula to `L = -log(1 - h(z))`. 
->
-> We can encode both of them in a single formula 
->
-> $$
 > L = -[y_i log(h(z)) + (1 - y_i) log(1 - h(z))]
-> $$
->
->
-> Hopefully this deep dive pays off while neural networks. 
+
+$$
+
+
+Hopefully this deep dive pays off while neural networks. 
 
 
 ---
@@ -550,5 +656,6 @@ $$
 
 We usually do not regularize the bias `b`, because shifting the prediction up or down is not a complexity issue.
 
-> A note: 
-> Some textbooks write $w^Tx + b$ as just $θ^Tx$. They appear to skip the bias entirely, but its just a clear way to hide it, the way bias can be hidden is by adding an extra column of 1's in input `x`, the end result of multiplication remains same. 
+A note: 
+Some textbooks write $w^Tx + b$ as just $θ^Tx$. They appear to skip the bias entirely, but its just a clear way to hide it, the way bias can be hidden is by adding an extra column of 1's in input `x`, the end result of multiplication remains same. 
+$$
