@@ -43,6 +43,8 @@ $$
 
 The two-layer stack is algebraically identical to a single layer with weight matrix $W^{[1]} W^{[2]}$. You made the network deeper and gained nothing. A 100-layer network of pure linear layers is, mathematically, logistic regression wearing a trench coat.
 
+> Its a deep statement: because we see that however many times we compose Z, it still resembles a equation of hyperplane at the end. So the real power we saw earlier: that is to draw sophisticated bent curves is gone
+
 The whole reason depth is useful is that a nonlinear function between layers **breaks this collapse**. Two linear transformations glue together; a linear-nonlinearity-linear stack does not.
 
 So the activation function's job is: *sit between layers and make the stack un-collapsible.* Everything else — the exact shape, the slope, the choice of function — is negotiable. And negotiated it has been: neural networks have been trained with threshold functions, tanh, sigmoid, ReLU, and smooth modern variants, each dominating its era. The rest of this note is about *which* nonlinearity to pick and *why* the current winner is ReLU.
@@ -59,6 +61,8 @@ Before comparing candidates, list the demands. An activation function should be:
 4. **Bounded slope** — a slope much bigger than 1 would amplify gradients (the opposite problem, exploding gradients).
 
 Property 2 is the one that dominates practice, and it is where sigmoid fails. Let us see it concretely.
+
+> The reason property 2 is important is because if a function's slope is 0 at most of its domain, then the gradients will vanish during backpropagation, making it difficult for the network to learn.
 
 ---
 
@@ -158,6 +162,11 @@ There are also two side benefits:
 - **Sparse activations.** Every neuron with $z \leq 0$ outputs exactly 0. Roughly half of a typical ReLU network's activations are zero at any moment, and zero activations often behave nicely as features — a neuron is simply saying "my pattern is absent from this input." (This is also the seed of ReLU's main failure mode, as we will see.)
 
 And one thing ReLU deliberately gives up: it is not bounded above, and it is not smooth (it has a kink at 0). In practice neither matters much — the function being nonlinear is what matters, not how elegant it looks.
+
+> ReLU is basically like a **y = x** line, isn't it very similar to the case when we didn't have sigmoid? "100-layer network of pure linear layers is, mathematically, logistic regression wearing a trench coat. Its a deep statement: because we see that however many times we compose Z, it still resembles a equation of hyperplane at the end. So the real power we saw earlier: that is to draw sophisticated bent curves is gone"
+>
+> The answer lies in how ReLU is subtly different from the simple **y = x** line, for negative region, its 0. This is what introduces the non-linearity in the equation. Consider: $f(x)=\operatorname{ReLU}(2x+1)$ and then another layer: $g(x)=\operatorname{ReLU}(-3f(x)+4)$. Because each ReLU can turn a value completely off, the composition can create bends.
+> 
 
 ---
 
@@ -315,6 +324,8 @@ One point worth making crisply: **the activation of your last layer answers a di
 
 - Hidden layers are building representations. There, the only real concerns are nonlinearity and gradient survival. ReLU (or GELU, or Leaky ReLU) dominates, almost by default.
 - The last layer is formatting the network's answer. The activation there is dictated not by gradients alone but by *what the answer means*:
+
+> Remember the logic for why sigmoid was the best choice in logistic regression: it converted the output to a probability number by measuring the distance of that point from the decision boundary (higher the distance, greater is the confidence, a point lying on decision boundary will get probability of 0.5 which means model has no idea which class it is). The exact same usecase appears at the last node of the neural network and sigmoid is still the best candidate here. The only thing we replaced is sigmoid got an additional responsibility of activation function which had issue of vanishing gradients.
 
 | task | output activation | paired loss | the clean gradient you get |
 |---|---|---|---|
