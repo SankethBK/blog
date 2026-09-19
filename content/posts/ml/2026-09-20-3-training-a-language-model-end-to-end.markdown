@@ -73,6 +73,18 @@ flowchart LR
     LOG --> S4["softmax row 3 → CE vs 'EOS'"]
 ```
 
+### 1.1 Batching in practice: from one sequence to a 3D block
+
+The walkthrough above used one sequence of length 5 for clarity. In training, you pack $B$ sequences of varying lengths into one tensor with shape:
+
+$$
+(B,\; n,\; d)
+$$
+
+where $B$ is the batch size, $n$ is the fixed maximum context length, and $d$ is the model width. Shorter sequences are padded up to length $n$ with a special `PAD` token, and the loss computation ignores the padded positions with a mask.
+
+The attention score matrix therefore has shape $(B, n, n)$: for each of the $B$ examples, an $n \times n$ table of relevance scores. Softmax is applied **per example, per position**, so the competition between tokens is local to each sequence; padding positions just receive zero attention weight. This is the same "batch × context × d" 3D block you noted in the embeddings note, now with the sequence axis made explicit.
+
 ---
 
 ## 2. Why this trains so well
@@ -126,7 +138,7 @@ Look at what the series just completed:
 
 - **Vector/matrix forms** of the MLP layer (the NumPy note) generalize directly to the transformer's block-by-block computation graph.
 - **Softmax and CE** are not just the classifier trick — they're the language model's loss, exactly, per position.
-- **Embeddings** are the input *and* via weight tying the output axis-set.
+- **Embeddings** are the input *and* via weight tying the output axis-set. The progression you traced in the embeddings note — from fixed Word2Vec rows to BERT/GPT-style contextual vectors — is exactly what attention enables: static embedding in, context-dependent vector out.
 - **Attention** is the single new algorithmic piece beyond "feedforward deep net" — the rest of the transformer is stability engineering (LN, residuals), order injection (PE), cheating prevention (mask), and a head.
 
 The rough percentage intuition worth holding: the transformer was 80% the machinery you already had, 20% the content-routing idea. But the routing idea turned out to be the one that scales — what "attention buys you at infinite data and compute" is empirically enormous. That's now well-established lore, and every frontier model in 2024-2026 is a transformer stacked high.
