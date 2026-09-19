@@ -248,6 +248,8 @@ $$
 \frac{\partial L}{\partial z_i} = p_i - y_i
 $$
 
+> This formula is the most important thing to takeaway from softmax because it boiled down all the complexities of Jacobians and probabilities into a simple one, and from here on nothing else would be different compared to a multi-class sigmoid classifier because softmax applies only on output of last layer.
+
 The gradient of softmax-cross-entropy with respect to the logits is just **prediction minus target**. For our example with $y = (0, 1, 0)$:
 
 $$
