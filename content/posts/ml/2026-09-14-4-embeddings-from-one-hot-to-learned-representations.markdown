@@ -587,4 +587,4 @@ $$\delta^{[1]} = \begin{bmatrix} 1 & 0 \\ 2 & 0 \\ 0 & 1 \\ 1 & 1 \end{bmatrix}.
 
 ## 9. What comes next
 
-When we get back to a keyboard: build the tiny experiment — train XOR or MNIST in NumPy with the L-layer loop, print hidden activations, and *look* at a learned representation directly. Then attention and Transformers, where softmax and embeddings stop being separate topics and become two of the three lines in the most important layer of this decade.
+Embeddings give every token a static vector. "bank" in "river bank" and "investment bank" are the same row of $E$ — and language meaning is not static. The [next note](/posts/ml/2026-09-20-1-attention-turning-token-vectors-into-context) introduces attention: the mechanism that mixes token vectors with their sentence-mates so that the representation of "bank" depends on who its neighbors are. Softmax (from the previous note) turns out to be the mixing knob.
