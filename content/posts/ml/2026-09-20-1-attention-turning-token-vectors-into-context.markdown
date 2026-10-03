@@ -400,6 +400,40 @@ flowchart TB
 > This whole process is what we call as single head of attention. 
 >
 > This process is parameterized by three different matrices, all filled with tunable parameters, the key, the query and the value. 
+>
+> **Now that we understand attention, How are they trained?**
+>
+> **How they're trained**
+>
+> Same loop as everything else. Predict the next token, compute cross-entropy, backprop. The gradient reaches the attention layer's output $Y$ and then travels back through the formula one operation at a time, using only pieces you already know:
+>
+> - $Y = \text{weights} \cdot V$ is a weighted sum, so the gradient splits into $dV$ (to $W_V$) and $d(\text{weights})$.
+> - weights $= \text{softmax}(\text{scores})$, so the gradient goes back through the softmax Jacobian from your softmax note.
+> - scores $= QK^T/\sqrt{d_k}$ is a dot product, so it splits into $dQ$ and $dK$, which flow into $W_Q$ and $W_K$.
+>
+> Nothing in that chain is new. There's no separate objective for attention, only the next-token loss, and the three matrices shift to whatever makes that loss lower.
+>
+> **Does the network "know" which is key, query, or value?**
+>
+> No. You've got it right: it just has more knobs. The names come from where each matrix sits in the computation graph, not from anything the network is told:
+>
+> - $W_Q$ and $W_K$ only influence the output through the scores, so they can only affect *who gets how much weight*.
+> - $W_V$ only influences the output through the mix, so it can only affect *what content gets sent*.
+>
+> Training doesn't assign those jobs. The structure forces them, and gradient descent then finds useful settings inside each role. It's the same story as embeddings: nobody said "cat and dog should be close", yet the structure plus the loss produced it. "Query = what I'm looking for" is our human gloss on the function a matrix serves.
+>
+> One detail that reinforces this: in the scores, $W_Q$ and $W_K$ only ever appear as the product $W_Q W_K^T$, since $QK^T = X W_Q W_K^T X^T$. So the model really learns one similarity rule, and splitting it into two matrices is partly a convenience (and a low-rank constraint).
+>
+> **Why wasn't this happening before?**
+>
+> Your guess is close, but the nuance is that earlier models could mix tokens, just badly:
+>
+> - **RNNs/LSTMs** did pass information between tokens, but through one fixed-size hidden state, strictly sequentially. Everything token 1 wants to tell token 49 has to survive 48 compressions. Mixing was possible but lossy and slow, and it couldn't be parallelized across positions during training.
+> - **Convolutions and plain dense layers** mix neighbors too, but with *fixed* weights. The same filter applies no matter what the tokens are.
+>
+> The real novelty in attention is that **the mixing weights are computed from the content itself**. The weight between "bank" and "river" depends on what those two vectors are, and it changes for every sentence. The weights of a normal layer are constants after training. Attention's mixing weights are an output of the forward pass.
+>
+> Attention itself actually predates transformers: it was bolted onto RNN translation models around 2014. The 2017 transformer paper's contribution was dropping the recurrence entirely and letting attention carry all the cross-token communication, which gave short gradient paths and made training massively parallel on GPUs. That's what let it scale.
 ---
 
 ## 4. Why the $\sqrt{d_k}$ divider: softmax saturation returns
