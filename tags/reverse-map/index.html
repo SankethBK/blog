@@ -4,6 +4,8 @@
 The Dual-Caching Exception:
 Reading via a regular path (e.g., /app/data.db) uses the file inode’s address_space.
 Reading via the raw disk node (e.g., /dev/sda1) uses the block device inode’s address_space.
+Result: The exact same physical 4 KB block on disk can reside twice in RAM under two different address_space objects.
+Practical Impact: Rare in normal operation because accessing raw block nodes requires root privileges, and system tools handle raw access using unbuffered I/O (O_DIRECT).
 ...</p></div><footer class=entry-footer><span title='2026-08-22 00:00:00 +0000 UTC'>August 22, 2026</span>&nbsp;·&nbsp;24 min</footer><a class=entry-link aria-label="post link to Page Frame Reclaiming" href=https://sankethbk.github.io/blog/posts/operating-systems/linux/2026-08-22-page-reclaim/></a></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
 <span>Powered by
 <a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
