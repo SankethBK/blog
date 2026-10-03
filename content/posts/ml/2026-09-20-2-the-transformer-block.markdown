@@ -90,12 +90,39 @@ The block so far:
 
 ```mermaid
 flowchart TB
-    X["input X (n × d)"] --> MHA["Multi-Head Attention"]
-    MHA --> A1["X + MHA(X), then LayerNorm"]
-    A1 --> FFN["Feedforward:<br/>d → 4d (ReLU/GELU) → d"]
-    FFN --> A2["+ residual, then LayerNorm"]
-    A2 --> OUT["block output (n × d)"]
+    X["Token stream X<br/>content + position"] --> SPLIT
+    subgraph PARALLEL["Parallel views of the same tokens"]
+        direction LR
+        SPLIT["Project X"] --> H1["Head 1<br/>subject / verb links"]
+        SPLIT --> H2["Head 2<br/>pronoun references"]
+        SPLIT --> H3["Head h<br/>another pattern"]
+        H1 --> CAT["Concatenate head outputs"]
+        H2 --> CAT
+        H3 --> CAT
+        CAT --> WO["Mix with W_O"]
+    end
+    X -. "identity path: keep the original" .-> ADD1((+))
+    WO --> ADD1
+    ADD1 --> LN1["LayerNorm"]
+    LN1 --> FFN["Same small MLP at each position<br/>d → 4d → d"]
+    LN1 -. "identity path" .-> ADD2((+))
+    FFN --> ADD2
+    ADD2 --> LN2["LayerNorm"]
+    LN2 --> OUT["Updated token stream<br/>same n × d shape"]
+
+    classDef input fill:#fff3bf,stroke:#f08c00,color:#3d2b00,stroke-width:2px
+    classDef head fill:#d0ebff,stroke:#1971c2,color:#102a43,stroke-width:2px
+    classDef merge fill:#e5dbff,stroke:#7048e8,color:#2b1b5a,stroke-width:2px
+    classDef norm fill:#d3f9d8,stroke:#2b8a3e,color:#173b22,stroke-width:2px
+    classDef mlp fill:#ffe3e3,stroke:#e03131,color:#4a1515,stroke-width:2px
+    class X input
+    class H1,H2,H3 head
+    class CAT,WO,ADD1,ADD2 merge
+    class LN1,LN2,OUT norm
+    class FFN mlp
 ```
+
+Imagine one ribbon of token vectors taking two routes at once: attention sends it through several differently colored lenses, while the faint bypass carries the untouched ribbon around the sublayer. The plus node adds the learned update back to that original stream. After the MLP does its per-token edit, a second bypass repeats the same idea. Every stage returns the same number of token vectors, ready for the next block.
 
 ---
 

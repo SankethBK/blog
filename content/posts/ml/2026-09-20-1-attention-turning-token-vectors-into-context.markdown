@@ -57,16 +57,28 @@ For the demo below we will just set $W_Q = W_K = W_V = I$ and pretend q = k = v 
 
 ## 3. The full formula, then a numeric walkthrough
 
-Stack all tokens' embeddings as rows of a matrix $X$ (shape $n \times d$, $n$ tokens). Then, in one line:
+Stack all tokens' embeddings as rows of a matrix $X$ (shape $n \times d$, with $n$ tokens and embedding width $d$). The learned projection matrices map each embedding into its query, key, and value spaces:
 
 $$
-Q = XW_Q, \qquad K = XW_K, \qquad V = XW_V
-$$
-$$
-\operatorname{Attention}(Q, K, V) = \operatorname{softmax}\!\left(\frac{QK^T}{\sqrt{d_k}}\right) V
+\begin{aligned}
+X &: (n \times d), \\
+W_Q &: (d \times d_k), & Q = XW_Q &: (n \times d_k), \\
+W_K &: (d \times d_k), & K = XW_K &: (n \times d_k), \\
+W_V &: (d \times d_v), & V = XW_V &: (n \times d_v).
+\end{aligned}
 $$
 
-Read it right to left like the previous notes:
+Queries and keys share width $d_k$ so their dot products are defined; values may have a different width $d_v$. Then the attention operation is:
+
+$$
+\begin{aligned}
+QK^T &: (n \times d_k)(d_k \times n) = (n \times n), \\
+A = \operatorname{softmax}\!\left(\frac{QK^T}{\sqrt{d_k}}\right) &: (n \times n), \\
+\operatorname{Attention}(Q, K, V) = AV &: (n \times n)(n \times d_v) = (n \times d_v).
+\end{aligned}
+$$
+
+Here $A$ is the attention-weight matrix: each of its $n$ rows is a distribution over the $n$ tokens. Read the operation right to left like the previous notes:
 
 1. $QK^T$ scores every query against every key. Shape $(n, n)$. Entry $(i, j)$ = "how much token $i$ should care about token $j$".
 2. $\sqrt{d_k}$ divides every score; section 4 explains why (your softmax saturation insight returns here).
@@ -136,6 +148,258 @@ flowchart TB
     M --> OUT["Y (n × dv):<br/>row i = contextual vector for token i"]
 ```
 
+> Making sense of the attention so far: 
+>
+> We have previously seen embedding as representing a token in the form of a vector. But we saw its limitations: 
+> 
+> **1. One vector cannot represent a token’s different uses**
+> 
+> An embedding is context-independent. The same token always starts with the same vector, regardless of the sentence it appears in. eg the word "bank". 
+>
+> **2. Ambiguous tokens whose meaning can't be established without the help of surrounding tokens**
+> 
+> The context required may be several words/sentences behind, for eg: “The cat sat on the chair. It broke.”,  when we use "it" the model has no idea what does it represent, it has to go back and find out what it means, there may be multiple possibilities in which case the semantics will decide which is the nearest match
+>
+> Why this was painful for RNNs
+> ```
+> The → cat → sat → on → the → chair → it → broke
+>     ↓
+>    h₁ → h₂ → h₃ → h₄ → h₅ → h₆ → h₇ → h₈
+>```
+>
+> Information about cat or chair has to survive through the hidden state as the RNN processes all the intervening tokens.
+>
+> So by the time it reaches it, the model has to somehow have preserved:
+> “There was a cat… and later there was a chair…”
+> inside its fixed-size hidden state.
+>
+> LSTMs made this much better by providing mechanisms for preserving information over longer distances, but the fundamental sequential bottleneck remained.
+>
+> **What is Attention Intuitively?**
+>
+> We can think of it like this: each token will look at its neighbouring tokens and extracts some information to enrich the context of the current token. 
+> ![attention](images/attention.png)
+>
+> The attention block allows to move information from one block encoded in one embedding to that of another potentially ones that are quite far away, potentially with information that's much richer than just a. single word. 
+>
+> **Prediction as a Function of Last Embedding Vector**
+> 
+> Another suprising fact that was deferred in embeddings note: "after all of the vectors flow through the network including many different attention blocks, the computation that we perform to produce a prediction of a enxt token is entirely a function of the last vector in the sequence." This kight come off as as a suprise, but its nothing new. This is even true for RNN era as well.
+>
+> What happened in an RNN? Take: "The cat sat on the mat". The embeddings start independently:
+> ```
+> The → x₁
+> cat → x₂
+> sat → x₃
+> on  → x₄
+> the → x₅
+> mat → x₆
+> ```
+>
+> Then the RNN processes them sequentially:
+>
+> ```
+> x₁ → h₁
+>       ↓
+> x₂ → h₂
+>       ↓
+> x₃ → h₃
+>      ↓
+> x₄ → h₄
+>       ↓
+> x₅ → h₅
+>       ↓
+> x₆ → h₆
+> ```
+> where roughly:
+> $h_t=f(x_t,h_{t-1})$
+>
+> So:
+> 
+> $h_1 = f(x_1)$
+> 
+> $h_2 = f(x_2,h_1)$
+> 
+> $h_3 = f(x_3,h_2)$
+>
+> and therefore: $h_6$ potentially contains information from all six tokens.
+> 
+> But it's all happening in numbers, so we can't really make sense of what each token really borrowed from its neighbouring tokens. This also means, attention will make sense only in a group of tokens, never a single token. 
+>
+> Imagine for an example the text that we input is mst of a mystery novel all the way upto the end where the sentence reads threfore the murder was ???. If the model is going to accurately predict the enxt word the final vector in the sequence which began its life simply embedding the word "was" will have to have been updated by all the attention blocks to represent much much more than any individual word somehow encoding all the information form the full context window that's relevant to predicting the next word 
+>
+> RNNs absolutely had the idea of a final representation carrying information about the preceding sequence.
+> But if word 1 is important for predicting word 49, its information has to survive 48 recurrent transformations.
+> In Transformers the final token doesn’t have to receive information by passing it through every intermediate token.
+>
+> The statement: “the computation that we perform to produce a prediction of the next token is entirely a function of the last vector in the sequence” is accurate in the causal Transformer setup being discussed, but don’t generalize it to say that Transformers literally throw away all the other vectors after the last one.
+>
+> To show why attention doesn't have the problem of loss or dilution of information over the words, this diagram will show it better
+>
+> In RNN
+>
+> ```
+> word 1
+>  ↓
+> h₁
+>  ↓
+> h₂
+>  ↓
+> h₃
+>  ↓
+> ...
+>  ↓
+> h₄₉
+>  ↓
+> final representation
+> ```
+>
+> In Attention
+>
+> ```
+> word 1 ──────-──────────┐
+> word 2 ─────-────────┐  │
+> word 3 ────-──────┐  │  │
+> ...               │  │  │
+> word 48 ───────┐  │  │  │
+> word 49 ───────┴──┴──┴──┴──→ final representation
+> ```
+>
+> Alright, sorry for small deviation, back to understanding the attention intuitively
+>
+> We start with a sentence, where each token is represented by an initial embedding of some high dimensional vector that only encodes the meaning of that particular word with no context (actually that's not quite true, they also encode the position of the word, there is lot more to say about the specific way that the positions are encoded, but right now, all we need to know is that the entries of this vector are enough to tell you what the word is and where it exists in the context).
+>
+> ![Embeddings include positions](images/static_embedding.png)
+>
+> The goal is to have a series of computations produce a new refined set of embeddings. For example, those corresponding to the nouns have ingested the meanign from their corresponding adjectives. 
+> 
+> ![Attention Transformation](images/attention-transformation.png)
+>
+> **Query Vector**
+>
+> A query vector is obtained by multiplying an embedding vector $\vec{E}$ with a weight matrix $W_Q$, so $\vec{E} \xrightarrow{W_Q} \vec{Q}$. The query vector will be of much smaller dimension compared to embedding vector. 
+>
+> Note: There is just one weight matrix of dimension $(d, d_q)$ which is multiplied with all embeddings to produce corresponding query vectors, its not different set of weights per embedding. 
+>
+> ![Query Vector](images/query-vector.png)
+>
+> The entries of this matrix are parameters of the model, which mens the true behaviour is learned from data, and in practice what this matrix does in a particular attention head is challening to parse.
+>
+> But for our sake we can think think of a matrix that asks questions. Let's consider an example we might hope that it would learn, we'll suppose this query matrix maps the embeddings of nouns in certain directions in this smaller query space that somehow encodes the notion of looking for adjectives in preceeding positons. 
+>
+> ![Query Space](images/query-space.png)
+>
+> **The Key Vector**
+>
+> THe Key vector is obtained by multiplying $W_k$ with every embedding $\vec{E}$. This produces a second set of vectors we call as keys. Conceptually we want to think of keys as potentially answering the queries. 
+>
+> ![key matrix](images/key-matrix.png)
+>
+> The key matrix is also full of tunable parameters and just like the query matrix it maps the embedding vectors to the same smaller dimensional space. We can think keys closely matching with querieswhenever they closely align with each other. For eg: the key matrix could match to adjectives like fluffly and blue to the vectors closely aligned with th query produced by the word creature. 
+>
+> ![key query space](images/key-query-space.png)
+>
+> To measure how well each query matches each key, we compute a dot product between each possible query/key pair. We can visualize it as a grid of dots where bigger dots mean the larger dot product (dot product is maximum when 2 vectors align and 0 when they are perpendicular).
+>
+> ![key query grid](images/key-query-grid.png)
+>
+> In our case, the keys produced by fluffly and blue really do align closely with the query produced by the creature, then the dot product in these two spots will be some large positive numbers.
+>
+> ![Key query alignment](images/key-query-alignment.png)
+>
+> In the lingo, machine learning people would say the embeddings of fluffly and blue attend to the embedding of creature. By contrast the dot product of other unrelated keys and queries will be small or negative values that reflects these are unrelated to each other. 
+>
+> We end up with a grid of values that can be any real number from $-\infty$ to $\infty$ giving us score of how relevant each word is to updating the meaning of every other word. 
+>
+> ![attention score grid](/images/attention-score-grid.png)
+>
+> The way we are going to use these words to take a weighted sum along each column, weighted by the relevance.
+>
+> ![weighted attention sum](/images/attention-weighted-sum.png)
+>
+> So instead of having values ranged from $-\infty$ to $\infty$ what we want is for the numbers in these columns to eb between 0 and 1 and for each column to add up to 1 as if they were a probability distribution
+>
+> ![softmax normalization](/images/attention-column-softmax.png)
+>
+> For that, we compute a softmax along each of the columns to normalize these values. 
+>
+> After normalizing we will the grid with these values
+>
+> ![normalized attention weights](/images/attention-normalized-grid.png)
+>
+> We can think of this grid as each column giving weight to how relevant the word on left is to the corresponding value at the top. We call this grid as the attention pattern.
+>
+> ![attention pattern](/images/attention-pattern.png)
+>
+> The attention formula we saw earlier is a compact way to represent this dot product. Here the vectors $Q$ and $K$ represents the full array of query and key vectors respectively. 
+>
+> ![attention formula diagram](/images/attention-matrix-formula.png)
+>
+> The expression in the numerator $K^T Q$ is a compact way of representing the grid of all possible dot products between pairs of keys and queries. 
+>
+> For numerical stability, it happens to be helpful to divide all of these values by the square root of the dimension in the key query space. Then the softmax that's wrapped around the full expression is meant to be understood to be applied column by column.
+>
+> It turns out to make the training process a lot more efficient, if you simulataneously have it predict every next token following each initial subsequence of tokens in the passage. This is nice because a single sentence acts as multiple training example.
+>
+> ![causal training window](/images/causal-training-window.png)
+>
+> For the attention pattern, it means we enver want to allow later words to influence earlier words. Since therwise they would kind of give away the answer for what comes next.
+>
+> ![causal mask prevents future leakage](/images/causal-mask.png)
+>
+> THat's why set the bottom half traingle to $-infty$ before softmax so that they become 0 after softmax
+>
+> ![masked lower triangle](/images/attention-mask-triangle.png)
+>
+> This mechanism is called "masking". There are scenarios in which it is not applied, but during traning of GPT-3, it was applied. 
+>
+> One thing to observe here is how the size of the attention pattern matrix is equal to size of the context size (number of tokens that can be processed at once). So this is why context size can be a really huge bottleneck for the LLM.
+>
+> ![attention context-size bottleneck](/images/attention-context-window.png)
+>
+> **Value Vector**
+>
+> So far we have derived the attention pattern which helps the model deduce which word are relevant to which other words, now we need to actually update the embeddings allowing words to pass information to whichever other words they are relevant to. For eg: we want the embedding of fluffly to somehow cause a change to embedding of creature that it moves it to different part of this 12,000 dimension embedding space that more specifically encodes a fluffly creature.
+>
+> ![how embedding changes after attention](/images/attention-embedding-update.png)
+>
+> The straightforward way to do it is to use a third matrix what we call as value matrix, which we multiply by the embedding of the first word for eg: fluffly.
+>
+> ![multiplying with value matrix](/images/value-matrix-projection.png)
+>
+> The result of this is what we'd call value vector and this is what we add ot the embedding of the second word, in this case something we add to the embedding of the creature. 
+>
+> ![value vector adding to next word](/images/value-vector-injection.png)
+>
+> So this value vector is in same high dimensinal space as embeddings
+>
+> When we multiply the value matrix by embedding of a word, we might think of it as saying, if this word is relevant to adjusting the meaning of something else, what exactly should be added to that something else in order to reflect this.
+>
+> Let's keep aside the key and query vectors now as we have the attention matrix. Let's the the embedding vectors and multiply them with value matrix to generate corresponding value vectors $\vec{E} \xrightarrow{W_V} \vec{V}$
+>
+> We might think of those value vectors as being associated with those corresponding keys.
+>
+> ![value vectors](/images/value-vectors.png)
+>
+> For each column in this diagram we multiply each of the value vectors by corresponding weight in that column.
+>
+> ![value vectors multiplied to attention pattern](/images/value-weighted-columns.png)
+>
+> For eg: under the value vector of creature we will be adding large proportions of value vectors for fluffly and blue while all of the other value vectors get zeroed out. 
+>
+> Now we add all the rescaled values of the column, producing a change $\Delta{\vec{E}}$. 
+>
+> ![delta adding to original embedding](/images/attention-delta-update.png)
+>
+> Once we added that delta to original contextless embedding, what results is hopefully the more refined contextually rich meaning.
+>
+> We do the same for all embeddings
+>
+> ![all embeddings transformation](/images/all-embeddings-attention.png)
+>
+> This whole process is what we call as single head of attention. 
+>
+> This process is parameterized by three different matrices, all filled with tunable parameters, the key, the query and the value. 
 ---
 
 ## 4. Why the $\sqrt{d_k}$ divider: softmax saturation returns
