@@ -1,0 +1,2902 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "id": "EIF2XT6bpj3k_qFW82RNh",
+      "type": "text",
+      "x": -3936.8152595959064,
+      "y": -4128.192843319246,
+      "width": 1325.4666748046875,
+      "height": 330.1164470302897,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "a0",
+      "roundness": null,
+      "seed": 1421769868,
+      "version": 1353,
+      "versionNonce": 1231498367,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "T_8YAH0CC5LrhKfwqijEs",
+          "type": "arrow"
+        },
+        {
+          "id": "78-fNCCc_68JKAKPtChDL",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784449642604,
+      "link": null,
+      "locked": false,
+      "text": "task_struct {\n    pid\n\n    mm_struct  mm  (memory space, NULL for kernel threads)\n    mm_struct  *active_mm (points at whatever mm was active before this kernel thread ran)\n\n    files_struct  *files;  (Open files table)\n\n }  ",
+      "fontSize": 29.343684180470195,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "task_struct {\n    pid\n\n    mm_struct  mm  (memory space, NULL for kernel threads)\n    mm_struct  *active_mm (points at whatever mm was active before this kernel thread ran)\n\n    files_struct  *files;  (Open files table)\n\n }  ",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "1CQFGnMomSbYJX7hbcOEz",
+      "type": "text",
+      "x": -646.9509363888246,
+      "y": -2515.0468038214112,
+      "width": 2514,
+      "height": 1365,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "a2",
+      "roundness": null,
+      "seed": 1715256244,
+      "version": 1418,
+      "versionNonce": 493702897,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "XO9p7Hby8qBB9SHXgfcUc",
+          "type": "arrow"
+        },
+        {
+          "id": "BW394iQ9dUO9kjMjEZId6",
+          "type": "arrow"
+        },
+        {
+          "id": "ZS5mWSmOe21WCqln-TOvf",
+          "type": "arrow"
+        },
+        {
+          "id": "78-fNCCc_68JKAKPtChDL",
+          "type": "arrow"
+        },
+        {
+          "id": "nov1r1itBhynzg9YHYwyG",
+          "type": "arrow"
+        },
+        {
+          "id": "Ik9VNlw7JXtEcwiLYWSHj",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784444543645,
+      "link": null,
+      "locked": false,
+      "text": "    mm_struct {\n        vm_area_struct * mmap (pointer to the head of VMA linked list)\n        maple_tree mm_mt (maple tree of VMA's)\n        int map_count (number of VMAs)\n\n        struct percpu_counter rss_stat[NR_MM_COUNTERS] (per-cpu array which tracks file backed pages + anonymous pages + disk backed pages)\n        unsigned long hiwater_rss  (Maximum number of page frames ever owned by the process)\n        unsigned long hiwater_vm;  (Maximum number of pages ever commited to the memory regions of the process, not necessarily allocated)\n        \n        unsigned long total_vm  (Size of the process address space (number of pages))\n        unsigned long locked_vm;  (Number of “locked” pages that cannot be swapped out - Pages that have PG_mlocked set, triggered by userspace calling mlock() to prevent swapping)\n        atomic64_t    pinned_vm;   ( /* Refcount permanently increased */\n        unsigned long data_vm;           /* VM_WRITE & ~VM_SHARED & ~VM_STACK */\n        unsigned long exec_vm;  (Number of pages in executable memory mappings)         /* VM_EXEC & ~VM_WRITE & ~VM_STACK */\n        unsigned long stack_vm;     (Number of pages in the User Mode stack)      /* VM_STACK */\n        \n\n\n        pgd_t * pgd (Pointer to the Page Global Directory - loaded into CR3)\n\n\n        atomic_t mm_users (The number of users including userspace)\n        int mm_count (The number of references to &struct, considers userspace count as 1, primarily used by kernel for pinning mm_struct)\n\n        unsigned long start_code (Initial address of executable code)\n        unsigned long end_code (Final address of executable code)\n        unsigned long start_data (Initial address of initialized data)\n        unsigned long end_data (Final address of initialized data)\n        unsigned long start_brk (Initial address of the heap)\n        unsigned long brk (Current final address of the heap)\n        unsigned long start_stack (Initial address of User Mode stack)\n        unsigned long arg_start (Initial address of command-line arguments)\n        unsigned long arg_end (Final address of command-line arguments) \n        unsigned long env_start (Initial address of environment variables)\n        unsigned long env_end.  (Final address of environment variables)\n\n\n     }\n        ",
+      "fontSize": 28,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "    mm_struct {\n        vm_area_struct * mmap (pointer to the head of VMA linked list)\n        maple_tree mm_mt (maple tree of VMA's)\n        int map_count (number of VMAs)\n\n        struct percpu_counter rss_stat[NR_MM_COUNTERS] (per-cpu array which tracks file backed pages + anonymous pages + disk backed pages)\n        unsigned long hiwater_rss  (Maximum number of page frames ever owned by the process)\n        unsigned long hiwater_vm;  (Maximum number of pages ever commited to the memory regions of the process, not necessarily allocated)\n        \n        unsigned long total_vm  (Size of the process address space (number of pages))\n        unsigned long locked_vm;  (Number of “locked” pages that cannot be swapped out - Pages that have PG_mlocked set, triggered by userspace calling mlock() to prevent swapping)\n        atomic64_t    pinned_vm;   ( /* Refcount permanently increased */\n        unsigned long data_vm;           /* VM_WRITE & ~VM_SHARED & ~VM_STACK */\n        unsigned long exec_vm;  (Number of pages in executable memory mappings)         /* VM_EXEC & ~VM_WRITE & ~VM_STACK */\n        unsigned long stack_vm;     (Number of pages in the User Mode stack)      /* VM_STACK */\n        \n\n\n        pgd_t * pgd (Pointer to the Page Global Directory - loaded into CR3)\n\n\n        atomic_t mm_users (The number of users including userspace)\n        int mm_count (The number of references to &struct, considers userspace count as 1, primarily used by kernel for pinning mm_struct)\n\n        unsigned long start_code (Initial address of executable code)\n        unsigned long end_code (Final address of executable code)\n        unsigned long start_data (Initial address of initialized data)\n        unsigned long end_data (Final address of initialized data)\n        unsigned long start_brk (Initial address of the heap)\n        unsigned long brk (Current final address of the heap)\n        unsigned long start_stack (Initial address of User Mode stack)\n        unsigned long arg_start (Initial address of command-line arguments)\n        unsigned long arg_end (Final address of command-line arguments) \n        unsigned long env_start (Initial address of environment variables)\n        unsigned long env_end.  (Final address of environment variables)\n\n\n     }\n        ",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "pWlvZuUZ_AiEJkf0fRUE9",
+      "type": "text",
+      "x": 3082.6013684956783,
+      "y": -2598.4280602945414,
+      "width": 4743.5,
+      "height": 1350,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "aO",
+      "roundness": null,
+      "seed": 739426700,
+      "version": 134,
+      "versionNonce": 598847505,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784390058975,
+      "link": null,
+      "locked": false,
+      "text": "RSS\n\n2. How rss_stat Maps Under the Hood\n\nThe NR_MM_COUNTERS array slot indexes still track the same core residency metrics:\n\n    MM_FILEPAGES: File-backed memory pages.\n\n    MM_ANONPAGES: Anonymous memory pages (what you knew as anon_rss).\n\n    MM_SWAPENTS: Pages that have been swapped out to disk.\n\n    MM_SHMEMPAGES: Shared memory pages (IPC, shmget, anonymous MAP_SHARED).\n\nBy changing this array to a per-CPU counter structure, a thread running on Core 0 increments Core 0's private count bucket. A thread on Core 128 increments Core 128's private bucket. No cross-talk, zero locks, and maximum execution speed on the hot allocation path.\n\n3. Reading the Value is No Longer Free\n\nBecause the counter values are scattered across individual per-core structures, you can no longer read a simple member scalar from GDB or C code.\n\nThe kernel's wrapper macro get_mm_counter(mm, member) now has to sum up the data across the core matrix:\nC\n\nstatic inline unsigned long get_mm_counter(struct mm_struct *mm, int member)\n{\n    // Sums up the local counters across all CPUs, ensuring it doesn't return a negative fluke\n    return percpu_counter_sum_positive(&mm->rss_stat[member]);\n}\n\n(Note: In the newest hierarchical tree variants, this calls percpu_counter_tree_precise_sum_positive to aggregate data faster across NUMA nodes.)",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "RSS\n\n2. How rss_stat Maps Under the Hood\n\nThe NR_MM_COUNTERS array slot indexes still track the same core residency metrics:\n\n    MM_FILEPAGES: File-backed memory pages.\n\n    MM_ANONPAGES: Anonymous memory pages (what you knew as anon_rss).\n\n    MM_SWAPENTS: Pages that have been swapped out to disk.\n\n    MM_SHMEMPAGES: Shared memory pages (IPC, shmget, anonymous MAP_SHARED).\n\nBy changing this array to a per-CPU counter structure, a thread running on Core 0 increments Core 0's private count bucket. A thread on Core 128 increments Core 128's private bucket. No cross-talk, zero locks, and maximum execution speed on the hot allocation path.\n\n3. Reading the Value is No Longer Free\n\nBecause the counter values are scattered across individual per-core structures, you can no longer read a simple member scalar from GDB or C code.\n\nThe kernel's wrapper macro get_mm_counter(mm, member) now has to sum up the data across the core matrix:\nC\n\nstatic inline unsigned long get_mm_counter(struct mm_struct *mm, int member)\n{\n    // Sums up the local counters across all CPUs, ensuring it doesn't return a negative fluke\n    return percpu_counter_sum_positive(&mm->rss_stat[member]);\n}\n\n(Note: In the newest hierarchical tree variants, this calls percpu_counter_tree_precise_sum_positive to aggregate data faster across NUMA nodes.)",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "XO9p7Hby8qBB9SHXgfcUc",
+      "type": "arrow",
+      "x": 1873.0490636111751,
+      "y": -2334.442707189645,
+      "width": 1125.4818030542153,
+      "height": 205.61515699304573,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "ab",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 315792831,
+      "version": 741,
+      "versionNonce": 1632477951,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784444543644,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          424.45733000275845,
+          42.59103790449126
+        ],
+        [
+          1125.4818030542153,
+          205.61515699304573
+        ]
+      ],
+      "startBinding": {
+        "elementId": "1CQFGnMomSbYJX7hbcOEz",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.8886994214763477,
+          0.11130057852365215
+        ]
+      },
+      "endBinding": null,
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "FRgW0x0S_5Olz0iEza4Lh",
+      "type": "text",
+      "x": 1810.0035375159227,
+      "y": -936.7171226411265,
+      "width": 1907.8753248995781,
+      "height": 389.8451031772929,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "ac",
+      "roundness": null,
+      "seed": 591433727,
+      "version": 125,
+      "versionNonce": 1671162321,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "BW394iQ9dUO9kjMjEZId6",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784444543645,
+      "link": null,
+      "locked": false,
+      "text": "data_vm\n\nThe kernel explicitly added this to track a process's private writable data space. Notice the logic gates: it\nmust be writable (VM_WRITE), but it cannot be a shared mapping (~VM_SHARED), and it cannot be the stack\n(~VM_STACK).\n\nThe kernel needs this field because of RLIMIT_DATA (the maximum size of a process's data segment). Every\ntime a process calls brk() or allocates anonymous private memory, the kernel verifies it against data_vm to\nensure the process isn't blowing past its system-enforced memory limits.",
+      "fontSize": 34.6528980602038,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "data_vm\n\nThe kernel explicitly added this to track a process's private writable data space. Notice the logic gates: it must be writable (VM_WRITE), but it cannot be a shared mapping (~VM_SHARED), and it cannot be the stack (~VM_STACK).\n\nThe kernel needs this field because of RLIMIT_DATA (the maximum size of a process's data segment). Every time a process calls brk() or allocates anonymous private memory, the kernel verifies it against data_vm to ensure the process isn't blowing past its system-enforced memory limits.",
+      "autoResize": false,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "BW394iQ9dUO9kjMjEZId6",
+      "type": "arrow",
+      "x": 1843.9906393808833,
+      "y": -2071.7641016296593,
+      "width": 975.4373240544451,
+      "height": 1149.4779081463284,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "ad",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 19025791,
+      "version": 1996,
+      "versionNonce": 1578193009,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784444543645,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          409.8635004370235,
+          207.67444115772912
+        ],
+        [
+          975.4373240544451,
+          1149.4779081463284
+        ]
+      ],
+      "startBinding": {
+        "elementId": "1CQFGnMomSbYJX7hbcOEz",
+        "mode": "inside",
+        "fixedPoint": [
+          0.9908279935440366,
+          0.3247492323749098
+        ]
+      },
+      "endBinding": {
+        "elementId": "FRgW0x0S_5Olz0iEza4Lh",
+        "mode": "inside",
+        "fixedPoint": [
+          0.5290830133109128,
+          0.03701708458098228
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "AL3pNx3LfHJHujqL4zaZ8",
+      "type": "text",
+      "x": 1901.8485274238647,
+      "y": -3261.632367916569,
+      "width": 2010.0999755859375,
+      "height": 450,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "ai",
+      "roundness": null,
+      "seed": 1139977247,
+      "version": 19,
+      "versionNonce": 1581595761,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784390317978,
+      "link": null,
+      "locked": false,
+      "text": "pinned_vm\n\nThis tracks pages that have been locked into place using specialized kernel routines like pin_user_pages(). \nUnlike locked_vm (which is triggered by userspace calling mlock() to prevent swapping), pinned_vm is used by \nhigh-performance kernel subsystems—like RDMA (Remote Direct Memory Access) or Direct I/O.\n\nWhen a page is pinned, the kernel cannot move it at all (even for page migration or defragmentation), because \nan external hardware device is actively reading or writing to that specific physical RAM address. Because multiple \nthreads can pin pages concurrently, this is tracked using an atomic type (atomic64_t) to prevent race conditions \nwithout needing to lock the whole mm_struct.",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "pinned_vm\n\nThis tracks pages that have been locked into place using specialized kernel routines like pin_user_pages(). \nUnlike locked_vm (which is triggered by userspace calling mlock() to prevent swapping), pinned_vm is used by \nhigh-performance kernel subsystems—like RDMA (Remote Direct Memory Access) or Direct I/O.\n\nWhen a page is pinned, the kernel cannot move it at all (even for page migration or defragmentation), because \nan external hardware device is actively reading or writing to that specific physical RAM address. Because multiple \nthreads can pin pages concurrently, this is tracked using an atomic type (atomic64_t) to prevent race conditions \nwithout needing to lock the whole mm_struct.",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "ZS5mWSmOe21WCqln-TOvf",
+      "type": "arrow",
+      "x": 1873.0490636111751,
+      "y": -2093.0350528814874,
+      "width": 790.2355946636387,
+      "height": 957.3470775037213,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "al",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 1632377265,
+      "version": 1303,
+      "versionNonce": 1119808287,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784444543645,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          273.85881344466384,
+          -3.6144632545015156
+        ],
+        [
+          -516.3767812189749,
+          -750.7050110830569
+        ],
+        [
+          -16.802554707478976,
+          -957.3470775037213
+        ]
+      ],
+      "startBinding": {
+        "elementId": "1CQFGnMomSbYJX7hbcOEz",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.6830719725972959,
+          0.3169280274027041
+        ]
+      },
+      "endBinding": null,
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "78-fNCCc_68JKAKPtChDL",
+      "type": "arrow",
+      "x": -2681.84265410478,
+      "y": -4002.304259188438,
+      "width": 2038.0786881526278,
+      "height": 1541.2098459826675,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "ar",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 2099754737,
+      "version": 1775,
+      "versionNonce": 1048008895,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784449642604,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          1607.7127230872377,
+          1161.3201130446123
+        ],
+        [
+          1831.28451372382,
+          1539.0793454995237
+        ],
+        [
+          2038.0786881526278,
+          1541.2098459826675
+        ]
+      ],
+      "startBinding": {
+        "elementId": "EIF2XT6bpj3k_qFW82RNh",
+        "mode": "inside",
+        "fixedPoint": [
+          0.9468156607377936,
+          0.3813459924923314
+        ]
+      },
+      "endBinding": {
+        "elementId": "1CQFGnMomSbYJX7hbcOEz",
+        "mode": "inside",
+        "fixedPoint": [
+          0.0012676891156214217,
+          0.03952556089057914
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "yFQpKp26ZPbof1GcaySjM",
+      "type": "text",
+      "x": -2442.2116216825325,
+      "y": -951.8993184343308,
+      "width": 1484.066650390625,
+      "height": 598.1225954596682,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "as",
+      "roundness": null,
+      "seed": 140566367,
+      "version": 894,
+      "versionNonce": 1150167406,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "nov1r1itBhynzg9YHYwyG",
+          "type": "arrow"
+        },
+        {
+          "id": "Ik9VNlw7JXtEcwiLYWSHj",
+          "type": "arrow"
+        },
+        {
+          "id": "60fIqljXDErFe5WHbl2lH",
+          "type": "arrow"
+        },
+        {
+          "id": "hn2PXH9wXqK16IcwdK08-",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1787776136274,
+      "link": null,
+      "locked": false,
+      "text": "vm_area_struct {\n    unsigned long vm_start (Starting address of VMA - inclusive)\n    unsigned long vm_end.   (Ending address of VMA - exclusive)\n\n    mm_struct * vm_mm     ( Back-pointer to the owning `mm_struct`)\n    pgprot_t vm_page_prot ( Permission bits — the readable/writable/executable flags)\n\n    struct file * vm_file.  (The mapped file, if this is a file-backed VMA (NULL for anonymous) )\n    unsigned long vm_pgoff  (Offset into the file where this mapping starts)\n\n    struct list_head anon_vma_chain (Used in reverse mapping - to be explored further)\n     struct anon_vma *anon_vma        \n}\n    \n    ",
+      "fontSize": 31.899871757848974,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "vm_area_struct {\n    unsigned long vm_start (Starting address of VMA - inclusive)\n    unsigned long vm_end.   (Ending address of VMA - exclusive)\n\n    mm_struct * vm_mm     ( Back-pointer to the owning `mm_struct`)\n    pgprot_t vm_page_prot ( Permission bits — the readable/writable/executable flags)\n\n    struct file * vm_file.  (The mapped file, if this is a file-backed VMA (NULL for anonymous) )\n    unsigned long vm_pgoff  (Offset into the file where this mapping starts)\n\n    struct list_head anon_vma_chain (Used in reverse mapping - to be explored further)\n     struct anon_vma *anon_vma        \n}\n    \n    ",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "nov1r1itBhynzg9YHYwyG",
+      "type": "arrow",
+      "x": -622.6037612862531,
+      "y": -2424.054258337341,
+      "width": 1812.0656579756126,
+      "height": 1466.1549399030102,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "ay",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 169878065,
+      "version": 1838,
+      "versionNonce": 1881328558,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1787776136274,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -346.87560941448305,
+          107.35549069529498
+        ],
+        [
+          -1249.1179707815197,
+          485.0792822359781
+        ],
+        [
+          -1812.0656579756126,
+          1466.1549399030102
+        ]
+      ],
+      "startBinding": {
+        "elementId": "1CQFGnMomSbYJX7hbcOEz",
+        "mode": "inside",
+        "fixedPoint": [
+          0.009684636078986298,
+          0.06666120548283548
+        ]
+      },
+      "endBinding": {
+        "elementId": "yFQpKp26ZPbof1GcaySjM",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.0022434316342488676,
+          0.002243431634249304
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "Ik9VNlw7JXtEcwiLYWSHj",
+      "type": "arrow",
+      "x": -1305.430352844529,
+      "y": -792.8174873669597,
+      "width": 660.8205417399229,
+      "height": 1700.1800260934529,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b00",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 1171258303,
+      "version": 1051,
+      "versionNonce": 2104042990,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1787776136274,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          98.98222052824644,
+          -1526.8313334328927
+        ],
+        [
+          660.8205417399229,
+          -1700.1800260934529
+        ]
+      ],
+      "startBinding": {
+        "elementId": "yFQpKp26ZPbof1GcaySjM",
+        "mode": "inside",
+        "fixedPoint": [
+          0.7659907110902253,
+          0.2659686028833501
+        ]
+      },
+      "endBinding": {
+        "elementId": "1CQFGnMomSbYJX7hbcOEz",
+        "mode": "inside",
+        "fixedPoint": [
+          0.0009312351965865577,
+          0.01615332627179402
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "3Zd_xggvIIQLR22mpLxOM",
+      "type": "text",
+      "x": -5528.174666548787,
+      "y": -2457.6945490879293,
+      "width": 984.066650390625,
+      "height": 405,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b03",
+      "roundness": null,
+      "seed": 2013763121,
+      "version": 174,
+      "versionNonce": 2082977297,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "kj-cWImihUyou7BcgD1AM",
+          "type": "arrow"
+        },
+        {
+          "id": "RfsLJRlnwCNs5prBtxB8O",
+          "type": "arrow"
+        },
+        {
+          "id": "T_8YAH0CC5LrhKfwqijEs",
+          "type": "arrow"
+        },
+        {
+          "id": "20PHwm79v5SO2NlBj36Fh",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784444395005,
+      "link": null,
+      "locked": false,
+      "text": "files_struct {\n    atomic_t count (Simple reference count)\n    unsigned int next_fd (fd for next file to be opened)\n\n    struct fdtable __rcu *fdt \n    struct fdtable fdtab \n    \n    struct file __rcu * fd_array[NR_OPEN_DEFAULT];\n}",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "files_struct {\n    atomic_t count (Simple reference count)\n    unsigned int next_fd (fd for next file to be opened)\n\n    struct fdtable __rcu *fdt \n    struct fdtable fdtab \n    \n    struct file __rcu * fd_array[NR_OPEN_DEFAULT];\n}",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "hLmDDJJHLw_96VgTy3MI_",
+      "type": "text",
+      "x": -8339.509137313962,
+      "y": -2696.8648800695246,
+      "width": 2067.2333984375,
+      "height": 540,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b08",
+      "roundness": null,
+      "seed": 1519968945,
+      "version": 137,
+      "versionNonce": 49247295,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "kj-cWImihUyou7BcgD1AM",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784407399205,
+      "link": null,
+      "locked": false,
+      "text": "fdt and fdtable\n\nfdt: This is the pointer the kernel actually uses whenever it looks up a file descriptor \n(using macros like files_fdtable(files)). It points to a struct fdtable which contains the arrays of open files, \nclose-on-exec flags, and bitmasks.\n\nfdtab: This is an embedded, default fallback table.\n\nThe Design Trick: When a process starts, fdt points directly to the internal fdtab right next to it. \nHowever, if your process opens a massive number of files that exceed the default limits, the kernel al\nlocates a brand new, larger struct fdtable on the heap, points fdt to that new heap address, and \nleaves fdtab behind. This prevents a memory allocation penalty for normal processes while remaining infinitely scalable.",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "fdt and fdtable\n\nfdt: This is the pointer the kernel actually uses whenever it looks up a file descriptor \n(using macros like files_fdtable(files)). It points to a struct fdtable which contains the arrays of open files, \nclose-on-exec flags, and bitmasks.\n\nfdtab: This is an embedded, default fallback table.\n\nThe Design Trick: When a process starts, fdt points directly to the internal fdtab right next to it. \nHowever, if your process opens a massive number of files that exceed the default limits, the kernel al\nlocates a brand new, larger struct fdtable on the heap, points fdt to that new heap address, and \nleaves fdtab behind. This prevents a memory allocation penalty for normal processes while remaining infinitely scalable.",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "kj-cWImihUyou7BcgD1AM",
+      "type": "arrow",
+      "x": -5526.378246863272,
+      "y": -2251.0989606341836,
+      "width": 739.8974920131895,
+      "height": 174.29849262012704,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b09",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 145000959,
+      "version": 549,
+      "versionNonce": 1808276223,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784407628094,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -739.8974920131895,
+          -174.29849262012704
+        ]
+      ],
+      "startBinding": {
+        "elementId": "3Zd_xggvIIQLR22mpLxOM",
+        "mode": "inside",
+        "fixedPoint": [
+          0.001825506112621959,
+          0.5101125640833226
+        ]
+      },
+      "endBinding": {
+        "elementId": "hLmDDJJHLw_96VgTy3MI_",
+        "mode": "orbit",
+        "fixedPoint": [
+          1,
+          0.5001
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "ZsY5EFggzk63axHH1kOl1",
+      "type": "text",
+      "x": -8363.729760446557,
+      "y": -1707.0773401811289,
+      "width": 2874.166748046875,
+      "height": 315,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0A",
+      "roundness": null,
+      "seed": 1554694111,
+      "version": 106,
+      "versionNonce": 939802801,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "RfsLJRlnwCNs5prBtxB8O",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784407572480,
+      "link": null,
+      "locked": false,
+      "text": "fd_array\n\nfd_array: This is a static array of pointers to struct file objects. \nOn standard x86 architectures, NR_OPEN_DEFAULT is typically set to 32 or 64.\n\nBecause it's embedded right inside the structure, the pointers for standard descriptors—like 0 (stdin), 1 (stdout), 2 (stderr), \nand your initial opened files—are allocated in a single contiguous block of memory. The CPU can fetch these pointers incredibly fast without chasing heap pointers.",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "fd_array\n\nfd_array: This is a static array of pointers to struct file objects. \nOn standard x86 architectures, NR_OPEN_DEFAULT is typically set to 32 or 64.\n\nBecause it's embedded right inside the structure, the pointers for standard descriptors—like 0 (stdin), 1 (stdout), 2 (stderr), \nand your initial opened files—are allocated in a single contiguous block of memory. The CPU can fetch these pointers incredibly fast without chasing heap pointers.",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "RfsLJRlnwCNs5prBtxB8O",
+      "type": "arrow",
+      "x": -5523.552598405564,
+      "y": -2130.753986640623,
+      "width": 1563.531093550645,
+      "height": 417.67664645949435,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0B",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 1399654897,
+      "version": 797,
+      "versionNonce": 120218399,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784407628094,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -384.2459468576444,
+          244.69476907454828
+        ],
+        [
+          -1563.531093550645,
+          417.67664645949435
+        ]
+      ],
+      "startBinding": {
+        "elementId": "3Zd_xggvIIQLR22mpLxOM",
+        "mode": "inside",
+        "fixedPoint": [
+          0.004696905581942575,
+          0.8072606480180398
+        ]
+      },
+      "endBinding": {
+        "elementId": "ZsY5EFggzk63axHH1kOl1",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.24608305016991572,
+          0.24608305016991502
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "T_8YAH0CC5LrhKfwqijEs",
+      "type": "arrow",
+      "x": -3935.7861681569934,
+      "y": -3888.1319876264115,
+      "width": 1258.4551708302938,
+      "height": 1424.4374385384817,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0C",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 323360753,
+      "version": 744,
+      "versionNonce": 1374373023,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784449642604,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -598.617637645812,
+          747.0042378025232
+        ],
+        [
+          -1258.4551708302938,
+          1424.4374385384817
+        ]
+      ],
+      "startBinding": {
+        "elementId": "EIF2XT6bpj3k_qFW82RNh",
+        "mode": "inside",
+        "fixedPoint": [
+          0.0007763993304958565,
+          0.7272005313652485
+        ]
+      },
+      "endBinding": {
+        "elementId": "3Zd_xggvIIQLR22mpLxOM",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.2379963333050076,
+          0.23799633330500786
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "e-_4gowUo8ChzZpbaK6Yv",
+      "type": "text",
+      "x": -5366.339676700121,
+      "y": -987.8696003267621,
+      "width": 2750.0862404012787,
+      "height": 360,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0D",
+      "roundness": null,
+      "seed": 1480049329,
+      "version": 809,
+      "versionNonce": 1049291601,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "FwF5Hm7hSNjqT54O5HSG-",
+          "type": "arrow"
+        },
+        {
+          "id": "saflfc0ZlX37XaXn1csvt",
+          "type": "arrow"
+        },
+        {
+          "id": "20PHwm79v5SO2NlBj36Fh",
+          "type": "arrow"
+        },
+        {
+          "id": "UtSATmzSiCCKhGdNKoJjJ",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784447213205,
+      "link": null,
+      "locked": false,
+      "text": "fdtable {\n    unsigned int max_fds (The absolute maximum capacity of the current arrays the kernel triggers a table resize if fds go beyond this.)\n    unsigned long *open_fds  (These are pointers to the active tracking bitmaps.)\n    \n    struct file __rcu **fd (This is a pointer-to-pointers. It is an array where every slot contains a pointer to a struct file)\n\n    struct rcu_head rcu\n}",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "fdtable {\n    unsigned int max_fds (The absolute maximum capacity of the current arrays the kernel triggers a table resize if fds go beyond this.)\n    unsigned long *open_fds  (These are pointers to the active tracking bitmaps.)\n    \n    struct file __rcu **fd (This is a pointer-to-pointers. It is an array where every slot contains a pointer to a struct file)\n\n    struct rcu_head rcu\n}",
+      "autoResize": false,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "ZBE5m6b8SPyjHbXm-xLT2",
+      "type": "text",
+      "x": -7657.331823464819,
+      "y": -901.7409101558551,
+      "width": 1758.5,
+      "height": 225,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0F",
+      "roundness": null,
+      "seed": 948118577,
+      "version": 149,
+      "versionNonce": 2047095793,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "FwF5Hm7hSNjqT54O5HSG-",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784443657397,
+      "link": null,
+      "locked": false,
+      "text": "fd\n\nWhen the process starts, this fd pointer points right back into the small, embedded fd_array[] \ninside the files_struct. If the process expands beyond that default size, fd is redirected to point \nto a brand new, massive array allocated on the heap.",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "fd\n\nWhen the process starts, this fd pointer points right back into the small, embedded fd_array[] \ninside the files_struct. If the process expands beyond that default size, fd is redirected to point \nto a brand new, massive array allocated on the heap.",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "FwF5Hm7hSNjqT54O5HSG-",
+      "type": "arrow",
+      "x": -5372.339676700121,
+      "y": -755.4643971332889,
+      "width": 2482.9574081649143,
+      "height": 298.3794143817636,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0G",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 411106001,
+      "version": 995,
+      "versionNonce": 556324945,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784444553174,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -441.8248993179577,
+          -278.7058480314315
+        ],
+        [
+          -2482.9574081649143,
+          -298.3794143817636
+        ],
+        [
+          -2290.9921467646973,
+          -52.390351035715526
+        ]
+      ],
+      "startBinding": {
+        "elementId": "e-_4gowUo8ChzZpbaK6Yv",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.059104287466626174,
+          0.940895712533374
+        ]
+      },
+      "endBinding": {
+        "elementId": "ZBE5m6b8SPyjHbXm-xLT2",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.04980067893372401,
+          0.9501993210662745
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "UhQ9X0-c8Rqt9HRCZZB2o",
+      "type": "text",
+      "x": -7001.586472382279,
+      "y": -468.6685121521009,
+      "width": 1384.13330078125,
+      "height": 360,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0H",
+      "roundness": null,
+      "seed": 1216295313,
+      "version": 37,
+      "versionNonce": 377294559,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "saflfc0ZlX37XaXn1csvt",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784443852701,
+      "link": null,
+      "locked": false,
+      "text": "rcu\n\nWhen the table resizes, the kernel allocates a new fdtable and instantly \nchanges the process's tracking pointer to look at the new one. However, \nother CPU cores might still be looking up a file in the old table at that \nexact microsecond. The rcu_head is a tiny structure that tells the kernel: \n\"Don't free this memory immediately. Wait until all active readers finish looking \nup their files, then safely destroy this old table in the background.\"",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "rcu\n\nWhen the table resizes, the kernel allocates a new fdtable and instantly \nchanges the process's tracking pointer to look at the new one. However, \nother CPU cores might still be looking up a file in the old table at that \nexact microsecond. The rcu_head is a tiny structure that tells the kernel: \n\"Don't free this memory immediately. Wait until all active readers finish looking \nup their files, then safely destroy this old table in the background.\"",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "saflfc0ZlX37XaXn1csvt",
+      "type": "arrow",
+      "x": -5364.8204548449485,
+      "y": -698.8592582254016,
+      "width": 805.645018346464,
+      "height": 224.19074607330072,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0I",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 1067544465,
+      "version": 1033,
+      "versionNonce": 2034250577,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784444564832,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -196.8381370472116,
+          136.11919930689146
+        ],
+        [
+          -805.645018346464,
+          224.19074607330072
+        ]
+      ],
+      "startBinding": {
+        "elementId": "e-_4gowUo8ChzZpbaK6Yv",
+        "mode": "inside",
+        "fixedPoint": [
+          0.0005524269867810385,
+          0.8028065058371124
+        ]
+      },
+      "endBinding": {
+        "elementId": "UhQ9X0-c8Rqt9HRCZZB2o",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.20390128251958484,
+          0.20390128251958434
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "20PHwm79v5SO2NlBj36Fh",
+      "type": "arrow",
+      "x": -5534.174666548787,
+      "y": -2198.126902677713,
+      "width": 689.3965149724518,
+      "height": 1216.0042084666584,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0J",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 1495388081,
+      "version": 1044,
+      "versionNonce": 1289336849,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784444553176,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -246.134778728926,
+          44.25614853666184
+        ],
+        [
+          298.9066929909768,
+          628.4218843156661
+        ],
+        [
+          443.2617362435258,
+          1216.0042084666584
+        ]
+      ],
+      "startBinding": {
+        "elementId": "3Zd_xggvIIQLR22mpLxOM",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.44418492945602567,
+          0.44418492945602495
+        ]
+      },
+      "endBinding": {
+        "elementId": "e-_4gowUo8ChzZpbaK6Yv",
+        "mode": "inside",
+        "fixedPoint": [
+          0.1001520397246419,
+          0.015963628099187565
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "4YaEMUigV_klcLh88Ff8q",
+      "type": "text",
+      "x": -4252.979495054511,
+      "y": 267.55280862422114,
+      "width": 2010.8333740234375,
+      "height": 540,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0Q",
+      "roundness": null,
+      "seed": 450002353,
+      "version": 602,
+      "versionNonce": 805626751,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "UtSATmzSiCCKhGdNKoJjJ",
+          "type": "arrow"
+        },
+        {
+          "id": "60fIqljXDErFe5WHbl2lH",
+          "type": "arrow"
+        },
+        {
+          "id": "qjir0P1gEg0erhgXV4cYq",
+          "type": "arrow"
+        },
+        {
+          "id": "wuc57QsdwY_OZeQdzCA3N",
+          "type": "arrow"
+        },
+        {
+          "id": "BhUfUFqZwVFM_6jWCA_sZ",
+          "type": "arrow"
+        },
+        {
+          "id": "ZZKe6pD0FH_6e0_epm2dB",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784475430579,
+      "link": null,
+      "locked": false,
+      "text": "file {\n        const struct path f_path\n        \n        loff_t f_pos (The file offset — this is literally \"where am I in the file right now\" for *this* open instance.)\n        \n        const struct file_operations * f_op (Pointer to Operations Table)\n        struct address_space *f_mapping. (Page cache mapping — usually just mirrors the inode's `i_mapping`)\n        struct inode  *f_inode  (Pointer to inode struct for this file)\n\n        unsigned int  f_flags  (Flags from `open()` — `O_APPEND`, `O_NONBLOCK`, etc.)\n        fmode_t  f_mode  (Read/write access mode for this open )\n}",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "file {\n        const struct path f_path\n        \n        loff_t f_pos (The file offset — this is literally \"where am I in the file right now\" for *this* open instance.)\n        \n        const struct file_operations * f_op (Pointer to Operations Table)\n        struct address_space *f_mapping. (Page cache mapping — usually just mirrors the inode's `i_mapping`)\n        struct inode  *f_inode  (Pointer to inode struct for this file)\n\n        unsigned int  f_flags  (Flags from `open()` — `O_APPEND`, `O_NONBLOCK`, etc.)\n        fmode_t  f_mode  (Read/write access mode for this open )\n}",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "UtSATmzSiCCKhGdNKoJjJ",
+      "type": "arrow",
+      "x": -5372.339676700121,
+      "y": -806.004207800052,
+      "width": 1274.6273995338715,
+      "height": 1127.2171826798017,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0V",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 897726897,
+      "version": 679,
+      "versionNonce": 510617887,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784447312305,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -151.18529893613504,
+          46.09620933703536
+        ],
+        [
+          -106.36281321899241,
+          739.120796194393
+        ],
+        [
+          1123.4421005977365,
+          1127.2171826798017
+        ]
+      ],
+      "startBinding": {
+        "elementId": "e-_4gowUo8ChzZpbaK6Yv",
+        "mode": "orbit",
+        "fixedPoint": [
+          0,
+          0.5001
+        ]
+      },
+      "endBinding": {
+        "elementId": "4YaEMUigV_klcLh88Ff8q",
+        "mode": "inside",
+        "fixedPoint": [
+          0.0020299637975267856,
+          0.09937067825097883
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "60fIqljXDErFe5WHbl2lH",
+      "type": "arrow",
+      "x": -2441.4726691270134,
+      "y": -707.1038390578857,
+      "width": 908.9238434936988,
+      "height": 979.3648801835178,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0W",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 1092747633,
+      "version": 492,
+      "versionNonce": 1030371374,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1787776136274,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -192.2916131265756,
+          487.09881539862465
+        ],
+        [
+          -908.9238434936988,
+          979.3648801835178
+        ]
+      ],
+      "startBinding": {
+        "elementId": "yFQpKp26ZPbof1GcaySjM",
+        "mode": "inside",
+        "fixedPoint": [
+          0.0004979241028862303,
+          0.4092730842049451
+        ]
+      },
+      "endBinding": {
+        "elementId": "4YaEMUigV_klcLh88Ff8q",
+        "mode": "inside",
+        "fixedPoint": [
+          0.44886015623852416,
+          0.008718949076686992
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "gZPn1WFwYx_Qxo3nEm04g",
+      "type": "text",
+      "x": -5612.311360515132,
+      "y": 1186.0968129909927,
+      "width": 2469.333251953125,
+      "height": 225,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0Y",
+      "roundness": null,
+      "seed": 1711286815,
+      "version": 131,
+      "versionNonce": 1580131231,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "f5rsFqbUejZkaTEplLSPf",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784449151353,
+      "link": null,
+      "locked": false,
+      "text": "path {\n        struct vfsmount *mnt  (Represents a specific mount point (e.g., \"I am the connection at `/media/usb`, and here are my mount flags\")\n        struct dentry *dentry  (Pointer to dentry object for this file)\n}\n    ",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "path {\n        struct vfsmount *mnt  (Represents a specific mount point (e.g., \"I am the connection at `/media/usb`, and here are my mount flags\")\n        struct dentry *dentry  (Pointer to dentry object for this file)\n}\n    ",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "qjir0P1gEg0erhgXV4cYq",
+      "type": "arrow",
+      "x": -4258.979495054511,
+      "y": 342.31046306790495,
+      "width": 1271.1796749909372,
+      "height": 847.9227017070359,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0Z",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 930802129,
+      "version": 606,
+      "versionNonce": 1099364991,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784457552126,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -491.9801117725956,
+          47.7572380053918
+        ],
+        [
+          -1121.7883104566617,
+          366.9603694203538
+        ],
+        [
+          -1271.1796749909372,
+          847.9227017070359
+        ]
+      ],
+      "startBinding": {
+        "elementId": "4YaEMUigV_klcLh88Ff8q",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.10089196553337203,
+          0.1008919655333717
+        ]
+      },
+      "endBinding": {
+        "elementId": "gZPn1WFwYx_Qxo3nEm04g",
+        "mode": "inside",
+        "fixedPoint": [
+          0.033268976718596126,
+          0.018383785706436256
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "2BzRHy5loEop3UU7XqF7a",
+      "type": "text",
+      "x": -7596.472777585349,
+      "y": 197.6310501536788,
+      "width": 1650.86669921875,
+      "height": 1575,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0b",
+      "roundness": null,
+      "seed": 146683071,
+      "version": 257,
+      "versionNonce": 490669905,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "wuc57QsdwY_OZeQdzCA3N",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784448102178,
+      "link": null,
+      "locked": false,
+      "text": "f_inode\n\nIn older kernels, the file structure pointed directly to the directory entry cache structure:\n\nTo find the file metadata (the inode) from here, you had to dereference the dentry:\n\n    file -> f_dentry -> d_inode\n\nTo clean up how mount points and directories were tracked, the kernel engineers grouped the \ndentry and the virtual filesystem mount point (vfsmount) into a unified helper structure \ncalled struct path:\n\nDuring this cleanup, f_dentry was removed. To get the dentry, code had to change to:\n\n    file -> f_path.dentry\n\nAnd to get the inode, code had to jump twice:\n\n    file -> f_path.dentry -> d_inode\n\nJumping from the file to the dentry, and then from the dentry to the inode is an \nincredibly frequent operation. It happens on every single read, write, seek, \nand poll system call.\n\nOn modern CPUs, chasing pointers across three different structures located \nin different parts of system RAM often results in CPU L1/L2 cache misses.\n\nTo optimize this hot-path, kernel developers did something simple: they added a \ncached direct pointer right back into struct file:\n\n    struct inode *f_inode;\n\nNow, if the kernel wants to read or write, it doesn't have to look up the dentry first. \nIt immediately dereferences the cached f_inode pointer directly.\n",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "f_inode\n\nIn older kernels, the file structure pointed directly to the directory entry cache structure:\n\nTo find the file metadata (the inode) from here, you had to dereference the dentry:\n\n    file -> f_dentry -> d_inode\n\nTo clean up how mount points and directories were tracked, the kernel engineers grouped the \ndentry and the virtual filesystem mount point (vfsmount) into a unified helper structure \ncalled struct path:\n\nDuring this cleanup, f_dentry was removed. To get the dentry, code had to change to:\n\n    file -> f_path.dentry\n\nAnd to get the inode, code had to jump twice:\n\n    file -> f_path.dentry -> d_inode\n\nJumping from the file to the dentry, and then from the dentry to the inode is an \nincredibly frequent operation. It happens on every single read, write, seek, \nand poll system call.\n\nOn modern CPUs, chasing pointers across three different structures located \nin different parts of system RAM often results in CPU L1/L2 cache misses.\n\nTo optimize this hot-path, kernel developers did something simple: they added a \ncached direct pointer right back into struct file:\n\n    struct inode *f_inode;\n\nNow, if the kernel wants to read or write, it doesn't have to look up the dentry first. \nIt immediately dereferences the cached f_inode pointer directly.\n",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "wuc57QsdwY_OZeQdzCA3N",
+      "type": "arrow",
+      "x": -4243.202334123713,
+      "y": 604.1439906321739,
+      "width": 1696.4037442428862,
+      "height": 434.7807018884273,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0c",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 455826673,
+      "version": 498,
+      "versionNonce": 1063515441,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784448102180,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -1075.2884558309852,
+          -337.8825721082503
+        ],
+        [
+          -1696.4037442428862,
+          96.89812978017699
+        ]
+      ],
+      "startBinding": {
+        "elementId": "4YaEMUigV_klcLh88Ff8q",
+        "mode": "inside",
+        "fixedPoint": [
+          0.004862243215724739,
+          0.623317003718431
+        ]
+      },
+      "endBinding": {
+        "elementId": "2BzRHy5loEop3UU7XqF7a",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.609101913554969,
+          0.6091019135549695
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "CLEsy-4JS-knmZDva5TrM",
+      "type": "text",
+      "x": -7340.409352490202,
+      "y": 2140.09666758323,
+      "width": 3142.39990234375,
+      "height": 225,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0f",
+      "roundness": null,
+      "seed": 1119548209,
+      "version": 127,
+      "versionNonce": 173383231,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "f5rsFqbUejZkaTEplLSPf",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784449147288,
+      "link": null,
+      "locked": false,
+      "text": "vfsmount {\n    struct dentry *mnt_root (The dentry representing the directory that acts as the root of this specific mount)\n    struct super_block *mnt_sb (A pointer to the physical file system's Superblock.)\n    int mnt_flags (A bitmask controlling the specific security and operational behaviors enforced at the mount level. Common flags: MNT_READONLY, MNT_NOSUID, MNT_NODEV)\n}   ",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "vfsmount {\n    struct dentry *mnt_root (The dentry representing the directory that acts as the root of this specific mount)\n    struct super_block *mnt_sb (A pointer to the physical file system's Superblock.)\n    int mnt_flags (A bitmask controlling the specific security and operational behaviors enforced at the mount level. Common flags: MNT_READONLY, MNT_NOSUID, MNT_NODEV)\n}   ",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "f5rsFqbUejZkaTEplLSPf",
+      "type": "arrow",
+      "x": -5618.311360515132,
+      "y": 1261.5093595403096,
+      "width": 564.0960126928703,
+      "height": 872.5873080429205,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0h",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 184500401,
+      "version": 427,
+      "versionNonce": 1592727487,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784449151354,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -235.33622219557128,
+          19.623371516603584
+        ],
+        [
+          -564.0960126928703,
+          872.5873080429205
+        ]
+      ],
+      "startBinding": {
+        "elementId": "gZPn1WFwYx_Qxo3nEm04g",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.17384906866301636,
+          0.1738490686630161
+        ]
+      },
+      "endBinding": {
+        "elementId": "CLEsy-4JS-knmZDva5TrM",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.35789584008342007,
+          0.3578958400834219
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "U34x5deFzbvZkC3lW4NO6",
+      "type": "text",
+      "x": -466.2845889903947,
+      "y": 1801.7717813207323,
+      "width": 5379.13330078125,
+      "height": 765,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0m",
+      "roundness": null,
+      "seed": 69480095,
+      "version": 13,
+      "versionNonce": 52263743,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "Qa-n4TL_UOMCA7PShRftQ",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784457487664,
+      "link": null,
+      "locked": false,
+      "text": "i_no\n\n1. The True Identity of a File\n\nIn Linux, file names do not matter to the operating system. File names are purely a user-friendly abstraction managed by the directory cache (struct dentry).\n\nTo the kernel and the file system driver, the actual identity of a file is defined entirely by its inode number (i_ino).\n\n    If two different directory entries (dentry objects) point to two different filenames, but both reference the exact same i_ino on the same filesystem, you have a Hard Link.\n\n    The file's data block mapping, permissions, and size are shared instantly because they both share the exact same struct inode.\n\n2. Bridging the VFS to the Disk Blocks\n\nWhen your application requests data from a file descriptor, the VFS layer hands the operation off to the filesystem driver (like ext4 or btrfs). The driver reads i_ino to compute exactly where that file's metadata structure is located on the physical disk sectors.\n\nFor example, in a traditional ext4 filesystem layout, the disk is divided into \"Block Groups,\" each containing an Inode Table. The driver takes i_ino, calculates its offset within that table, and reads the raw metadata from the disk to populate the rest of the fields inside your struct inode object in RAM.",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "i_no\n\n1. The True Identity of a File\n\nIn Linux, file names do not matter to the operating system. File names are purely a user-friendly abstraction managed by the directory cache (struct dentry).\n\nTo the kernel and the file system driver, the actual identity of a file is defined entirely by its inode number (i_ino).\n\n    If two different directory entries (dentry objects) point to two different filenames, but both reference the exact same i_ino on the same filesystem, you have a Hard Link.\n\n    The file's data block mapping, permissions, and size are shared instantly because they both share the exact same struct inode.\n\n2. Bridging the VFS to the Disk Blocks\n\nWhen your application requests data from a file descriptor, the VFS layer hands the operation off to the filesystem driver (like ext4 or btrfs). The driver reads i_ino to compute exactly where that file's metadata structure is located on the physical disk sectors.\n\nFor example, in a traditional ext4 filesystem layout, the disk is divided into \"Block Groups,\" each containing an Inode Table. The driver takes i_ino, calculates its offset within that table, and reads the raw metadata from the disk to populate the rest of the fields inside your struct inode object in RAM.",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "BhUfUFqZwVFM_6jWCA_sZ",
+      "type": "arrow",
+      "x": -4258.97949505451,
+      "y": 589.062343711181,
+      "width": 1567.4031689573626,
+      "height": 2213.7833711812254,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0p",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 259761855,
+      "version": 1063,
+      "versionNonce": 1370650879,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784475153309,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -211.55388662645328,
+          179.8021284136762
+        ],
+        [
+          1355.8492823309093,
+          655.0168610369258
+        ],
+        [
+          989.0424575229276,
+          2213.7833711812254
+        ]
+      ],
+      "startBinding": {
+        "elementId": "4YaEMUigV_klcLh88Ff8q",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.14068729360177548,
+          0.14068729360177537
+        ]
+      },
+      "endBinding": {
+        "elementId": "_PLUNeVAk0i7JhR8BNHja",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.4341943604006305,
+          0.4341943604006331
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "_PLUNeVAk0i7JhR8BNHja",
+      "type": "text",
+      "x": -4371.655371179914,
+      "y": 2808.845714892407,
+      "width": 2269.199951171875,
+      "height": 1125,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0s",
+      "roundness": null,
+      "seed": 1995939039,
+      "version": 537,
+      "versionNonce": 1438182124,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "BhUfUFqZwVFM_6jWCA_sZ",
+          "type": "arrow"
+        },
+        {
+          "id": "Qa-n4TL_UOMCA7PShRftQ",
+          "type": "arrow"
+        },
+        {
+          "id": "D-Mh7y7gxsMYGteT6mB16",
+          "type": "arrow"
+        },
+        {
+          "id": "-yY8UtXUVl-mBE7bjrLiy",
+          "type": "arrow"
+        },
+        {
+          "id": "DCZQv6cKCSByb787jldb2",
+          "type": "arrow"
+        },
+        {
+          "id": "Gm4myOVWLkoRuGyfwty6A",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1785350007034,
+      "link": null,
+      "locked": false,
+      "text": "inode {\n   u64 i_ino  (This is the absolute, unique serial number assigned to a specific file or directory by the underlying filesystem)\n   atomic_t i_count (Reference count — same `_refcount` discipline from `struct page`. Inode isn't freed while this is nonzero)\n   unsigned int i_nlink (Number of hard links)\n\n   kuid_t  i_uid \n   kgid_t i_gid\n   umode_t i_mode\n\n    const struct inode_operations  *i_op (Pointer to inode operations table)\n    struct super_block *i_sb (Pointer to superblock object for this filesystem)\n    struct address_space  *i_mapping (Pointer to address_space object for this file)\n    struct file_operations * i_fop \n\n     loff_t  i_size (File size in bytes)\n     blkcnt_t i_blocks (Number of blocks of the file)\n    \n}\n\n\n\n\n \n\n",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "inode {\n   u64 i_ino  (This is the absolute, unique serial number assigned to a specific file or directory by the underlying filesystem)\n   atomic_t i_count (Reference count — same `_refcount` discipline from `struct page`. Inode isn't freed while this is nonzero)\n   unsigned int i_nlink (Number of hard links)\n\n   kuid_t  i_uid \n   kgid_t i_gid\n   umode_t i_mode\n\n    const struct inode_operations  *i_op (Pointer to inode operations table)\n    struct super_block *i_sb (Pointer to superblock object for this filesystem)\n    struct address_space  *i_mapping (Pointer to address_space object for this file)\n    struct file_operations * i_fop \n\n     loff_t  i_size (File size in bytes)\n     blkcnt_t i_blocks (Number of blocks of the file)\n    \n}\n\n\n\n\n \n\n",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "Qa-n4TL_UOMCA7PShRftQ",
+      "type": "arrow",
+      "x": -2104.887743889982,
+      "y": 2903.132105454834,
+      "width": 1796.1974620365654,
+      "height": 1331.1014262429403,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0t",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 1658182751,
+      "version": 1275,
+      "versionNonce": 1008271647,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784475153309,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          798.2916378321543,
+          -1208.8360941703017
+        ],
+        [
+          1617.4693627188576,
+          -1331.1014262429403
+        ],
+        [
+          1796.1974620365654,
+          -1107.3603241341018
+        ]
+      ],
+      "startBinding": {
+        "elementId": "_PLUNeVAk0i7JhR8BNHja",
+        "mode": "inside",
+        "fixedPoint": [
+          0.9988401008341019,
+          0.08381012494437931
+        ]
+      },
+      "endBinding": {
+        "elementId": "U34x5deFzbvZkC3lW4NO6",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.03405744358950952,
+          0.03405744358950976
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "aMQpLpQ3fkxy7BJ1eAZW8",
+      "type": "text",
+      "x": -8310.443778845358,
+      "y": 2982.216024150053,
+      "width": 2044.7332763671875,
+      "height": 2160,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b0x",
+      "roundness": null,
+      "seed": 2022638911,
+      "version": 41,
+      "versionNonce": 735161375,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "D-Mh7y7gxsMYGteT6mB16",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784466967639,
+      "link": null,
+      "locked": false,
+      "text": "1. kuid_t i_uid (Owner User ID)\n\n    What it is: The unique identifier of the user who owns the file.\n\n    The k Prefix Significance: The kuid_t type stands for Kernel User ID. \n    The kernel does not use raw integer UIDs directly here because of modern \n     features like user namespaces (containers). A user might be UID 0 (root) \n     inside an unprivileged LXC/Docker container, but map to UID 100000 on the \n     physical host. kuid_t is a structure abstraction that handles this internal mapping safely.\n\n2. kgid_t i_gid (Owner Group ID)\n\n    What it is: The identifier of the POSIX group assigned to the file.\n\n    The k Prefix Significance: Just like the UID, kgid_t stands for Kernel Group ID. It abstracts \n    the group integer across namespace boundaries to ensure that group permissions are safely \n    translated between host and containers.\n\n3. umode_t i_mode (File Type & Permissions Bitmask)\n\n    What it is: A 16-bit bitmask that stores two critical pieces of data packed together: the file \n    type and the access permissions (what you see when running ls -l).\n\n    The Internal Bit Layout:\n\n        Top 4 bits (File Type): Identifies what kind of inode this is (e.g., standard file, directory, \n         symbolic link, socket, block device). The kernel checks these bits using macros like S_ISREG() or S_ISDIR().\n\n        Bottom 12 bits (Flags & Permissions):\n\n            3 bits for execution flags: SUID (Set User ID), SGID (Set Group ID), and the Sticky Bit.\n\n            9 bits for standard POSIX permissions: User (rwx), Group (rwx), and Others (rwx).\n\nHow the Kernel Evaluates Them Together\n\nWhen a process tries to open a file, the VFS layer calls a helper function (typically generic_permission()) that uses \nthese three exact fields in a strict cascading order:\n\n[ Process attempts to access file ]\n              │\n              ├──► Is Process UID == inode->i_uid? \n              │       YES ──► Check User bits in i_mode\n              │\n              ├──► Is Process GID matching inode->i_gid? \n              │       YES ──► Check Group bits in i_mode\n              │\n              └──► Otherwise ─────────────────────────► Check Other bits in i_mode",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "1. kuid_t i_uid (Owner User ID)\n\n    What it is: The unique identifier of the user who owns the file.\n\n    The k Prefix Significance: The kuid_t type stands for Kernel User ID. \n    The kernel does not use raw integer UIDs directly here because of modern \n     features like user namespaces (containers). A user might be UID 0 (root) \n     inside an unprivileged LXC/Docker container, but map to UID 100000 on the \n     physical host. kuid_t is a structure abstraction that handles this internal mapping safely.\n\n2. kgid_t i_gid (Owner Group ID)\n\n    What it is: The identifier of the POSIX group assigned to the file.\n\n    The k Prefix Significance: Just like the UID, kgid_t stands for Kernel Group ID. It abstracts \n    the group integer across namespace boundaries to ensure that group permissions are safely \n    translated between host and containers.\n\n3. umode_t i_mode (File Type & Permissions Bitmask)\n\n    What it is: A 16-bit bitmask that stores two critical pieces of data packed together: the file \n    type and the access permissions (what you see when running ls -l).\n\n    The Internal Bit Layout:\n\n        Top 4 bits (File Type): Identifies what kind of inode this is (e.g., standard file, directory, \n         symbolic link, socket, block device). The kernel checks these bits using macros like S_ISREG() or S_ISDIR().\n\n        Bottom 12 bits (Flags & Permissions):\n\n            3 bits for execution flags: SUID (Set User ID), SGID (Set Group ID), and the Sticky Bit.\n\n            9 bits for standard POSIX permissions: User (rwx), Group (rwx), and Others (rwx).\n\nHow the Kernel Evaluates Them Together\n\nWhen a process tries to open a file, the VFS layer calls a helper function (typically generic_permission()) that uses \nthese three exact fields in a strict cascading order:\n\n[ Process attempts to access file ]\n              │\n              ├──► Is Process UID == inode->i_uid? \n              │       YES ──► Check User bits in i_mode\n              │\n              ├──► Is Process GID matching inode->i_gid? \n              │       YES ──► Check Group bits in i_mode\n              │\n              └──► Otherwise ─────────────────────────► Check Other bits in i_mode",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "D-Mh7y7gxsMYGteT6mB16",
+      "type": "arrow",
+      "x": -4377.655371179914,
+      "y": 3078.7519759753773,
+      "width": 3436.985003121952,
+      "height": 600.387702192394,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b10",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 1971986815,
+      "version": 950,
+      "versionNonce": 79267135,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784475153309,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -587.0342670384598,
+          -26.139160340327635
+        ],
+        [
+          -3118.1353001641764,
+          -600.387702192394
+        ],
+        [
+          -3436.985003121952,
+          -102.53595182532445
+        ]
+      ],
+      "startBinding": {
+        "elementId": "_PLUNeVAk0i7JhR8BNHja",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.26385429332451,
+          0.26385429332450844
+        ]
+      },
+      "endBinding": {
+        "elementId": "aMQpLpQ3fkxy7BJ1eAZW8",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.14350794860904048,
+          0.14350794860904004
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "GccuUkRSU2dFOWLJgFrDa",
+      "type": "text",
+      "x": -8147.819434915274,
+      "y": 5874.7488927647955,
+      "width": 3081.10009765625,
+      "height": 1755,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b13",
+      "roundness": null,
+      "seed": 119969681,
+      "version": 90,
+      "versionNonce": 763113169,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "-yY8UtXUVl-mBE7bjrLiy",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784469781235,
+      "link": null,
+      "locked": false,
+      "text": "Hard Links and Symlinks\n\n1. Hard Links: Multiple Names, Same Inode\n\nA hard link is just an additional directory entry (struct dentry) pointing to an existing inode number \n(i_ino) on the same filesystem.\n\n    Under the Hood: When you create a hard link, the kernel allocates a new dentry with the new filename, \n    but it copies the exact same i_ino into it. It also increments the reference counter (i_nlink) inside the struct inode.\n\n    Behavior: Both filenames are completely identical peers. If you delete the original filename, the inode and \n    the file data remain completely intact because i_nlink is still greater than 0. The data is only wiped from the disk when all hard links are deleted.\n\n    Limitations: Because an inode number is only unique within its own filesystem partition, hard links cannot cross filesystem\n     boundaries (e.g., you cannot hard link a file from an ext4 drive onto a btrfs drive). You also cannot hard link directories (to prevent infinite loops in the filesystem graph).\n\n[dentry: file.txt] ─────► i_ino = 142857 ────► [ struct inode ] ──► Data Blocks\n                               ▲\n[dentry: hardlink.txt] ────────┘ (Points directly to the same Inode)\n\n2. Symbolic Links (Symlinks): A Shortcut File\n\nA symlink is a completely distinct, special type of file that contains a text string pointing to the path of another filename.\n\n    Under the Hood: When you create a symlink, the kernel allocates a brand new inode with its own unique i_ino and a \n    distinct struct inode. The file type bits in i_mode are set to S_IFLNK (Symbolic Link). The data blocks of this new i\n    node simply store the text path string of the target file (e.g., \"/home/user/file.txt\").\n\n    Behavior: When a process tries to open a symlink, the VFS layer reads the path string stored inside the symlink's inode, \n    halts the current lookup, and restarts the path resolution algorithm using the target path. If you delete the original \n    target file, the symlink remains but becomes \"broken\" (pointing to a path that no longer exists).\n\n    Advantages: Because it relies entirely on a text path string, symlinks can span across different physical drives and file \n    systems, and they can point directly to directories without restrictions.\n\n[dentry: symlink.txt] ──► i_ino = 999999 ──► [struct inode (S_IFLNK)] ──► Data: \"file.txt\"\n                                                                                │\n                                                                                ▼\n[dentry: file.txt] ─────► i_ino = 142857 ──────────────────────────────► [struct inode] ──► Data Blocks",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "Hard Links and Symlinks\n\n1. Hard Links: Multiple Names, Same Inode\n\nA hard link is just an additional directory entry (struct dentry) pointing to an existing inode number \n(i_ino) on the same filesystem.\n\n    Under the Hood: When you create a hard link, the kernel allocates a new dentry with the new filename, \n    but it copies the exact same i_ino into it. It also increments the reference counter (i_nlink) inside the struct inode.\n\n    Behavior: Both filenames are completely identical peers. If you delete the original filename, the inode and \n    the file data remain completely intact because i_nlink is still greater than 0. The data is only wiped from the disk when all hard links are deleted.\n\n    Limitations: Because an inode number is only unique within its own filesystem partition, hard links cannot cross filesystem\n     boundaries (e.g., you cannot hard link a file from an ext4 drive onto a btrfs drive). You also cannot hard link directories (to prevent infinite loops in the filesystem graph).\n\n[dentry: file.txt] ─────► i_ino = 142857 ────► [ struct inode ] ──► Data Blocks\n                               ▲\n[dentry: hardlink.txt] ────────┘ (Points directly to the same Inode)\n\n2. Symbolic Links (Symlinks): A Shortcut File\n\nA symlink is a completely distinct, special type of file that contains a text string pointing to the path of another filename.\n\n    Under the Hood: When you create a symlink, the kernel allocates a brand new inode with its own unique i_ino and a \n    distinct struct inode. The file type bits in i_mode are set to S_IFLNK (Symbolic Link). The data blocks of this new i\n    node simply store the text path string of the target file (e.g., \"/home/user/file.txt\").\n\n    Behavior: When a process tries to open a symlink, the VFS layer reads the path string stored inside the symlink's inode, \n    halts the current lookup, and restarts the path resolution algorithm using the target path. If you delete the original \n    target file, the symlink remains but becomes \"broken\" (pointing to a path that no longer exists).\n\n    Advantages: Because it relies entirely on a text path string, symlinks can span across different physical drives and file \n    systems, and they can point directly to directories without restrictions.\n\n[dentry: symlink.txt] ──► i_ino = 999999 ──► [struct inode (S_IFLNK)] ──► Data: \"file.txt\"\n                                                                                │\n                                                                                ▼\n[dentry: file.txt] ─────► i_ino = 142857 ──────────────────────────────► [struct inode] ──► Data Blocks",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "-yY8UtXUVl-mBE7bjrLiy",
+      "type": "arrow",
+      "x": -4377.655371179914,
+      "y": 3140.2698737386877,
+      "width": 2340.6924130077405,
+      "height": 2747.6328275316423,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b14",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 1597329809,
+      "version": 863,
+      "versionNonce": 1257538911,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784475153309,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -427.5688247440967,
+          350.72583216299927
+        ],
+        [
+          -1472.7618080152024,
+          2146.50118206234
+        ],
+        [
+          -2340.6924130077405,
+          2747.6328275316423
+        ]
+      ],
+      "startBinding": {
+        "elementId": "_PLUNeVAk0i7JhR8BNHja",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.10932460459093911,
+          0.10932460459093839
+        ]
+      },
+      "endBinding": null,
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "fsJHkqxzNedaVnJdjzVq2",
+      "type": "text",
+      "x": -13717.100297737114,
+      "y": 4072.478649726094,
+      "width": 46.63333511352539,
+      "height": 45,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b15",
+      "roundness": null,
+      "seed": 2057619519,
+      "version": 4,
+      "versionNonce": 467279007,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784469381747,
+      "link": null,
+      "locked": false,
+      "text": "Wy",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "Wy",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "rHI3l8g7zUGHKHtI7Echj",
+      "type": "text",
+      "x": -11193.53351277483,
+      "y": 4314.311079795024,
+      "width": 2258.63330078125,
+      "height": 2295,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b19",
+      "roundness": null,
+      "seed": 1649835729,
+      "version": 274,
+      "versionNonce": 1430835857,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "DCZQv6cKCSByb787jldb2",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784470008821,
+      "link": null,
+      "locked": false,
+      "text": "Why inode stores i_fop as well? (To be explored further)\n\n\nThe short answer: The inode's f_op acts as the master template that dictates how a file descriptor should behave\n when it is first opened.\n\nHere is the exact architectural reason for this design:\n\n1. The Polymorphism Problem: Not All Inodes are Disk Files\n\nIn Linux, an inode doesn't just represent a plain text file on an ext4 drive. An inode can represent a directory, a pipe (FIFO), \na network socket, or a character device (like a mouse or a GPU driver in /dev).\n\nEach of these file types requires radically different operations when you call system calls like read() or write():\n\n    Reading a regular file copies bytes from a storage driver's page cache.\n\n    Reading a network socket pulls packets from a network interface buffer.\n\n    Reading a character device executes custom code inside a hardware driver.\n\nThe kernel needs a way to store which behavior belongs to this entry before anyone even opens it. That is the job of the \ninode's operations pointer.\n\n2. The Initialization Hook (Setting up struct file)\n\nWhen a process calls open(), the kernel sets up a brand new struct file instance. But how does that new struct file know which \nread and write functions to use?\n\nIt copies them directly from the inode. The path looks like this:\n\n// Simplified kernel logic inside the open system call path\nfile->f_op = inode->i_fop; \n\nif (file->f_op->open) {\n    error = file->f_op->open(inode, file); // Trigger custom open routine\n}\n\n3. The Power of Overriding (The Character Device Example)\n\nThe most elegant aspect of this architecture is how the kernel handles hardware drivers via Device Files (like /dev/nvme0).\n\n    When the filesystem mounts /dev, it creates inodes on the disk space. Initially, the generic filesystem driver assigns a \ndefault device-file operation pointer to inode->i_fop.\n\n    When a process opens /dev/nvme0, the generic open function triggers. It looks at the inode's device major/minor numbers, \nrealizes it's a character device, and swaps the generic operations pointer out for the actual custom driver operations written \nby the hardware manufacturer.\n\n    Any subsequent read() or write() calls on that file descriptor instantly route directly into the custom hardware driver code, \ncompletely bypassing the standard filesystem code.",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "Why inode stores i_fop as well? (To be explored further)\n\n\nThe short answer: The inode's f_op acts as the master template that dictates how a file descriptor should behave\n when it is first opened.\n\nHere is the exact architectural reason for this design:\n\n1. The Polymorphism Problem: Not All Inodes are Disk Files\n\nIn Linux, an inode doesn't just represent a plain text file on an ext4 drive. An inode can represent a directory, a pipe (FIFO), \na network socket, or a character device (like a mouse or a GPU driver in /dev).\n\nEach of these file types requires radically different operations when you call system calls like read() or write():\n\n    Reading a regular file copies bytes from a storage driver's page cache.\n\n    Reading a network socket pulls packets from a network interface buffer.\n\n    Reading a character device executes custom code inside a hardware driver.\n\nThe kernel needs a way to store which behavior belongs to this entry before anyone even opens it. That is the job of the \ninode's operations pointer.\n\n2. The Initialization Hook (Setting up struct file)\n\nWhen a process calls open(), the kernel sets up a brand new struct file instance. But how does that new struct file know which \nread and write functions to use?\n\nIt copies them directly from the inode. The path looks like this:\n\n// Simplified kernel logic inside the open system call path\nfile->f_op = inode->i_fop; \n\nif (file->f_op->open) {\n    error = file->f_op->open(inode, file); // Trigger custom open routine\n}\n\n3. The Power of Overriding (The Character Device Example)\n\nThe most elegant aspect of this architecture is how the kernel handles hardware drivers via Device Files (like /dev/nvme0).\n\n    When the filesystem mounts /dev, it creates inodes on the disk space. Initially, the generic filesystem driver assigns a \ndefault device-file operation pointer to inode->i_fop.\n\n    When a process opens /dev/nvme0, the generic open function triggers. It looks at the inode's device major/minor numbers, \nrealizes it's a character device, and swaps the generic operations pointer out for the actual custom driver operations written \nby the hardware manufacturer.\n\n    Any subsequent read() or write() calls on that file descriptor instantly route directly into the custom hardware driver code, \ncompletely bypassing the standard filesystem code.",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "DCZQv6cKCSByb787jldb2",
+      "type": "arrow",
+      "x": -4377.655371179914,
+      "y": 3372.131598120918,
+      "width": 4551.244840813665,
+      "height": 2094.3835897717227,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b1B",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 945362961,
+      "version": 739,
+      "versionNonce": 1999870129,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784470539084,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -771.1800288663444,
+          86.54994960022395
+        ],
+        [
+          -820.6036261628733,
+          2094.3835897717227
+        ],
+        [
+          -4551.244840813665,
+          1973.0365654465559
+        ]
+      ],
+      "startBinding": {
+        "elementId": "_PLUNeVAk0i7JhR8BNHja",
+        "mode": "orbit",
+        "fixedPoint": [
+          0,
+          0.5001
+        ]
+      },
+      "endBinding": {
+        "elementId": "rHI3l8g7zUGHKHtI7Echj",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.5648400464829415,
+          0.4351599535170576
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "rNaNp9lJsYRClTW2WDpKP",
+      "type": "text",
+      "x": -3970.297920923483,
+      "y": 4502.106941107296,
+      "width": 2493.800048828125,
+      "height": 450,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b1F",
+      "roundness": null,
+      "seed": 136390655,
+      "version": 575,
+      "versionNonce": 1774999537,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "Gm4myOVWLkoRuGyfwty6A",
+          "type": "arrow"
+        },
+        {
+          "id": "vQfdr-2kxEdBjNRa8LqtU",
+          "type": "arrow"
+        },
+        {
+          "id": "ZZKe6pD0FH_6e0_epm2dB",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784475430579,
+      "link": null,
+      "locked": false,
+      "text": "address_space {\n    struct inode *host (Back-pointer to the owning inode. NULL if not inode-backed (e.g. swapper's anonymous pages) \n    struct xarray i_pages (Enhancement of old radix tree page_tree, representation of pages owned by this file)\n\n    unsigned long nrpages (Total pages currently cached for this file)\n    struct rb_root_cached  i_mmap (Represents all userspace processes (VMA's)  that have this page cache mapped into their address space)\n    \n    const struct address_space_operations *a_ops (Operations table for address_space)\n    pgoff_t writeback_index (Where writeback left off — used to resume flushing dirty pages sequentially )\n}",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "address_space {\n    struct inode *host (Back-pointer to the owning inode. NULL if not inode-backed (e.g. swapper's anonymous pages) \n    struct xarray i_pages (Enhancement of old radix tree page_tree, representation of pages owned by this file)\n\n    unsigned long nrpages (Total pages currently cached for this file)\n    struct rb_root_cached  i_mmap (Represents all userspace processes (VMA's)  that have this page cache mapped into their address space)\n    \n    const struct address_space_operations *a_ops (Operations table for address_space)\n    pgoff_t writeback_index (Where writeback left off — used to resume flushing dirty pages sequentially )\n}",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "N8kcuPVgJQN-PkKVGkFaj",
+      "type": "text",
+      "x": 39.550184594607344,
+      "y": 3367.9237426290033,
+      "width": 3826.2666015625,
+      "height": 1575,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b1M",
+      "roundness": null,
+      "seed": 776275761,
+      "version": 35,
+      "versionNonce": 2065328895,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "vQfdr-2kxEdBjNRa8LqtU",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1784475258790,
+      "link": null,
+      "locked": false,
+      "text": "i_mmap and i_pages\n\nTo see how i_pages (the XArray) and i_mmap (the cached Red-Black tree) differ, you have to look at the two completely different directions memory flows when a file is memory-mapped (mmap).\n\nBoth live inside struct address_space, but they solve opposite problems. One handles the data, and the other handles the sharing processes.\nThe Short Answer\n\n    i_pages (XArray): Maps a file offset to the physical memory pages (Folios) containing the data. It asks: \"Where is the actual data for page index 5 in RAM?\"\n\n    i_mmap (RB-Tree): Maps the file to all the userspace processes (vm_area_structs) that currently have this file mapped into their virtual memory. It asks: \"Which processes are currently looking at this file?\"\n\nWhy i_mmap Needs a Red-Black Tree\n\nWhen you memory-map a file, you aren't loading the whole file into a process's memory at once. Instead, the kernel creates a vm_area_struct (VMA) in your process that points to a specific range of the file.\n\nIf ten different processes map different parts of the same massive database file, the kernel needs a fast way to track all those different processes and their overlapping view windows. That is what i_mmap does. \nIt uses an augmented Red-Black tree (rb_root_cached) to store intervals of VMAs sorted by their file offsets.\n\nThe Dynamic Interaction (When they meet)\n\nThe easiest way to understand the difference is to trace what happens during a Page Fault or a Cache Eviction. This is where the two structures talk to each other.\nScenario A: Reading/Writing Data (Using i_pages)\n\nWhen a process reads from a memory-mapped file address and the data isn't in RAM yet, a page fault triggers. The kernel looks inside i_pages (XArray) using the file offset. If it's a miss, it reads the data from disk, \nallocates a physical page, and drops it into i_pages.\nScenario B: Unmapping or Evicting (Using i_mmap)\n\nWhat happens if the system runs out of memory, and the kernel needs to evict a dirty file page from RAM? Or what if a process calls msync() to flush changes back to disk?\nThe kernel has the physical page, but it needs to find every single process table entry pointing to it to clear the \"Present\" bit.\n\n    The kernel looks at the page and finds its address_space.\n\n    It looks at i_mmap (RB-Tree) to search for all process VMAs that cover this specific file offset.\n\n    It walks down those specific VMAs, unmaps the page from those processes' page tables, and then safely frees the physical page from i_pages.",
+      "fontSize": 36,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "i_mmap and i_pages\n\nTo see how i_pages (the XArray) and i_mmap (the cached Red-Black tree) differ, you have to look at the two completely different directions memory flows when a file is memory-mapped (mmap).\n\nBoth live inside struct address_space, but they solve opposite problems. One handles the data, and the other handles the sharing processes.\nThe Short Answer\n\n    i_pages (XArray): Maps a file offset to the physical memory pages (Folios) containing the data. It asks: \"Where is the actual data for page index 5 in RAM?\"\n\n    i_mmap (RB-Tree): Maps the file to all the userspace processes (vm_area_structs) that currently have this file mapped into their virtual memory. It asks: \"Which processes are currently looking at this file?\"\n\nWhy i_mmap Needs a Red-Black Tree\n\nWhen you memory-map a file, you aren't loading the whole file into a process's memory at once. Instead, the kernel creates a vm_area_struct (VMA) in your process that points to a specific range of the file.\n\nIf ten different processes map different parts of the same massive database file, the kernel needs a fast way to track all those different processes and their overlapping view windows. That is what i_mmap does. \nIt uses an augmented Red-Black tree (rb_root_cached) to store intervals of VMAs sorted by their file offsets.\n\nThe Dynamic Interaction (When they meet)\n\nThe easiest way to understand the difference is to trace what happens during a Page Fault or a Cache Eviction. This is where the two structures talk to each other.\nScenario A: Reading/Writing Data (Using i_pages)\n\nWhen a process reads from a memory-mapped file address and the data isn't in RAM yet, a page fault triggers. The kernel looks inside i_pages (XArray) using the file offset. If it's a miss, it reads the data from disk, \nallocates a physical page, and drops it into i_pages.\nScenario B: Unmapping or Evicting (Using i_mmap)\n\nWhat happens if the system runs out of memory, and the kernel needs to evict a dirty file page from RAM? Or what if a process calls msync() to flush changes back to disk?\nThe kernel has the physical page, but it needs to find every single process table entry pointing to it to clear the \"Present\" bit.\n\n    The kernel looks at the page and finds its address_space.\n\n    It looks at i_mmap (RB-Tree) to search for all process VMAs that cover this specific file offset.\n\n    It walks down those specific VMAs, unmaps the page from those processes' page tables, and then safely frees the physical page from i_pages.",
+      "autoResize": true,
+      "lineHeight": 1.25,
+      "created": null,
+      "labelPosition": null,
+      "baseFontSize": null
+    },
+    {
+      "id": "Gm4myOVWLkoRuGyfwty6A",
+      "type": "arrow",
+      "x": -4371.594773124305,
+      "y": 3315.190676485525,
+      "width": 707.311604394708,
+      "height": 1367.7408834260777,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b1N",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 363931025,
+      "version": 416,
+      "versionNonce": 1429411775,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784475162056,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -273.1405042907518,
+          232.37326484437108
+        ],
+        [
+          -289.4474000693044,
+          1182.2499439450457
+        ],
+        [
+          417.86420432540353,
+          1367.7408834260777
+        ]
+      ],
+      "startBinding": {
+        "elementId": "_PLUNeVAk0i7JhR8BNHja",
+        "mode": "inside",
+        "fixedPoint": [
+          0.0000267022376914172,
+          0.45008441030499347
+        ]
+      },
+      "endBinding": {
+        "elementId": "rNaNp9lJsYRClTW2WDpKP",
+        "mode": "inside",
+        "fixedPoint": [
+          0.006643416392732431,
+          0.40183248623179274
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "vQfdr-2kxEdBjNRa8LqtU",
+      "type": "arrow",
+      "x": -1486.3979518062315,
+      "y": 4574.4784459281445,
+      "width": 1519.9481364008388,
+      "height": 1066.37085435791,
+      "angle": 0,
+      "strokeColor": "#2f9e44",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b1Q",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 1650344927,
+      "version": 426,
+      "versionNonce": 2067673553,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784475430580,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          472.0306205095658,
+          -791.8889139179996
+        ],
+        [
+          1519.9481364008388,
+          -1066.37085435791
+        ]
+      ],
+      "startBinding": {
+        "elementId": "rNaNp9lJsYRClTW2WDpKP",
+        "mode": "inside",
+        "fixedPoint": [
+          0.9960301228979743,
+          0.16082556626855268
+        ]
+      },
+      "endBinding": {
+        "elementId": "N8kcuPVgJQN-PkKVGkFaj",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.053783692524048514,
+          0.05378369252404896
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "ZZKe6pD0FH_6e0_epm2dB",
+      "type": "arrow",
+      "x": -2260.5071681981517,
+      "y": 551.899327276789,
+      "width": 1232.457381067201,
+      "height": 3960.028412621866,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b1S",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 1785230865,
+      "version": 449,
+      "versionNonce": 102481233,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1784475434111,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          740,
+          35
+        ],
+        [
+          945,
+          2975
+        ],
+        [
+          -287.4573810672009,
+          3960.028412621866
+        ]
+      ],
+      "startBinding": {
+        "elementId": "4YaEMUigV_klcLh88Ff8q",
+        "mode": "inside",
+        "fixedPoint": [
+          0.9908689365293655,
+          0.5265676271343849
+        ]
+      },
+      "endBinding": {
+        "elementId": "rNaNp9lJsYRClTW2WDpKP",
+        "mode": "inside",
+        "fixedPoint": [
+          0.5703478000678149,
+          0.0218239973141317
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    },
+    {
+      "id": "hn2PXH9wXqK16IcwdK08-",
+      "type": "arrow",
+      "x": -1446.4816919870427,
+      "y": 4763.710536136454,
+      "width": 625,
+      "height": 5111.487259111116,
+      "angle": 0,
+      "strokeColor": "#e03131",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "b1T",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 2083230449,
+      "version": 868,
+      "versionNonce": 2014249582,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1787776136274,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          625,
+          -95
+        ],
+        [
+          312.9945345888393,
+          -5111.487259111116
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": {
+        "elementId": "yFQpKp26ZPbof1GcaySjM",
+        "mode": "orbit",
+        "fixedPoint": [
+          0.8785544862822484,
+          0.8785544862822481
+        ]
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false,
+      "moveMidPointsWithElement": false,
+      "created": null
+    }
+  ],
+  "appState": {
+    "gridSize": 20,
+    "gridStep": 5,
+    "gridModeEnabled": false,
+    "viewBackgroundColor": "#ffffff",
+    "lockedMultiSelections": {}
+  },
+  "files": {}
+}
