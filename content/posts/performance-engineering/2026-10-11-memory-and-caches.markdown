@@ -67,6 +67,14 @@ The hardware moves data automatically. Your job is to make the access patterns f
 
 Data is not moved one byte at a time. It is moved in **cache lines**, typically 64 bytes on x86 and 64 bytes on most ARM cores. A load of one byte brings the entire surrounding 64-byte block into cache.
 
+> A cache line is the smallest block of data that can be transferred between the main memory (RAM) and the CPU cache hierarchy (L1, L2, or L3). 
+>
+> Its not literal line, its more like I/O happens in blocks of unit size (mostly 64 bytes).
+>
+> **Which 64 byte window is choosen if i read byte "x" from RAM?**
+>
+> It will always be the fixed 64-byte window determined by dropping the lowest 6 bits of the address. 
+
 ```text
 memory address layout:
 
@@ -106,7 +114,117 @@ for (int i = 0; i < n; i++) {
 
 A linked list usually has poor spatial locality because nodes are scattered in memory. An array has good spatial locality because elements are contiguous.
 
-## 5. How caches are organized
+## 5. How a cache lookup works
+
+By now we know the CPU moves data in 64-byte cache lines. The next question is mechanical: when the CPU wants byte `0x12345678`, how does it know whether the line containing that byte is already in the cache?
+
+At this level we can think in physical addresses. The TLB and page tables handle virtual-to-physical translation first; once that is done, the cache lookup works on a physical address.
+
+### A cache is a lookup table
+
+Picture the cache as a small, fast table next to the CPU. Each entry must store two things:
+
+1. The 64-byte line it copied from RAM.
+2. Enough address information to know which 64-byte block of RAM it represents.
+
+Without the second piece, the cache would be useless. Many addresses could produce the same bytes, and the CPU would have no way to tell whether the cached line really corresponds to the address it is asking for.
+
+```text
+cache as a simple lookup table:
+
+RAM address        cache entry
+0x00000000      [addr? | 64 bytes]
+0x00000040      [addr? | 64 bytes]
+0x00000100      [addr? | 64 bytes]
+...
+```
+
+The part of the address that uniquely identifies the line is called the **tag**. On every access, the cache compares the requested address's tag against the tags stored in its entries. A match is a **cache hit**; no match is a **cache miss**.
+
+### Direct mapping: one address, one slot
+
+The simplest cache is **direct-mapped**: a few bits from the middle of the address are used as an index, and the cache has exactly one slot per index.
+
+```text
+direct-mapped cache:
+
+        address bits
+   ┌──────────┬───────┬────────┐
+   │   tag    │ index │ offset │
+   │  (many)  │  3    │   6    │
+   └──────────┴───────┴────────┘
+                 │
+                 ▼
+           ┌────────────┐
+           │  one slot  │
+           │ per index  │
+           └────────────┘
+```
+
+With 3 index bits there are 8 slots. Address `0x...140` and `0x...240` both map to slot 1, so only one of them can live there at a time. The tag is what tells the cache which one is currently stored.
+
+Direct mapping is fast and cheap, but it is rigid. If two frequently used addresses happen to map to the same slot, they evict each other continuously, even though other slots sit idle. This is a **conflict miss**.
+
+### Adding breathing room: sets and ways
+
+The problem with direct mapping is too little freedom. **Set-associative caching** loosens it: an address still maps to exactly one set, but the set has several slots, called **ways**. The line can live in any way within that set.
+
+```text
+2-way set-associative cache with 4 sets:
+
+        address bits
+   ┌──────────┬───────┬────────┐
+   │   tag    │  set  │ offset │
+   │  (many)  │  2    │   6    │
+   └──────────┴───────┴────────┘
+                 │
+                 ▼
+        ┌─────────────────────┐
+  set 0 │ way 0  │  way 1     │
+  set 1 │ way 0  │  way 1     │
+  set 2 │ way 0  │  way 1     │
+  set 3 │ way 0  │  way 1     │
+        └─────────────────────┘
+```
+
+An 8-way set-associative cache gives each address eight possible homes inside its set. The hardware checks all ways in the chosen set in parallel and compares each stored tag to the requested tag.
+
+> Checking in parallel is the important thing here - as it determines the level of associativity a cache can have without any extra penalty.
+
+A cache entry therefore looks like this:
+
+```text
+one cache way:
+┌─────────────────┬────────────────────┬─────────────────┐
+│      tag        │   64 bytes data    │  status bits    │
+│ (which block)   │ (the cached line)  │ (valid, dirty)  │
+└─────────────────┴────────────────────┴─────────────────┘
+```
+
+> This is the entry that is stored in the cache.
+
+### The three parts of a cache address
+
+So a memory address entering the cache splits into three pieces:
+
+- **Offset** (low 6 bits on x86): which byte inside the 64-byte line.
+- **Set index**: which set to look in.
+- **Tag** (remaining high bits): compared against the tags in the set.
+
+```text
+address split:
+
+┌────────────────────────┬─────────────┬───────────--─┐
+│         tag            │  set index  │   offset     │
+│   identifies block     │ picks a set │ byte in line │
+└────────────────────────┴─────────────┴───────────--─┘
+```
+
+> This is the entry that CPU asks for cache, even though the entire 64 byte line is cached, CPU only requests only byte at a time. 
+
+This is the machinery that turns a RAM address into a yes/no cache decision. With that picture in mind, we can look at how real caches are organized and why the choice of associativity matters.
+
+## 6. How caches are organized
 
 A cache is divided into **sets**, each of which holds some number of **ways**. An address maps to exactly one set, but can be stored in any way within that set.
 
@@ -141,7 +259,9 @@ each access evicts the previous one
 cache hit rate collapses despite the cache being large enough overall
 ```
 
-## 6. Data layout: structure of arrays vs array of structures
+> This is a hypothetical example to illustrate the concept of conflict misses. Ideally with 8-way associativity, this wouldn't happen.
+
+## 7. Data layout: structure of arrays vs array of structures
 
 How you lay out data in memory is one of the highest-impact decisions you can make.
 
@@ -180,7 +300,7 @@ The choice depends on the access pattern:
 - Use **AoS** when you touch most fields of one element together.
 - A hybrid (array of small structures of arrays) is common in high-performance code.
 
-## 7. Alignment and padding
+## 8. Alignment and padding
 
 A variable is **naturally aligned** if its address is a multiple of its size. A 4-byte `float` should be at an address divisible by 4. An 8-byte `double` or pointer should be at an address divisible by 8. A 16-byte SIMD type should be at an address divisible by 16.
 
@@ -223,7 +343,7 @@ struct Better {
 // total: 16 bytes
 ```
 
-## 8. Cache thrashing, capacity misses, and conflict misses
+## 9. Cache thrashing, capacity misses, and conflict misses
 
 There are three distinct reasons a cache access can miss:
 
@@ -239,7 +359,7 @@ There are three distinct reasons a cache access can miss:
 
 **Conflict misses** are solved by avoiding power-of-two strides and by being aware of cache associativity.
 
-## 9. Prefetching
+## 10. Prefetching
 
 CPUs contain hardware prefetchers that predict future accesses and fetch data before it is needed. Common prefetcher types:
 
@@ -264,7 +384,7 @@ for (int i = 0; i < n; i++) {
 
 Software prefetching is fragile. It helps when the hardware prefetcher cannot figure out the pattern, but it can hurt if the data is already in cache or if the prefetch distance is wrong. In most cases, a clean access pattern is better than explicit prefetches.
 
-## 10. TLB and page walks
+## 11. TLB and page walks
 
 The CPU uses virtual addresses. Memory uses physical addresses. The translation is done through page tables, and the result is cached in the **translation lookaside buffer (TLB)**.
 
@@ -300,7 +420,7 @@ Common symptoms of TLB pressure:
 - A program slows down when the working set crosses a few megabytes, even though L3 is much larger.
 - Random access patterns hurt more than sequential ones because sequential streams reuse TLB entries.
 
-## 11. False sharing and true sharing
+## 12. False sharing and true sharing
 
 **False sharing** happens when two threads write to different variables that happen to live in the same cache line. The cache coherence protocol serializes updates to that line even though the threads do not share data logically.
 
@@ -328,16 +448,16 @@ struct PaddedCounter counters[2];
 
 False sharing is a classic micro-optimization trap because the fix is trivial once diagnosed but invisible in source code. `perf c2c` (cache-to-cache) can detect it on supported hardware.
 
-## 12. NUMA
+## 13. NUMA
 
 Non-uniform memory access (NUMA) becomes relevant on multi-socket servers. Each socket has its own local DRAM. A core can access its own memory quickly and another socket's memory more slowly.
 
 ```text
 socket 0                       socket 1
-┌──────────────┐               ┌──────────────┐
+┌──────────────┐                ┌──────────────┐
 │ cores + L3   │──interconnect──│ cores + L3   │
-│ local DRAM   │               │ local DRAM   │
-└──────────────┘               └──────────────┘
+│ local DRAM   │                │ local DRAM   │
+└──────────────┘                └──────────────┘
 ```
 
 For single-socket laptops and desktops, NUMA does not matter. For servers, it matters a lot. The Linux `numactl` tool can bind memory allocation and thread execution to specific sockets.
@@ -349,7 +469,7 @@ numactl --cpunodebind=0 --membind=0 ./program
 
 Even on a single socket, memory bandwidth is shared. If many cores stream through memory, the shared DRAM bandwidth can saturate before any single core is CPU-bound.
 
-## 13. Measuring cache behavior
+## 14. Measuring cache behavior
 
 The right counters tell you whether memory is your bottleneck and which level is hurting you.
 
@@ -384,7 +504,7 @@ For a quick sanity check of your access pattern, a microbenchmark that sweeps an
 
 The curve will show flat regions at each cache level, then a jump to DRAM latency.
 
-## 14. Worked example: row-major vs column-major traversal
+## 15. Worked example: row-major vs column-major traversal
 
 A matrix stored in C is row-major: `A[i][j]` and `A[i][j+1]` are adjacent in memory.
 
@@ -408,7 +528,7 @@ The row-major version touches memory sequentially. The column-major version jump
 
 The same principle applies to multidimensional arrays in any language: traverse in the order the language stores elements.
 
-## 15. Worked example: blocking for cache reuse
+## 16. Worked example: blocking for cache reuse
 
 Matrix multiplication is the classic example where a better algorithm improves cache reuse.
 
@@ -435,7 +555,7 @@ for ii in steps of BLOCK
 
 A block size chosen to fit in L1 or L2 keeps the working set small, increases reuse, and turns a memory-bound problem into a compute-bound one. The actual code is more complex because of boundary conditions, but the idea is universal: **process data in chunks that fit in fast memory.**
 
-## 16. What comes next
+## 17. What comes next
 
 This note covered the memory side of the single-machine model. The next notes in the sequence will cover:
 
@@ -446,7 +566,7 @@ This note covered the memory side of the single-machine model. The next notes in
 
 Memory is usually the first thing to profile after CPU stalls. Once you can read cache and TLB counters, you can usually explain why a hot loop is slow without guessing.
 
-## 17. Questions to think about
+## 18. Questions to think about
 
 1. You have an array of structs where each struct is 64 bytes. You only read one 4-byte field per struct in a tight loop. What is the effective memory bandwidth utilization as a fraction of the bytes moved, and what data-layout change would raise it?
 
