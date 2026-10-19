@@ -57,6 +57,12 @@ def main():
         default="",
         help='Comma-separated tags, e.g. "ml,word2vec"',
     )
+    parser.add_argument(
+        "--fm-category",
+        default=None,
+        help="Category to write in frontmatter (defaults to --category). Use when the "
+        "directory nesting differs from the taxonomy, e.g. --category ml/labs --fm-category ml",
+    )
     args = parser.parse_args()
 
     require_nbconvert()
@@ -96,17 +102,23 @@ def main():
 
     md_text = tmp_md.read_text()
 
-    # nbconvert markdown links to images like: ![png](my-lab_files/output_0.png)
-    # Those paths are already relative to the markdown file, so they stay valid
-    # inside the bundle. Nothing to rewrite for the standard case.
+    # nbconvert writes image links as *absolute* paths when --output is absolute
+    # (they point into the bundle dir), which Hugo then serves verbatim as
+    # /Users/... . Strip the bundle prefix so links are bundle-relative.
+    md_text = md_text.replace(f"{bundle_dir}/", "")
+
+    # nbconvert markdown links to images like: ![png](my-lab_4_1.png)
+    # Those paths are now relative to the markdown file, so they stay valid
+    # inside the bundle.
 
     tag_list = [f'"{t.strip()}"' for t in args.tags.split(",") if t.strip()]
     tags_line = ",".join(tag_list) if tag_list else ""
 
+    fm_category = args.fm_category or args.category
     frontmatter = f"""---
 title:  "{args.title}"
 date:   {args.date}T00:00:00+05:30
-categories: ["{args.category}"]
+categories: ["{fm_category}"]
 tags: [{tags_line}]
 ---
 
