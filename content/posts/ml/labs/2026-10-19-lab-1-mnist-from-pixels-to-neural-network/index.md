@@ -123,17 +123,121 @@ print("train counts per class:", dict(enumerate(np.bincount(y_train))))
 
 **Forward:** logits $z = Wx + b$, with $W \in \mathbb{R}^{10 \times 784}$ and $b \in \mathbb{R}^{10}$; probabilities $\hat p = \mathrm{softmax}(z)$; loss = mean cross-entropy $\mathcal{L} = -\tfrac1N \sum_i \log \hat p_{i,\,y_i}$.
 
+> The type of neural network we are going to use here is just one layer: input layer with 784 neurons and output consists of 10 output nodes (not neurons technically) - they softmax the output. 
+>
+>      It's the smallest possible "neural network": one weight layer, zero hidden layers (softmax regression).
+> 
+>     - Layer 0 — input: 784 neurons, one per pixel (not trainable).
+>     - Layer 1 — output: 10 neurons, one per digit. Each has 784 weights (its row of W) + 1 bias = 785 params.
+>     - Total: 10 × 785 = 7,850 weights + 10 biases = 7,860 numbers, matching the notebook.
+
+
+<img src="../../../assets/images/handwritten_digits_single_layer_neural_network.png" width="600">
+
+>  **Why it still works:** 
+> MNIST digits really are mostly separable as pixel clouds. A linear model on raw pixels gets ~92.6%, which is respectable but it's the ceiling — the ~7% it can't get are stroke-connectivity cases (5 vs 3, 7 vs 9) that need features, not pixels.
+
+> On 3b1b: his net is 784 → 16 → 16 → 10 with ReLU — two hidden layers, ~13k params, 98%. So the extra layers buy 5–6 accuracy points. The tradeoff is exactly what §7 says: as soon as a hidden layer exists, the input→hidden rows stop being class photos and become parts (edges, strokes), and you can no longer read them as digits.
+
+> So: is it built this way to visualize? *Mostly yes, deliberately*. The design principle is "strip away everything that hides the arithmetic." Keeping the input as the feature space is the one trick that makes weights renderable as images.
+
+> But it's also the natural first model to try — the pedagogical and the honest choice coincide here. Lab 3 is where you pay for the hidden layers and lose the pictures.
+
 **Gradient** (derived in the [softmax note](/posts/ml/2026-09-14-3-softmax-and-multiclass-cross-entropy)) — the single most important equation in this lab:
 
+> The most important result from the softmax lesson was $∂L/∂z_i = p_i − y_i$ i.e., even softmax appears to be mixing z's and creating complex functions, the dependencies cancel out and the derivate of logit is purely dependent on its output and its label
+>
+> Single example. $z_c = Σ_j W_{cj} x_j + b_c$, so
+>
+> $∂z_c/∂W_{cj} = x_j$        
+> $∂z_c/∂b_c = 1$
+>
+> and nothing else in $W$ affects $z_c$. Therefore
+> 
+> $∂L/∂W_{cj} = (∂L/∂z_c) · x_j = (p_c − y_c) x_j$
+> 
+> $∂L/∂b_c    = (p_c − y_c) · 1$
+
 $$\frac{\partial \mathcal{L}}{\partial W} = \tfrac1N (\hat p - y)\, x^\top, \qquad \frac{\partial \mathcal{L}}{\partial b} = \tfrac1N (\hat p - y)$$
+
+For **one image**, the gradient is:
+
+
+$$
+\frac{\partial \ell}{\partial W}
+= \frac{\partial \ell}{\partial z}\frac{\partial z}{\partial W}
+= (\hat p-y)x^\top
+$$
+
+Here’s why the $x^\top$ appears. For class $c$ and pixel $j$,
+
+$$
+z_c=\sum_j W_{cj}x_j+b_c
+\quad\Longrightarrow\quad
+\frac{\partial z_c}{\partial W_{cj}}=x_j.
+$$
+
+So each weight’s gradient is the class’s logit error, $(\hat p_c-y_c)$, multiplied by that pixel’s value, $x_j$. Putting all classes and pixels into a matrix gives the **outer product**:
+
+$$
+(\hat p-y)x^\top
+$$
+
+The shapes make this concrete: $(\hat p-y)$ is $10\times1$, and $x^\top$ is $1\times784$, so their product is $10\times784$—the same shape as $W$.
+
+For **$N$ images**, the loss is the average of their individual losses:
+
+$$
+\mathcal L=\frac{1}{N}\sum_{i=1}^{N}\ell_i.
+$$
+
+Differentiating an average means averaging the individual gradients:
+
+$$
+\frac{\partial\mathcal L}{\partial W}
+=\frac{1}{N}\sum_{i=1}^{N}(\hat p_i-y_i)x_i^\top.
+$$
+
+That’s where $1/N$ comes from. It keeps the gradient on the scale of an average example, rather than making it grow just because the batch is larger.
+
+For a batch, the notebook’s equivalent matrix form is:
+
+$$
+\frac{\partial\mathcal L}{\partial W}
+=\frac{1}{N}\Delta^\top X,
+$$
+
+where each row of $X$ is one image and each row of $\Delta$ is that image’s $(\hat p-y)$.
 
 Now read the SGD update $W \leftarrow W - \eta\,\partial \mathcal{L} / \partial W$ literally:
 
 > Every training image $x$ **paints itself into every row of $W$**. The true class's row *gains* $(1 - \hat p_c)\,x$; every wrong class's row *loses* $\hat p_c\,x$.
 
+### What that update looks like for one pixel
+
+Take one image whose correct label is **7**, and look at one pixel with value $x_j=1$. Suppose the model currently assigns probability $0.7$ to 7 and $0.2$ to 1. For this pixel, the gradient is $(\hat p_c-y_c)x_j$:
+
+- **Digit 7 (the correct class):** $(0.7-1)\times1=-0.3$. Gradient descent subtracts the gradient, so this weight **increases by $0.3\eta$**.
+- **Digit 1 (a wrong class):** $(0.2-0)\times1=0.2$. Subtracting this gradient makes this weight **decrease by $0.2\eta$**.
+
+Here $\eta$ is the learning rate. Increasing the 7 weight makes this pixel count more in favor of 7 next time; decreasing the 1 weight makes it count less in favor of 1. If the pixel value were zero, this example would make no change to either class's weight for that pixel. For a dim pixel such as $x_j=0.5$, both changes would be half as large.
+
+That is all “the image paints itself into the rows” means: each pixel changes the corresponding weight according to its intensity and how wrong the current probabilities were. Across a mini-batch, the changes from its images are averaged. If the model already gives the correct digit almost all the probability, the gradients are close to zero, so the weights barely change.
+
 So training is: *true-class rows accumulate the average ink of their class; wrong-class rows accumulate negative ink of everything that tempted them.* If an image is predicted perfectly, $\hat p - y \approx 0$ and it stops painting entirely.
 
 Before training anything, we verify our analytic gradient against finite differences — on a tiny 8-image batch in `float64`. If the numbers match, the code implements the math, not just *a* math.
+
+
+**What this check does:** A derivative is the slope of the loss as one parameter changes. For a selected weight, the code nudges it slightly up and down by $\varepsilon$, measures the loss both times, and estimates the slope as $[L(W+\varepsilon)-L(W-\varepsilon)]/(2\varepsilon)$. This is the central finite-difference approximation to the derivative from first principles. It compares that numerical estimate with the gradient formula in `grad()`. Close values are evidence that the implemented formula is correct for this model and loss. We check a small sample of weights rather than all 7,840, and use `float64` so rounding does not overwhelm the tiny nudges.
+
+### A useful mental model to carry forward
+
+Each output class has its own row of 784 pixel weights and one bias (785 parameters total). For an image, backprop updates every class row, not only the row for the correct answer. It pushes the correct class to score the image higher, and pushes the other classes to score it lower. A wrong class that gave the image a high probability gets a stronger corrective push.
+
+So a class learns both which pixel patterns tend to support its score and which patterns tend to mislead it. The weights are not literal stored examples or perfect pictures of digits; they are coefficients the model adjusts based on its errors.
+
+
 
 ```python
 class SoftmaxReg:
@@ -196,6 +300,36 @@ print("-> tiny error means our dL/dW is the gradient of THIS code, not of an ide
 ## 3. Training — with the camera rolling
 
 Mini-batch SGD: batch 256, lr 0.5, 5 epochs ≈ 1,170 steps. We save a **checkpoint** of $(W, b)$ at steps 0, 1, 2, 5, 10, 25, 50, 100, 200, 400, 800 and at the end — each with the test accuracy it had reached. The accuracy curve tells you *what it knows*; the snapshots tell you *what it is*.
+
+### Epochs, batches, and steps
+
+A **batch** is the group of examples used to calculate one gradient update. A **step** is that one update. An **epoch** is one pass through the training set, usually after shuffling and splitting the examples into batches:
+
+```text
+one training step:
+    take one batch of examples
+    calculate predictions and gradients for that batch
+    update the model's weights once
+
+one epoch:
+    shuffle the training examples
+    split them into batches
+    run one training step per batch
+    # The model has seen each training example once
+```
+
+This notebook uses batches of 256, so it runs about 234 steps per epoch. The code drops the final incomplete batch, so a small remainder is not seen during that epoch.
+
+### Mini-batch SGD and full-batch gradient descent
+
+The name **stochastic gradient descent (SGD)** is used in two ways. Strictly, SGD uses one example per update. In everyday machine-learning usage, “SGD” often also refers to mini-batch training like this notebook, where each update uses a small group of examples.
+
+- **Single-example SGD:** calculate an update from one example at a time. Each update is cheap and needs little memory, and the model updates frequently. But individual examples can point in different directions, so the loss may jump around rather than decrease smoothly.
+- **Mini-batch SGD (this lab):** average the gradients from a batch, then update once. This reduces some of the single-example noise while keeping updates manageable and efficient on typical hardware. The gradient is still an estimate based on part of the dataset, so it can fluctuate.
+- **Full-batch gradient descent:** calculate one gradient using the entire training dataset, then update once. That gives a less noisy estimate of the dataset-wide direction, but each update takes more computation and memory. An epoch is only one update, so reaching a useful solution may require fewer but more expensive steps.
+
+With batch size 1, one epoch over 60,000 examples means about 60,000 updates. With full-batch training, it means one update. Mini-batches are a practical middle ground: in this notebook, 256 examples per update means about 234 updates per epoch.
+
 
 ```python
 BATCH, LR, EPOCHS = 256, 0.5, 5
@@ -266,7 +400,7 @@ save_fig(fig, FIGS / "training_curve.png"); plt.show()
 
 
     
-![png](01_what_do_weights_represent_9_1.png)
+![png](01_what_do_weights_represent_10_1.png)
     
 
 
@@ -298,7 +432,7 @@ print("  " + "   ".join(f"{c}:{model.W[c] @ means[c] / np.linalg.norm(model.W[c]
 
 
     
-![png](01_what_do_weights_represent_11_1.png)
+![png](01_what_do_weights_represent_12_1.png)
     
 
 
@@ -340,7 +474,7 @@ print("(reloaded straight from checkpoints/lab01/step_*.npz — the snapshots ar
 
 
     
-![png](01_what_do_weights_represent_13_1.png)
+![png](01_what_do_weights_represent_14_1.png)
     
 
 
@@ -375,7 +509,7 @@ save_fig(fig, FIGS / "mistakes.png"); plt.show()
 
 
     
-![png](01_what_do_weights_represent_15_1.png)
+![png](01_what_do_weights_represent_16_1.png)
     
 
 
@@ -387,7 +521,7 @@ save_fig(fig, FIGS / "mistakes.png"); plt.show()
 
 
     
-![png](01_what_do_weights_represent_15_4.png)
+![png](01_what_do_weights_represent_16_4.png)
     
 
 
@@ -429,7 +563,7 @@ for i in (clean_idx, fail_idx):
 
 
     
-![png](01_what_do_weights_represent_17_1.png)
+![png](01_what_do_weights_represent_18_1.png)
     
 
 
@@ -441,7 +575,7 @@ for i in (clean_idx, fail_idx):
 
 
     
-![png](01_what_do_weights_represent_17_4.png)
+![png](01_what_do_weights_represent_18_4.png)
     
 
 
