@@ -132,7 +132,7 @@ print("train counts per class:", dict(enumerate(np.bincount(y_train))))
 >     - Total: 10 × 785 = 7,850 weights + 10 biases = 7,860 numbers, matching the notebook.
 
 
-<img src="../../../assets/images/handwritten_digits_single_layer_neural_network.png" width="600">
+<img src="handwritten_digits_single_layer_neural_network.png" width="600">
 
 >  **Why it still works:** 
 > MNIST digits really are mostly separable as pixel clouds. A linear model on raw pixels gets ~92.6%, which is respectable but it's the ceiling — the ~7% it can't get are stroke-connectivity cases (5 vs 3, 7 vs 9) that need features, not pixels.

@@ -21,6 +21,7 @@ What it does:
 import argparse
 import datetime
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -106,6 +107,28 @@ def main():
     # (they point into the bundle dir), which Hugo then serves verbatim as
     # /Users/... . Strip the bundle prefix so links are bundle-relative.
     md_text = md_text.replace(f"{bundle_dir}/", "")
+
+    # Jupyter HTML image tags can point to files relative to the notebook
+    # (for example, ../../../assets/images/diagram.png). Those paths are not
+    # valid relative to the generated page bundle, so copy local image assets
+    # into the bundle and make the references bundle-relative.
+    image_src_pattern = re.compile(r'(<img\b[^>]*?\bsrc=["\'])([^"\']+)(["\'])', re.IGNORECASE)
+
+    def bundle_local_image(match):
+        src = match.group(2)
+        if "://" in src or src.startswith(("/", "#", "data:")):
+            return match.group(0)
+
+        source_image = (args.notebook.parent / src).resolve()
+        if not source_image.is_file():
+            return match.group(0)
+
+        target_image = bundle_dir / source_image.name
+        if source_image != target_image.resolve():
+            shutil.copy2(source_image, target_image)
+        return f"{match.group(1)}{source_image.name}{match.group(3)}"
+
+    md_text = image_src_pattern.sub(bundle_local_image, md_text)
 
     # nbconvert markdown links to images like: ![png](my-lab_4_1.png)
     # Those paths are now relative to the markdown file, so they stay valid
