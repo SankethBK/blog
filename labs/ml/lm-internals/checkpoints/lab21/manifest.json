@@ -1,0 +1,86 @@
+[
+  {
+    "name": "sgns_main",
+    "step": null,
+    "time": "2026-10-27 22:42:24",
+    "metrics": {
+      "dim": 16,
+      "pearson_vs_pmi": 0.952
+    },
+    "arrays": {
+      "E": [
+        85,
+        16
+      ],
+      "U": [
+        85,
+        16
+      ],
+      "vocab": [
+        85
+      ],
+      "PMI": [
+        85,
+        85
+      ],
+      "C": [
+        85,
+        85
+      ]
+    }
+  },
+  {
+    "name": "dim_sweep",
+    "step": null,
+    "time": "2026-10-27 22:42:29",
+    "metrics": {
+      "2": {
+        "analogy_exact": 0.06,
+        "gender_acc": 0.12,
+        "pearson": 0.618
+      },
+      "4": {
+        "analogy_exact": 0.0,
+        "gender_acc": 0.12,
+        "pearson": 0.775
+      },
+      "8": {
+        "analogy_exact": 0.12,
+        "gender_acc": 0.56,
+        "pearson": 0.911
+      },
+      "16": {
+        "analogy_exact": 0.12,
+        "gender_acc": 1.0,
+        "pearson": 0.94
+      },
+      "32": {
+        "analogy_exact": 0.12,
+        "gender_acc": 1.0,
+        "pearson": 0.948
+      },
+      "64": {
+        "analogy_exact": 0.12,
+        "gender_acc": 1.0,
+        "pearson": 0.956
+      }
+    },
+    "arrays": {}
+  },
+  {
+    "name": "bias_mirror",
+    "step": null,
+    "time": "2026-10-27 22:42:32",
+    "metrics": {},
+    "arrays": {
+      "E_A": [
+        85,
+        16
+      ],
+      "E_B": [
+        85,
+        16
+      ]
+    }
+  }
+]
