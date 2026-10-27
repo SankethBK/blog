@@ -2011,4 +2011,14 @@ This walkthrough documents my first attempt at such a challenge, focusing on &lt
 &lt;li&gt;Buses&lt;/li&gt;
 &lt;/ol&gt;
 &lt;h3 id="1-arithmetic-logic-unit-alu"&gt;1. Arithmetic Logic Unit (ALU)&lt;/h3&gt;
-&lt;p&gt;ALU is an electronic circuit made of NAND gates responsible for performing arithmetic and logical operations on integer binary numbers. It takes two operands as inputs and an opcode to indicate the type of operation to be performed. Operations supported by ALU are Add, Subtract, Negation, Two&amp;rsquo;s complement, AND, OR, XOR, bit shift, etc.&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;ALU is an electronic circuit made of NAND gates responsible for performing arithmetic and logical operations on integer binary numbers. It takes two operands as inputs and an opcode to indicate the type of operation to be performed. Operations supported by ALU are Add, Subtract, Negation, Two&amp;rsquo;s complement, AND, OR, XOR, bit shift, etc.&lt;/p&gt;</description></item><item><title/><link>https://sankethbk.github.io/blog/posts/twitter_articles/linux/agents/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/twitter_articles/linux/agents/</guid><description>&lt;h1 id="linux-kernel-lab-access-notes"&gt;Linux Kernel Lab Access Notes&lt;/h1&gt;
+&lt;p&gt;These notes record how to reach the Linux kernel lab used for the articles in this directory.&lt;/p&gt;
+&lt;h2 id="ssh-to-the-ubuntu-host"&gt;SSH to the Ubuntu host&lt;/h2&gt;
+&lt;p&gt;From a machine on the same network, connect to the Ubuntu 20.04 host:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-sh" data-lang="sh"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;ssh sanketh@192.168.1.14
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Use the configured SSH authentication. Do not store credentials in this file.&lt;/p&gt;
+&lt;h2 id="qemu-lab"&gt;QEMU lab&lt;/h2&gt;
+&lt;p&gt;The lab is launched on the Ubuntu host from the home directory:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-sh" data-lang="sh"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;cd /home/sanketh
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;./kernel-lab/boot-bildroot.sh
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The running QEMU command uses &lt;code&gt;-s&lt;/code&gt;, which opens its GDB stub on TCP port &lt;code&gt;1234&lt;/code&gt;. Its serial console is exposed at &lt;code&gt;localhost:4321&lt;/code&gt; on the Ubuntu host:&lt;/p&gt;</description></item></channel></rss>
