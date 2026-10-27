@@ -1,13 +1,13 @@
 ---
-title:  "Lab 2: Teach It 1s and 2s First, Then Introduce 3 — Watching Weights Reorganize"
+title:  "Lab 1.2: Teach It 1s and 2s First, Then Introduce 3 — Watching Weights Reorganize"
 date:   2026-10-19T00:00:00+05:30
 categories: ["ml"]
 tags: ["ml","lab","mnist","continual-learning","catastrophic-forgetting","interpretability"]
 ---
 
-# Lab 2: Teach It 1s and 2s First, Then Introduce 3 — Watching Weights Reorganize
+# Lab 1.2: Teach It 1s and 2s First, Then Introduce 3 — Watching Weights Reorganize
 
-**MNIST internals series.** In [Lab 1](/posts/ml/labs/2026-10-19-lab-1-mnist-from-pixels-to-neural-network/) we established what a weight row *is*: a learned photograph of a class, contrast-carved against its rivals, painted by the update rule $W_c \leftarrow W_c - \eta\,\tfrac1N\sum (\hat p_c - y_c)\,x^\top$.
+**MNIST internals series.** In [Lab 1.1](/posts/ml/labs/2026-10-19-lab-1-mnist-from-pixels-to-neural-network/) we established what a weight row *is*: a learned photograph of a class, contrast-carved against its rivals, painted by the update rule $W_c \leftarrow W_c - \eta\,\tfrac1N\sum (\hat p_c - y_c)\,x^\top$.
 
 Now the experiment that motivated the series: **start the model in an impoverished world — only 1s and 2s exist — then let it discover 3.** This is *continual learning* in miniature, and it lets us watch, directly and quantitatively:
 
@@ -15,11 +15,11 @@ Now the experiment that motivated the series: **start the model in an impoverish
 2. **Phase 2** — how the old rows are re-carved when a new class arrives (the "1s/2s accuracy barely moves, but the weights definitely do" effect),
 3. **Phase 3** — catastrophic forgetting: teach it *only* 3s afterwards and watch knowledge of 1 and 2 get actively repurposed, not merely fade; then the one-line fix (rehearsal).
 
-Everything is the Lab 1 machinery: one softmax layer, plain SGD, float64 NumPy, checkpoints at every phase boundary.
+Everything is the Lab 1.1 machinery: one softmax layer, plain SGD, float64 NumPy, checkpoints at every phase boundary.
 
 ## 0. Setup
 
-Same model as Lab 1, verbatim — the only laboratory instrument here is the dataset's class composition. First, slice the data down to a two-class universe: all 1s and 2s, relabeled to output indices 0 and 1.
+Same model as Lab 1.1, verbatim — the only laboratory instrument here is the dataset's class composition. First, slice the data down to a two-class universe: all 1s and 2s, relabeled to output indices 0 and 1.
 
 ```python
 from pathlib import Path
@@ -38,7 +38,7 @@ x_train, y_train, x_test, y_test = load_mnist("data")
 CKPT = Path("checkpoints/lab02"); FIGS = Path("figures/lab02"); FIGS.mkdir(parents=True, exist_ok=True)
 
 class SoftmaxReg:
-    """z = x @ W.T + b ; p = softmax(z) ; cross-entropy loss ; plain SGD. (Verbatim from Lab 1.)"""
+    """z = x @ W.T + b ; p = softmax(z) ; cross-entropy loss ; plain SGD. (Verbatim from Lab 1.1.)"""
     def __init__(self, n_in, n_classes, rng, scale=0.01):
         self.W = rng.normal(0, scale, size=(n_classes, n_in))
         self.b = np.zeros(n_classes)
@@ -168,7 +168,7 @@ save_fig(fig, FIGS / "threes_in_a_two_class_world.png"); plt.show()
 
 Now add a third output row (random init ~ N(0, 0.01)) and keep training on all of {1, 2, 3} — **old rows are NOT frozen**, they keep moving. What should we expect?
 
-The 2 and the 3 share real estate: both draw a right-side vertical-ish stroke and middle curves. Before 3 arrived, row "2"'s blueprint covered a lot of "3-ish" pixels positively. Once 3s are in the training data, every 3 that scores high on row "2" paints $-\hat p_2\,x$ there (the gradient rule from Lab 1). Watch the per-class accuracies, then look at the before/after templates and the change map $\Delta W$.
+The 2 and the 3 share real estate: both draw a right-side vertical-ish stroke and middle curves. Before 3 arrived, row "2"'s blueprint covered a lot of "3-ish" pixels positively. Once 3s are in the training data, every 3 that scores high on row "2" paints $-\hat p_2\,x$ there (the gradient rule from Lab 1.1). Watch the per-class accuracies, then look at the before/after templates and the change map $\Delta W$.
 
 ```python
 CLASSES_123 = [1, 2, 3]
@@ -425,7 +425,7 @@ That is what forgetting *is* here — not erasure, but out-bidding: the veteran 
 - Kirkpatrick et al., [*Overcoming catastrophic forgetting in neural networks* (EWC)](https://www.pnas.org/doi/10.1073/pnas.1611835114), PNAS 2017 — DeepMind's weight-importance regularizer.
 - On why fine-tuned LLMs forget pretraining skills unless old data is mixed in: same math, larger canvas — the $\hat p - y$ update doesn't know or care which task an example came from.
 
-**Next lab:** add a hidden layer. Rows of $W^{(1)}$ stop being digit photographs and become *features* — edgelets and stroke fragments that no longer correspond to classes — and we will need a new instrument (activation maximization) to see them. That is where the Distill literature begins.
+**Next (Lab 1.3):** add a hidden layer. Rows of $W^{(1)}$ stop being digit photographs and become *features* — edgelets and stroke fragments that no longer correspond to classes — and we will need a new instrument (activation maximization) to see them. That is where the Distill literature begins.
 
 ---
 

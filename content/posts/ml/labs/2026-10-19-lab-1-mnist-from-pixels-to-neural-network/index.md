@@ -1,11 +1,11 @@
 ---
-title:  "Lab 1: MNIST From Pixels to a Neural Network — What Do the Weights Actually Represent?"
+title:  "Lab 1.1: MNIST From Pixels to a Neural Network — What Do the Weights Actually Represent?"
 date:   2026-10-19T00:00:00+05:30
 categories: ["ml"]
 tags: ["ml","lab","mnist","interpretability","neural-networks","weights","softmax","numpy"]
 ---
 
-# Lab 1: What Do the Weights of a Neural Network Actually Represent?
+# Lab 1.1: What Do the Weights of a Neural Network Actually Represent?
 
 **MNIST internals series** — the practical companion to the [ML notes](/posts/ml/) (softmax & cross-entropy, backprop, training a 2-layer network). This time we stop deriving and start *looking*.
 
@@ -141,7 +141,7 @@ print("train counts per class:", dict(enumerate(np.bincount(y_train))))
 
 > So: is it built this way to visualize? *Mostly yes, deliberately*. The design principle is "strip away everything that hides the arithmetic." Keeping the input as the feature space is the one trick that makes weights renderable as images.
 
-> But it's also the natural first model to try — the pedagogical and the honest choice coincide here. Lab 3 is where you pay for the hidden layers and lose the pictures.
+> But it's also the natural first model to try — the pedagogical and the honest choice coincide here. Lab 1.3 is where you pay for the hidden layers and lose the pictures.
 
 **Gradient** (derived in the [softmax note](/posts/ml/2026-09-14-3-softmax-and-multiclass-cross-entropy)) — the single most important equation in this lab:
 
@@ -483,7 +483,7 @@ print("(reloaded straight from checkpoints/lab01/step_*.npz — the snapshots ar
 
 ## 5. Where it fails — and why it fails *there*
 
-~92–93% on test is the ceiling for a linear model on raw pixels, and the confusion matrix shows the failures are not random. The top confusions are pairs that genuinely overlap as pixel clouds — measured top offenders: 5→3 (44), 2→8 (38), 4→9 (36), 9→4 (35), 5→8 (34). All of these are *stroke-movement* differences, not pixel differences: The template model has no mechanism to fix these: "does the loop close?" or "is there a junction?" are *features*, not pixels, and a linear layer cannot form them. That missing machinery is exactly Lab 3.
+~92–93% on test is the ceiling for a linear model on raw pixels, and the confusion matrix shows the failures are not random. The top confusions are pairs that genuinely overlap as pixel clouds — measured top offenders: 5→3 (44), 2→8 (38), 4→9 (36), 9→4 (35), 5→8 (34). All of these are *stroke-movement* differences, not pixel differences: The template model has no mechanism to fix these: "does the loop close?" or "is there a junction?" are *features*, not pixels, and a linear layer cannot form them. That missing machinery is exactly Lab 1.3.
 
 ```python
 pred = model.predict(x_test)
@@ -590,7 +590,7 @@ For this model, the answer fits in one sentence:
 
 Every piece of that sentence is visible above: the templates (§4), the painting rule from the gradient ($\S$2), the deepening suppression halos (§4 evolution), the confusions between cloud-overlapping digits (§5), the per-pixel votes (§6).
 
-**Where this stops working.** The "weights are pictures" trick works because the input *is* the feature space — a linear model has nowhere to hide anything. Give the network one hidden layer and rows of the first matrix stop being class photographs and become **parts**: edge detectors, stroke pieces, loop-closers. From then on you cannot read a row directly; you have to ask "what input maximally excites this neuron?" — that is activation maximization, and it is the beginning of the entire interpretability literature. That is where Lab 3 picks up.
+**Where this stops working.** The "weights are pictures" trick works because the input *is* the feature space — a linear model has nowhere to hide anything. Give the network one hidden layer and rows of the first matrix stop being class photographs and become **parts**: edge detectors, stroke pieces, loop-closers. From then on you cannot read a row directly; you have to ask "what input maximally excites this neuron?" — that is activation maximization, and it is the beginning of the entire interpretability literature. That is where Lab 1.3 picks up.
 
 **Worth your time (curated):**
 
@@ -600,7 +600,7 @@ Every piece of that sentence is visible above: the templates (§4), the painting
 - Anthropic, [*Toy Models of Superposition*](https://transformer-circuits.pub/2022/toy_model/index.html) — why features get packed into networks in entangled form (the real reason LLMs are black boxes).
 - LeCun et al., [*Gradient-Based Learning Applied to Document Recognition*](http://yann.lecun.com/exdb/publis/pdf/lecun-98.pdf) (1998) — MNIST's home paper; §II still reads like modern engineering notes.
 
-**Next:** Lab 2 runs the experiment this lab made you think of from §4 — *teach it only 1s and 2s first, then introduce 3, and watch the rows move.* (Spoiler: two-class weights turn out to be near-perfect mirror images of each other, and adding a class re-carves the old ones.)
+**Next:** Lab 1.2 runs the experiment this lab made you think of from §4 — *teach it only 1s and 2s first, then introduce 3, and watch the rows move.* (Spoiler: two-class weights turn out to be near-perfect mirror images of each other, and adding a class re-carves the old ones.)
 
 ---
 

@@ -11,9 +11,10 @@ No frameworks: pure NumPy, float64, gradients checked numerically. Runs on anyth
 
 | # | Notebook | Question it answers | Post |
 |---|----------|---------------------|------|
-| 1 | `01_what_do_weights_represent.ipynb` | What *is* a weight row? (Spoiler: a matched-filter photograph of its class, contrast-carved against rivals.) Watch the 10 rows develop from noise during training; decompose a prediction into per-pixel votes. | [lab-01](/posts/ml/labs/2026-10-19-lab-1-mnist-from-pixels-to-neural-network/) |
-| 2 | `02_teach_1_2_then_3.ipynb` | Teach it only 1s and 2s, then introduce 3. Mirror-image two-class weights (cos = −0.98), new-class re-carving (Δ‖W‖/‖W‖ = 0.65–0.78 at fixed accuracy), catastrophic forgetting disassembled (the virgin class wins because it *never learned to say no*), and the rehearsal fix. | [lab-02](/posts/ml/labs/2026-10-19-lab-2-continual-learning-1-2-then-3/) |
-| 3 | *(planned)* | Add a hidden layer: weights stop being photographs and become features. First-layer edgelets, weight-vs-activation visualization, activation maximization — the gateway to Distill's *Feature Visualization*. | — |
+| 1.1 | `01_what_do_weights_represent.ipynb` | What *is* a weight row? (Spoiler: a matched-filter photograph of its class, contrast-carved against rivals.) Watch the 10 rows develop from noise during training; decompose a prediction into per-pixel votes. | [lab-1.1](/posts/ml/labs/2026-10-19-lab-1-mnist-from-pixels-to-neural-network/) |
+| 1.2 | `02_teach_1_2_then_3.ipynb` | Teach it only 1s and 2s, then introduce 3. Mirror-image two-class weights (cos = −0.98), new-class re-carving (Δ‖W‖/‖W‖ = 0.65–0.78 at fixed accuracy), catastrophic forgetting disassembled (the virgin class wins because it *never learned to say no*), and the rehearsal fix. | [lab-1.2](/posts/ml/labs/2026-10-19-lab-2-continual-learning-1-2-then-3/) |
+| 1.3 | `03_one_hidden_layer_features.ipynb` | Add one hidden layer and weights stop being photographs. W₁ as class-agnostic stroke fragments (spatially coherent, not sparse — permutation-tested), W₂ as unreadable routing, dataset top-responders, activation maximization built from scratch (and proven redundant on layer 1), regularized class dreams, causal lesion studies (41 shared units; kill them → selective collapses), error analysis 791 → 277. | [lab-1.3](/posts/ml/labs/2026-10-27-lab-3-from-templates-to-features/) |
+| 1.4 | *(planned)* | Same model in PyTorch on the M3's GPU (MPS), then a CNN — weight sharing finally delivers the textbook translation-invariant edge filters; probing the hidden representation space (t-SNE, linear probes). | — |
 
 ## Layout
 
