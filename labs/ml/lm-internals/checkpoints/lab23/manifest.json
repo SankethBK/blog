@@ -1,0 +1,48 @@
+[
+  {
+    "name": "grid_stage1",
+    "step": null,
+    "time": "2026-10-28 01:15:14",
+    "metrics": {
+      "RNN H=32_G10": 1.0,
+      "LSTM H=32_G10": 1.0,
+      "RNN H=32_G30": 1.0,
+      "LSTM H=32_G30": 1.0,
+      "RNN H=32_G60": 1.0,
+      "LSTM H=32_G60": 0.086,
+      "RNN H=32_G150": 0.152,
+      "LSTM H=32 (naive)_G150": 0.152,
+      "RNN H=64 (param control)_G150": 0.238
+    },
+    "arrays": {}
+  },
+  {
+    "name": "grid_full",
+    "step": null,
+    "time": "2026-10-28 01:18:35",
+    "metrics": {
+      "RNN H=32_G10": 1.0,
+      "LSTM H=32_G10": 1.0,
+      "RNN H=32_G30": 1.0,
+      "LSTM H=32_G30": 1.0,
+      "RNN H=32_G60": 1.0,
+      "LSTM H=32_G60": 0.086,
+      "RNN H=32_G150": 0.152,
+      "LSTM H=32 (naive)_G150": 0.152,
+      "RNN H=64 (param control)_G150": 0.238,
+      "LSTM bf=+1 (control @clean budget)_G150": 0.152,
+      "LSTM bf=+3_G150": 0.328,
+      "LSTM bf=+5_G150": 1.0,
+      "RNN H=32 (kept for \u00a74-\u00a75)_G60": 1.0
+    },
+    "arrays": {
+      "hero_Wf": [
+        32,
+        40
+      ],
+      "hero_bf": [
+        32
+      ]
+    }
+  }
+]
