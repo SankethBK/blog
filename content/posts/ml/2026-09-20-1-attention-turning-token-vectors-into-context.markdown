@@ -393,6 +393,8 @@ flowchart TB
 >
 > Once we added that delta to original contextless embedding, what results is hopefully the more refined contextually rich meaning.
 >
+> > One caveat here is: we saw that the output dimentions are $(n, d_v)$, so in order to consider this as $\Delta{\vec{E}}$, $d_v$ should be equal to $d$, which is usually the case.
+>
 > We do the same for all embeddings
 >
 > ![all embeddings transformation](/images/all-embeddings-attention.png)
