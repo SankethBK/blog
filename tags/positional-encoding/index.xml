@@ -1,3 +1,45 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Positional-Encoding on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/positional-encoding/</link><description>Recent content in Positional-Encoding on Sanketh's Blog</description><generator>Hugo -- 0.169.0</generator><language>en-us</language><lastBuildDate>Sun, 20 Sep 2026 00:00:00 +0530</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/positional-encoding/index.xml" rel="self" type="application/rss+xml"/><item><title>The Transformer Block: Multi-Head Attention, Residuals, Norms, and Position</title><link>https://sankethbk.github.io/blog/posts/ml/2026-09-20-2-the-transformer-block/</link><pubDate>Sun, 20 Sep 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/2026-09-20-2-the-transformer-block/</guid><description>&lt;h1 id="the-transformer-block-multi-head-attention-residuals-norms-and-position"&gt;The Transformer Block: Multi-Head Attention, Residuals, Norms, and Position&lt;/h1&gt;
 &lt;p&gt;The &lt;a href="https://sankethbk.github.io/blog/posts/ml/2026-09-20-1-attention-turning-token-vectors-into-context"&gt;attention note&lt;/a&gt; derived the single mechanism — softmax over query-key scores, times values — and ended with its two obvious weaknesses: one head can track only &lt;em&gt;one&lt;/em&gt; relevance pattern at a time, and the whole operation is blind to token order.&lt;/p&gt;
-&lt;p&gt;This note turns attention into the actual Transformer block. The block is attention plus four supporting acts — multi-head projection, a residual connection, layer normalization, and a small feedforward network — and then positional encoding bolted onto the input. None of them are exotic. Each one exists to patch a specific failure of the bare mechanism, and by the end you should be able to name the patch for each failure.&lt;/p&gt;</description></item></channel></rss>
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Attention is blind to token order&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;This was highlighted in previous note here&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;4. Sets, not sequences.&lt;/strong&gt; Nothing in the formula knows which token came first. Permute the input rows of
+$X$
+and the outputs permute identically — attention is &lt;em&gt;permutation equivariant&lt;/em&gt;: it treats the sequence as a bag of tokens with affinities. That&amp;rsquo;s great for set-like inputs and a true bug for language, whose meaning is bound up in order (&amp;ldquo;dog bites man&amp;rdquo; ≠ &amp;ldquo;man bites dog&amp;rdquo;). Fixing that is positional encoding, coming in the next note.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;One attention head can learn only relevance pattern at a time&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;This idea was only mentioned at the end of the previous note. It was never justified or derived.&lt;/p&gt;
+&lt;p&gt;So let&amp;rsquo;s try to make sense of it.&lt;/p&gt;
+&lt;p&gt;Short answer: The answer lies in what happens when we compute
+$QK^\top$
+. From 3b1b&amp;rsquo;s video &lt;strong&gt;if this token is useful to another token, what information should it send?&lt;/strong&gt; If we think about it, a token can be useful to the next token in multiple different ways—for a given token A, its predecessor token B might be more useful when considering grammatical context, and token C might be more useful when considering semantic context. We are forcing one attention head to somehow capture all those relationships and turn them into one set of weights (
+$W_Q$
+,
+$W_K$
+, and
+$W_V$
+). Even if it somehow ends up capturing these different spatial relationships, at best they fight with each other and average them out.&lt;/p&gt;
+&lt;p&gt;(Technically,
+$W_V$
+(the Value weights) doesn&amp;rsquo;t decide who to look at; it only decides what information to extract once the connection is made. The &amp;ldquo;fighting and averaging out&amp;rdquo; happens specifically inside
+$W_Q$
+and
+$W_K$
+, which calculate the attention map.)&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Long answer:&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;One attention head can only learn one relevance pattern at a time because the query-key interaction is governed by a single pair of linear projection matrices (
+$W_Q$
+and
+$W_K$
+).&lt;/p&gt;
+&lt;p&gt;When we compute
+$QK^\top$
+, we perform a single matrix multiplication that collapses the high-dimensional token representations into one scalar affinity score for every pair of tokens. Mathematically and conceptually, here is why this limits a single head to one &amp;ldquo;type&amp;rdquo; of similarity:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The Rank and Geometry of the Attention Matrix&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;The similarity matrix before softmax is computed as:&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/blockquote&gt;</description></item></channel></rss>
