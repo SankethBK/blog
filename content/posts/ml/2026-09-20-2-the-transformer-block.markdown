@@ -518,6 +518,33 @@ with widths $d \to 4d \to d$ (512 → 2048 → 512). Two things worth noticing i
 
 Position-independent: every token goes through the *same* $W_1, W_2$; FFN applies at each position separately. Attention is the only place where tokens talk.
 
+![FFN flow through a Transformer block](/blog/images/FFN-flow.png)
+
+> ### 1. The Core Intuition: "Attention is talking, FFN is thinking/processing"
+>
+> Up until now, the Attention layer acted like a communication network. It allowed the token "Bank" to look at surrounding words (like "river" or "money") to figure out its context.
+> 
+> But Attention only routes information. It doesn’t actually do heavy processing or fact-retrieval. Once the token "Bank" has sucked in context from its neighbors, it passes into the FFN.
+> 
+> The FFN is **completely isolated**. The token "Bank" goes into its own private room (the FFN) to process what it just learned. It doesn’t look at any other words. **Attention is how tokens interact; FFN is where tokens think individually**.
+>
+> ### 2. Why the Bottleneck? (d → 4d → d)
+>
+> - **The Expansion (W₁)**: Think of the 512-dimensional vector as a compressed ZIP file. The first layer (W₁) unzips it into a massive 2048-dimensional space. Why? To create room for patterns to be recognized. In this massive space, specific neurons look for highly specific concepts (e.g., "Is this word acting as a financial bank?" or "Is this text about legal documents?").
+> - **The Nonlinearity (σ)**: This is the GELU/ReLU. It acts like a switch. If a concept is found, the switch flips "ON". If not, it stays "OFF". This is the non-linear memory lookup.
+> - **The Compression (W₂)**: Once the concepts are found and processed, the second layer (W₂) compresses the results back down into the clean 512-dimensional format so it can be dumped back into the main river stream.
+>
+> ### 3. The "Key-Value Memory" Story (Mechanistic Interpretability)
+>
+> Your draft mentions that the FFN acts like a "soft key-value memory." This is the coolest way to view it:
+> - The Key (W₁): The first matrix acts like a database query. It asks the incoming vector: "Do you match any of my criteria?" (e.g., "Are you a token talking about programming?").
+> - The Value (W₂): If the vector matches a key, the nonlinearity fires, and the second matrix (W₂) writes a new fact into the vector. For example, if the key detects "Java (the language)", the value matrix will add information like "object-oriented, code, software" into the token's vector representation.
+>
+> The above analogy might sound too strong - but its actually backed by research which we will go over some other day. 
+>
+> An important thing to note is FFN only takes one input token at a time. We can stack the inputs for parallelizing them like in traditional NN, but all of them have their own paths. 
+>
+> This also means the residual for each input token is only that input token, not the whole sentence like in multi-attention. This is clearly visible in above diagram.
 ---
 
 ## 5. Positional encoding: giving a set back its order
@@ -540,6 +567,89 @@ $$
 Sinusoids with geometrically increasing wavelengths. The one-paragraph why: think of an odometer / binary counter — each "digit" ticks at a different rate. High-frequency coordinates (small $i$) change fast (distinguish nearby positions); low-frequency ones change slowly (encode rough location). Combination ≈ a unique fingerprint of "position". Beyond fingerprints, the frequencies are chosen so "shift by $k$" is a *linear map* of the encoding — attention can learn relative offsets from queries and keys that read the fingerprints.
 
 Modern variants you'll meet (one-line each): learned absolute position embeddings (train a position embedding matrix like a second embedding table); RoPE (rotate query/key vectors by a position-dependent angle — relative offsets emerge geometrically; common in current LLMs); ALiBi (just subtract a distance penalty from scores). All are answers to "attention doesn't know order; inject order."
+
+> ### Why not just use one hot encoding for positions? 
+> 
+> Attention is fundamentally permutation equivariant: if you scramble the order of the input rows, every attention score, weight, and output row scrambles identically. Meaning has no visibility into temporal order. A Transformer with text embeddings alone provably cannot distinguish "dog bites man" from "man bites dog", because the two sequences look identical under a bag-of-words dot product.
+> 
+> To fix this, we create a positional coordinate vector for every index and add it directly to the token's embedding at the input:
+> $$\widetilde{x}_i = x_i + p_i$$
+>
+> Why One-Hot Vectors Fail
+>
+>A natural instinct is to use discrete one-hot vectors for position (e.g., [1, 0, 0, ...] for position 0). This creates two catastrophic flaws:
+>
+> 1. **No Concept of Distance:** The dot product between any two distinct one-hot position vectors is always exactly 0. To the network, position 1 is just as distant from position 2 as it is from position 200. It destroys the organic rule that nearby words possess tighter structural relationships.
+> 2. **Hard Sequence Limits:** If you allocate a 1000-dimensional one-hot block for position, the model completely breaks the moment it encounters a sentence with 1001 tokens.
+>
+> ### Building the Mental Model for the Formula
+>
+> Before we see the actual formula, let's think how ti should be: Let's call each embedding's position as pos and each dimension within a=it as i. In fact imagine it as matrix where embeddings are stacked column-wise. Now pos acts as column number and i acts as row number. 
+>
+> Let's consider the function as PE(pos, i) -> a scalar number. 
+> 1. The formula should give a unique scalar column of position encodings for each embedding, duplicates are possible for given PE(pos, i)
+> 2. The positional encoding vector should convey the distance between the embeddings. i.e., embedding at position 0 should have more distance to embedding at position 200 than embedding at position 1. 
+>
+> Now let's see the formula first and address each questions one at a time
+>
+$$
+\operatorname{PE}(\text{pos}, 2i) = \sin\!\left(\frac{\text{pos}}{10000^{2i / d}}\right), \qquad
+\operatorname{PE}(\text{pos}, 2i+1) = \cos\!\left(\frac{\text{pos}}{10000^{2i / d}}\right)
+$$
+>
+> 1. First of all, what is this? 
+> What we are doing is encoding pos and i into sin and cos functions. We know the output of functions ranges from -1 to +1, so the position encoding vector at the end will consist of values in same range. We are using sin for even i's (dimensions - row of matrix we described above) and cos for odd i's.
+>
+> 2. Why such a wierd formula? 
+> The first reasoning is we have to make sure each positions encoding is unique. The formula is designed in such a way for lower i's the sina dn cos fluctuate highest, and for higher values the values fluctuate barely - because dividign by such a high number like 10,000 barely moves the raidans. 
+>
+> ![PE formula visualization](/blog/images/Position-encoding-formula.png)
+>
+> We can already see why it wil be unique. 
+>
+> Why alternate between sin and cos? 
+> This one has the deepest answer and in fact the main reason for choosing this encoding format. (Spoiler alert: its related to how it should convey distance). 
+>
+> Question 1: Why use Sine and Cosine alternatively? (The Rotation Identity)
+
+> To understand why we need both, we have to look at the dot product used in the attention mechanism. Attention matches tokens using:
+
+$$
+\operatorname{Query} \cdot \operatorname{Key}
+$$
+
+> If we only used sine or only cosine, the dot product between two positional vectors would mix absolute positions together. The model would not easily infer the distance between them.
+>
+> Because the coordinates are paired as $[\sin(\theta), \cos(\theta)]$, something useful happens. Consider a query at position $t$ and a key at position $t+k$, separated by distance $k$.
+>
+> For a single frequency $i$, the positional vectors have dot product:
+
+$$
+\operatorname{Vector}_t \cdot \operatorname{Vector}_{t+k}
+= \sin(t)\sin(t+k) + \cos(t)\cos(t+k)
+$$
+
+> The relevant trigonometric identity is:
+
+$$
+\cos(A)\cos(B) + \sin(A)\sin(B) = \cos(B-A)
+$$
+
+> Applying it gives:
+
+$$
+\sin(t)\sin(t+k) + \cos(t)\cos(t+k)
+= \cos((t+k)-t)
+= \cos(k)
+$$
+
+> **The Mind-Blowing Realization**
+>
+> The absolute positions $t$ and $t+k$ disappear from the result. The dot product depends only on the relative distance $k$.
+>
+> By interleaving sine and cosine, positional shifts become geometric rotations. Moving $k$ steps forward in a sentence is mathematically equivalent to rotating the positional vector by $k$. Because the dot product preserves rotational relationships, attention can infer that one token is a certain distance from another regardless of whether they occur at the beginning, middle, or end of the sentence.
+
+
 
 ---
 
