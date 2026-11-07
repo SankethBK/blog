@@ -363,7 +363,7 @@ Imagine one ribbon of token vectors taking two routes at once: attention sends i
 
 > ### The idea of Normalization in Neural Networks
 >
-> Normalization is the process of scaling input features or intermediate layer activations to a common, balanced range (such as $[0, 1]$ or a zero mean and unit variance). [1, 2, 3] 
+> Normalization is the process of scaling input features or intermediate layer activations to a common, balanced range (such as $[0, 1]$ or a zero mean and unit variance).
 > 
 > We need normalization in neural networks for several key reasons:
 > 
