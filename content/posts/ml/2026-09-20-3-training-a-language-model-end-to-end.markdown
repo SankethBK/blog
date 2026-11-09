@@ -32,6 +32,8 @@ At every position, the model predicts **the next token**. That's the whole objec
 
 **Step 3: stack $N$ transformer blocks.** Shape stays $(5, d)$ the whole way through — the blocks' property is exactly "same shape out as in". Say $d = 512$, $N = 12$; interior shapes are all $(5, 512)$. Every position's representation now encodes everything causally visible to it.
 
+> $N = 12$ indicates number of transformer blocks stacked. 
+
 **Step 4: language-model head.** Apply one final matrix $W_{\text{out}} \in \mathbb{R}^{d \times V}$ to each position's final vector:
 
 $$
@@ -39,6 +41,93 @@ $$
 $$
 
 Row $i$ is a 50,000-way score vector for "what token comes after position $i$". For row 1 (position of `the`), the model is effectively answering "what follows 'the'?"
+
+> We know that output of transformer block is of same dimension as input, i.e., $(5, 512)$. Now we need to convert this into next word prediction machine. So we add a final component called LM head. 
+> What LM head does is: it takes the output of last transformer block of dimension $(n, d)$, multiplies it with a matrix $W_O$ of dimension $(d, V)$ (where V = number of words in our vocabulary = 50,000 in our case). The resulting matrix is of dimension $(n ,V)$, what is it supposed to represent? (Stay tuned)
+>
+> Notice what happens when we multiply:
+
+$\underbrace{(5 \times 512)}_{H^{(12)}} \times \underbrace{(512 \times 50{,}000)}_{W_{\text{out}}} = \underbrace{(5 \times 50{,}000)}_{\text{Logits}}$
+
+> The middle dimensions (512) match, so the multiplication is valid. The output is a matrix with five rows and 50,000 columns. Each row contains scores for every possible next token.
+>
+> But what's going on? we earlier said we will use only use the last token for predicting the next token? Here we clearly used all tokens, also how to interpret the output matrix? its dimensions are $(5, 50,000)$. 
+>
+> Let's untangle this by looking at what happens for an inidividual token when we do the multiplication: 
+>
+> Suppose the final representation of cat is:
+
+$$
+h_{\text{cat}} \in \mathbb{R}^{512}
+$$
+
+> The output matrix has 50,000 columns:
+
+$$
+W_{\text{out}} =
+\begin{bmatrix}
+| & | & | & & | \\
+w_1 & w_2 & w_3 & \cdots & w_{50000} \\
+| & | & | & & |
+\end{bmatrix}
+$$
+
+> Each column corresponds to one vocabulary token.
+
+> The model calculates a dot product between the representation and every column:
+
+$$
+\begin{aligned}
+z_1 &= h_{\text{cat}} \cdot w_1 \\
+z_2 &= h_{\text{cat}} \cdot w_2 \\
+z_3 &= h_{\text{cat}} \cdot w_3 \\
+&\vdots \\
+z_{50000} &= h_{\text{cat}} \cdot w_{50000}
+\end{aligned}
+$$
+
+> Now we have 50,000 scores. These are called logits. Softmax converts them into probabilities, and the model can predict which token should come next.
+>
+> Now extend the same understanding to what happened when we passed the sentence with five words:
+>
+> Each token predicted its next token! 
+>
+> We previously learnt that most efficient way to train is to make LLM predict every next token of sentence. The way i thought they did that was by passing them as multiple inputs 
+> [ the
+>   the, cat
+>   the, cat, sat, ...]
+>
+> But if we observe closely, we don't have to do that. 
+>
+> After passing through the Transformer, we have five contextual representations:
+> 
+$$
+H^{(12)} =
+\begin{bmatrix}
+h_0 \\
+h_1 \\
+h_2 \\
+h_3 \\
+h_4
+\end{bmatrix}
+$$
+
+> Each row represents one position.
+
+> Because of causal attention:
+>
+> - $h_0$ has information from `<BOS>`.
+> - $h_1$ has information from `<BOS> the`.
+> - $h_2$ has information from `<BOS> the cat`.
+> - $h_3$ has information from `<BOS> the cat sat`.
+> - $h_4$ has information from the entire sentence.
+>
+> By design of casual masking: a token draws context from its predecessor tokens in multi-attention block. So we can use them to simultaneously predict the next token. Because even though they were part of same input, they have no idea about future tokens. 
+>
+> So:
+>
+> - Training: Use every position to calculate a prediction and loss.
+> - Inference: Use the last position’s prediction to generate the next token.
 
 **Step 5: next-token cross-entropy at every position.** Row $i$'s softmax is compared against the one-hot target for token $i+1$:
 
@@ -97,6 +186,17 @@ Before using it, appreciate *why* this combination historically displaced everyt
 
 **3. Gradient paths are short.** Look at where loss at position 0 flows: the LM head, the stack, the residual highway all the way down, embeddings. Residuals keep slope-1 highways and attention keeps every pair of positions one hop apart. A signal from predicting position 0's target reaches token 0's embedding in O(N) hops — *independent of sequence length*. Compare RNNs, whose gradient for the last token must pass through every intermediate cell — path length grows with the sequence — and the vanishing gradient story returns from the activation note with enormous force. This architectural feature is not cosmetic; it *is* the reason deeper, wider models learned long-range dependencies at all.
 
+
+> We already know why residuals work: they create a short-circuit through the computational graph, and the chain rule reflects that directly. If the gradients from later layers are too weak, the residual path still lets information flow back to earlier blocks and even to the input embeddings.
+>
+> Because of the residual form $h_{\ell+1} = h_\ell + F_\ell(h_\ell)$:
+> - The gradient splits: part flows through the complex machinery of the attention block $F_\ell$.
+> - The shortcut path activates: the other part travels directly along the identity path $+h_\ell$, cleanly, unmultiplied by weights, and untouched by activation functions.
+>
+> Even if the attention blocks $F_\ell$ are poorly initialized and their gradients vanish to zero, the error signal $\frac{\partial \mathcal{L}}{\partial h_\ell}$ can still flow back to earlier layers almost unchanged.
+
+> ![Transformer blocks and residuals](/blog/images/transfomer-blocksand-residuals.png)
+
 **4. The objective is minimal and universal.** "Next token" forces the model to capture grammar (predicting "sat" after "cat" agent-verb agreement), facts ("the capital of France is ___"), style, coherence. Everything else — fine-tuning, instruction-tuning, RLHF — is downstream of or built on top of this loss.
 
 ---
@@ -108,6 +208,35 @@ One detail worth knowing by name: the LM head matrix $W_{\text{out}}$ is convent
 1. **Same space argument**: the input embedding $E[i, :]$ lives in exactly the space the final representation $h$ lives in; reading the logit for token $i$ as $h \cdot E[i, :]$ is "how aligned is the model's prediction vector with token $i$'s vector?" — a natural measurement.
 2. **Fewer parameters and better generalization**: a $V \times d$ matrix is often the single largest parameter block in the model (50,000 × 512 ≈ 26M for GPT-2 scale). Sharing it between input and output keeps it smaller *and* gives that matrix twice the gradient signal per step.
 
+> The big reveal here is that $W_{\text{out}}$ is literally $E^{T}$. They are not just two matrices that happen to match in size; they point to the exact same memory address in hardware. If a model updates a weight in $E$, that exact same change instantly exists in $W_{\text{out}}$ because they are the same parameters.
+>
+> **1. Does this means no longer static in word2vec?**
+>
+> We learnt previously that the embeddings are not a thing which we can simply download and start using. Unlike in word2vec it served this exact purpose, train once, feeze and re-use them as we want. But now we see that the embeddings is deeply tied to internal working of LLM, its not portable at all.
+>
+> During training, each input sentence updates the embeddings, but during inference it remains static. 
+>
+> **2. Won't it backprop-update twice?**
+>
+> Yes, but it doesn't cause a conflict—the gradients simply add together.
+> When the computational graph is unrolled during backpropagation, the shared matrix appears in two completely different places: at the very end of the graph ($W_{\text{out}}$) and at the very beginning of the graph ($E$).
+> 
+> The calculus of shared weights is a solved problem in backpropagation. According to the chain rule, when a parameter is used multiple times in a network, you calculate the gradient at each location independently, and then sum them together to make a single update.
+> $$\nabla_{W_{\text{shared}}}\mathcal{L} = \nabla_{W_{\text{out}}}\mathcal{L} + \nabla_E\mathcal{L}$$
+>
+> So the model doesn't get confused or update "twice" sequentially. It takes the error signal from its output predictions, adds it to the error signal from its input representation, and applies that unified adjustment to the matrix all at once.
+>
+> 
+> **3. Serving two purposes: Won't this cause an issue?**
+> 
+> You have a very sharp intuition here. While it saves massive amounts of memory, forcing a single matrix to play two completely different roles does introduce a fascinating architectural tension.
+> 
+> | Role | Operational Goal | Geometrical Behavior |
+> |---|---|---|
+> | Input Embedding ($E$) | Needs to be highly receptive. It maps incoming tokens into a well-distributed space so the attention blocks can easily separate and manipulate them. | Broad & Distributed Space |
+> | Output Head ($W_{\text{out}}$) | Needs to be highly decisive. It computes a dot product to see how well the final hidden state aligns with a specific token. | Aligned & Target-Driven Space |
+>
+> Recent machine learning research has shown that output-layer gradients heavily dominate input gradients early in training (roughly a 70/30 split). This means the shared matrix naturally warps itself to be slightly better at predicting tokens than representing them.
 ---
 
 ## 4. Generation: there is no teacher now
