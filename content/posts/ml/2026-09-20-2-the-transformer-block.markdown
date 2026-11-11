@@ -167,7 +167,7 @@ $$
 $$
 C W_O = O_1 W_O^{(1)} + O_2 W_O^{(2)} + \cdots + O_8 W_O^{(8)}
 $$
-> That's exactly "tell the NN to find the optimal combination" — but note it's linear combination with learned matrices, not just learned scalars. And it's unavoidable for a second reason: we took $d_v = d_model$ as convinience in all our examples, but if they're different $W_O$ is what brings it back to $d_model$
+> That's exactly "tell the NN to find the optimal combination" — but note it's linear combination with learned matrices, not just learned scalars. And it's unavoidable for a second reason: we took $d_v = d_{model}$ as convinience in all our examples, but if they're different $W_O$ is what brings it back to $d_{model}$
 
 ![Combining multi-attention outputs](/blog/images/combining_multi-attention_outputs.png)
 
