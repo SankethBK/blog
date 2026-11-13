@@ -89,6 +89,29 @@ Therefore, recomputing old positions does not merely give approximately the same
 
 That creates an opportunity: run the old work once, save the parts future tokens will need, and never do it again.
 
+> **Difference during trainign and inference**
+>
+> We saw during inteference, the model has to parse the whole sentence everytime just to predict the next token, this seems correct but let's understand why. We also learnt only last token is used to predict the next token which seems to contradict this, but it doesn't. If we think about it, last transformer block's output for last token in the sentence is so enriched that it contains context for entire sentence. But the reason it got so enriched is because we had to run the whole sentence for it to see all it's previous tokens. 
+>
+> Now we can naturally observe that whenever we add one extra token to the sentence, attention pattern matrix will get one extra row and column there won't be any change in existing matrix because previous tokens never see this token because of casual masking. This means just compute $Q$, $K$ and $V$ for the new token, dot the new $Q$ and $K$ with previous token's $Q$ and $K$ and multiply with newly added column with V after softmax and division by root of $d_k$. 
+>
+> **But what happens when multi-attention merges?**
+>  
+> We still need to prove that the $\Delta E$ added by MHA block is same as before it just gets an additional column for the newly added token, otherwise if there are changes to previous token's $\Delta E$, then it means the input received by next transformer block is no longer the same, so their older $K$, $Q$ and $V$ no longer remain same. We already know this is true intuitively because of casual masking but let's try to see it from mathematical formulas as well. 
+>
+> At the end of MHA, each attention head has computed a $A_{i}V$ matrix called $O_{i}$ of dimension $(n, d_v)$, here n will increase by 1, so each matrix will have another row. Each $O_{i}$ will be stacked columnwise and multiplied by another matrix $W_{O}$ of dimension $(d_v, d_{model})$ (remember we highlighted the purpose of this matrix to bring back the vector to original embedding dimension $d_{model}$ so that it can be treated as $\Delta E$). The resulting matrix therefore has dimensions of $(n, d_{model})$. Now we have to prove this matrix ony got an additonal row, previous rows remained unchanged. If we think about it, its obvious because each $O_i$ got an additional row, an addition of a row in first matrix only influences that row's result because the result for last row last row multiplied by each columns, nothing else changes. Therefore, its safe to assume next layer's get same $\Delta E$ for previous tokens.
+>
+> we already know FFN layer doesn't mix tokens at all, so nothing to be bothered here. 
+>
+> **Is KV cache helpful during training as well?**
+>
+> There are two ways of looking at it, and both ways give clear answer i.e., no. 
+>
+> 1. We already saw how during traning a sentence is parsed only once and every token predicts its next token and backpropagation updates all weights - everything completes in single pass so what do we even cache them for? 
+> 2. Let's assume for a moment we do multiple passes during training (like we thought before "the" in first pass -> backprop, "the cat" in second pass -> backprop). Here backprop will end up updating embeddings as well, which means all the values cached are immediately invalidated. 
+>
+> We don't know which one is followed in practice - its mostly 1, but conclusion is same on both anyways. 
+
 ---
 
 ## 3. Which values does a future token actually need?
@@ -131,6 +154,23 @@ V = [v₁, ..., vₜ₋₁]                append kₜ to K
 
 No old query matrix is stored. No old attention-weight matrix is stored either: attention weights depend on the current query, so the new token needs a fresh row of weights.
 
+> Although we previously thought whole $O_i$ can be ached as it only gets an additonal row, this argument is totally correct - but we missed something bigger. What we do is we only calculate the $QK^{T}$ for this new token i.e., 
+>
+> $
+    S' =
+    \begin{bmatrix}
+    q_4k_1^T & q_4k_2^T & q_4k_3^T & q_4k_4^T
+    \end{bmatrix}
+    $
+> But notice something: the new row requires $q_4$ and all previous keys. It does not require previous queries.
+>
+> Next for the attention we will just do 
+> 
+> $
+o_4 = a_{41}v_1+a_{42}v_2+a_{43}v_3+a_{44}v_4
+ $
+> And same goes for $O_iW_O$, we don't multiply these 2 large matrices again, we only multiply the new row and column which will in the end give us $\Delta E$ for last token. This completes the loop.
+
 ### A tiny numerical view
 
 Suppose one attention head already has two cached tokens, with:
@@ -160,6 +200,8 @@ $$
 $$
 
 We did not compute queries for tokens 1 and 2. We did not recompute their keys or values. We only reused them while processing token 3.
+
+> One observation here is increasing the number of multi-head attention blocks directly penalizes on cache size, as each block has to store n keys and values. 
 
 ---
 
@@ -312,6 +354,10 @@ So the central trade-off is:
 
 At small scale it is an obvious optimization. At serving scale, managing this memory becomes one of the main engineering problems.
 
+> One observation here is we don't necessarily process just one sentence at a time during inference, because i assume batchign has benefits because of GPU and i assume that's actually how we can serve multiple requests at scale from LLM.
+>
+> And if think about it, this is the main thing that can decide how long can a LLM hold context - until the KV cache fills, of course this doesn't mean KV cache is bad, it saved us from huge burden of recomputation but each generated token gonna add its own key and value to the cache.
+
 ---
 
 ## 8. Why the number of KV heads matters
@@ -345,6 +391,17 @@ This is an architectural choice made when designing and training the model, not 
 
 **Breadcrumbs:** MQA and GQA are worth exploring next if the memory formula made sense. They connect model architecture directly to inference cost.
 
+> GQA means we still have multiple attention heads, but they share $W_K$ and $W_V$ - group of attention heads will share the same $W_K$ and W_V$ if all of them share it, then its MQA. 
+>
+> But why would we want to share it, the whole point of having multiple attention heads is so that they could identify and learn their own patterns right? 
+> This is actually the real tradeoff we make during GQA and MQA. But there is a sensible way of looking at it
+>
+> We previously saw that queries are like questions a token asks its previous tokens, keys advetise what this token might eb relevant for and values are the actual representation of what token is offering. 
+>
+> So if we think about it, a token might ask different questions in different contexts (queries), but what a token advertises and its actual representation may not be really that different in different contexts. 
+>
+> This is just an analogical way of looking at it. But its a real tradeoff at the end, upsides are larger context windows and downsides can be managed NN learns these weights by itself. 
+
 ---
 
 ## 9. What the cache does not change
@@ -363,6 +420,8 @@ Greedy selection, sampling, temperature, top-k, and top-p all operate on the log
 
 During teacher-forced training, the whole target sequence is already known, so all positions can be processed in parallel once. Generation has to revisit the model because each next input token was not known until the previous step produced it. The cache is a response to that serial inference loop.
 
+> This answers the earlier open question we had during training.
+
 ### It is exact reuse, not an approximation
 
 Ignoring ordinary floating-point and kernel differences, cached and uncached causal decoding compute the same mathematical function. If a cached implementation substantially changes outputs, suspect incorrect positions, masking, cache indexing, or accidental reuse across sequences — not an unavoidable property of KV caching.
@@ -370,6 +429,10 @@ Ignoring ordinary floating-point and kernel differences, cached and uncached cau
 ### Position still matters
 
 With RoPE or another positional mechanism, the new key and query must be computed using the correct absolute or relative position before being used or stored. Reusing a token's K/V does not mean forgetting where that token occurred. Each request also needs its own cache; sharing one conversation's cache with another would leak both context and computation.
+
+> RoPE stands for Rotary Positional Embedding. It’s a way of injecting positional information into a Transformer by rotating the Query and Key vectors according to their token positions.. Sinusoidal encoding adds position information to token representations. RoPE rotates queries and keys according to position, making attention scores depend on relative positions. 
+>
+> This is something to learn some other day.
 
 ---
 
@@ -385,6 +448,22 @@ Once the basic cache is clear, several production ideas become easier to place:
 
 None of these is required to understand the core cache. They are trails to follow after the basic prefill/decode loop feels boring.
 
+> **PagedAttention**
+>
+> PagedAttention is a memory-management technique for the KV cache, inspired by virtual memory paging in operating systems.
+>
+> Instead of allocating one large, contiguous memory region for each sequence, it divides the KV cache into fixed-size blocks (pages) that can be stored anywhere in GPU memory. A block table maps the logical token sequence to its physical memory blocks.
+>
+> As a sequence grows, new blocks are allocated only when needed. This avoids reserving excessive memory, reduces fragmentation, and allows efficient memory sharing between requests with common prompt prefixes.
+>
+> PagedAttention does not change the attention calculation or the model’s output. It changes how the KV cache is organized and accessed.
+>
+> Key distinction:
+>
+> - KV Cache avoids recomputing previous tokens’ keys and values.
+> - PagedAttention manages how those cached keys and values are allocated and stored in GPU memory.
+>
+> PagedAttention, Multi-head latent attention and SPeculative Decoding sound interesting its something to revisit another day.
 ---
 
 ## 11. Summary
