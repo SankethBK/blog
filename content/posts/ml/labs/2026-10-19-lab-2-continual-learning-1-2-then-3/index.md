@@ -106,6 +106,8 @@ SGD, converging near the minimum-norm solution, goes exactly there. Let's measur
 >
 > But it need not be the case that both neurons are right or wrong at the same time always, that's why the weights are almost mirror images not exact. 
 
+**Correction to my reasoning:** I was wrong that the rows might not get opposite updates because they are not always both right or wrong. For each example, $p_1+p_2=1$ and $y_1+y_2=1$, so $(p_1-y_1)x=-(p_2-y_2)x$. The two rows therefore receive exactly opposite gradients on every update. The weight rows themselves are not necessarily exact negatives, because their initial random values remain in $W_1+W_2$. That is why the leftover in the sum image is initialization noise, not shared ink. With biases initialized to zero, their sum stays zero.
+
 ```python
 wA, wB = model.W    # row A = template of digit 1, row B = template of digit 2
 print(f"cosine(row_1, row_2)              = {cos(wA, wB):+.4f}")
@@ -133,7 +135,7 @@ fig.tight_layout(); save_fig(fig, FIGS / "phase1_mirror.png"); plt.show()
     
 
 
-The residual mass in "sum of the two rows" is the shared structure all digits have (the central ink channel) — useless for telling them apart, so it goes un-learned. **Weights record contrast, not appearance.**
+The residual in the "sum of the two rows" is the small random initialization left over: because the two class rows receive exactly opposite updates, their sum stays at its initial value. It is not a learned shared-ink pattern. **The difference between the rows records contrast, not appearance.**
 
 > It means when we add 2 weights we can see most of them cancel out, but not perfectly. This aligns with the reasoning that they are not perfect mirror images. 
 
@@ -430,7 +432,7 @@ That is what forgetting *is* here — not erasure, but out-bidding: the veteran 
 > Summarizes itself neatly, no further explnation needed. Some notes on rehearsal: first of all it means that we introduce a small number of 1's and 2's into a batch of 3's (the model already knows how to predict 1 and 2 very well). The split is 75% of 3's and 25% of 1/2's.  
 >
 > Why Exactly does this helps?
-> Because if we think about it, the batch still has dominant number of 3's and we learnt that the $(\partial L/\partial W\)$ is the average of individual loss across all inputs in that batch. So a small number of 1 and 2's will still get dominated by 3 because average leans towards it right? That's not true, because if output is predicted correctly for a given row, then it contributes no loss towards total loss. Which means the model still has incentive to predict those small 1 and 2's correctly. In short: its not really about number of 1's and 2's competing againist number of 3's, but number of wrong entries for 1 and 2, competing and wrong entries for 3's.
+> Because if we think about it, the batch still has dominant number of 3's and we learnt that the $\frac{\partial L}{\partial W}$ is the average of individual loss across all inputs in that batch. So a small number of 1 and 2's will still get dominated by 3 because average leans towards it right? That's not true, because if output is predicted correctly for a given row, then it contributes no loss towards total loss. Which means the model still has incentive to predict those small 1 and 2's correctly. In short: its not really about number of 1's and 2's competing againist number of 3's, but number of wrong entries for 1 and 2, competing and wrong entries for 3's.
 >
 > Another angle to this is: when we trained with batches of all 3, the neuron for 3 became overly aggressive because it has no one to fight with, it has no red ink, it only has to learn what a 3 looks like, it doesn't has to learn what a 3 doesn't looks like. 
 > So what happened was this overly aggressive neuron aggressively identified even 1 and 2's as 3's while the correct neuron's still maintained their original patterns, their red ink will will cause them to give a logit lesser than the third neuron's logitm they're no match againist a neuron with no red ink.
