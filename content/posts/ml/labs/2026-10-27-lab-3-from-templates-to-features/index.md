@@ -49,11 +49,19 @@ print("python:", sys.version.split()[0], "| numpy:", np.__version__, "| data:", 
 **Forward:**
 $$z_1 = xW_1^\top + b_1 \qquad a_1 = \max(z_1, 0) \qquad z_2 = a_1W_2^\top + b_2 \qquad \hat p = \mathrm{softmax}(z_2)$$
 
+The loss $\mathcal{L}$ is a single number measuring how wrong the predictions are. For one image, cross-entropy is $\ell_i = -\sum_c y_{i,c}\log(\hat p_{i,c})$; since $y_i$ is one-hot, this is just minus the log-probability assigned to the correct class. For a batch of $N$ images, we average those losses:
+
+$$\mathcal{L} = \frac{1}{N}\sum_{i=1}^{N}\ell_i = -\frac{1}{N}\sum_{i=1}^{N}\sum_{c=1}^{C} y_{i,c}\log(\hat p_{i,c})$$
+
 **Backward** (chain rule, exactly the dense-network derivation from the [backprop notes](/posts/ml/2026-09-12-3-backpropagation-in-a-fully-connected-network) — written out because every claim in this lab depends on it):
 
 $$\delta_2 = \tfrac1N (\hat p - y) \qquad \frac{\partial \mathcal{L}}{\partial W_2} = \delta_2^\top a_1 \qquad \delta_1 = (\delta_2 W_2) \odot \mathbb{1}[z_1 > 0] \qquad \frac{\partial \mathcal{L}}{\partial W_1} = \delta_1^\top x$$
 
-The piece that is new relative to Lab 1.1 is $\delta_1$: the information flowing into a first-layer weight is gated by the ReLU mask $\mathbb{1}[z_1>0]$ **and** routed through $W_2$. A first-layer row no longer learns "what class $c$ looks like" — it learns *"something the assembler layer finds useful to talk about."* Remember that sentence when we look at the pictures.
+To read the hidden-layer error $\delta_1$, follow two steps: $\delta_2 W_2$ passes the output error signal backward through $W_2$, estimating how much each hidden unit contributed. Then $\mathbb{1}[z_1>0]$ gates that signal: it is 1 for a hidden unit whose ReLU was active and 0 for one whose output was shut off. The symbol $\odot$ means multiply corresponding entries element by element. So inactive units get no error signal for this step.
+
+This is the piece that is new relative to Lab 1.1: information flowing into a first-layer weight is routed through $W_2$ and gated by the ReLU mask. A first-layer row no longer learns "what class $c$ looks like" — it learns *"something the assembler layer finds useful to talk about."* Remember that sentence when we look at the pictures.
+
+> No need to make sense of backprop formulas all over again, just need to remember gradients flow backwards - if prediction is right then nothing flows back, if neuron is not activated, then also nothing flows back.
 
 ```python
 class MLP:
@@ -277,6 +285,28 @@ Not noise, and not digits: **localized fragments**. Short strokes, edgelets at s
 
 But "localized" deserves a baseline, not a vibe — so measure it two honest ways. **Fewness?** Participation ratio $(\sum w_i^2)^2 / \sum w_i^4$ (the effective number of pixels a row touches). **Geometry?** Correlation between neighbor pixels, versus the same numbers with their pixels shuffled (the permutation baseline that destroys geometry while preserving everything else). And a standard internals headcount: dead ReLU units that never fire.
 
+> > A Gabor filter is a small pattern detector, often used to describe a slanted edge or stripe. “Slick Gabor filters” here means neat, reusable edge detectors. This model is fully connected, so each hidden unit has a separate weight for every pixel position. It might learn to respond to a stroke in the upper-left area, for example. If the same stroke shifts to the right, the unit may respond differently. The model doesn’t automatically reuse the same detector at the new position.
+>
+> A convolutional layer does reuse one detector across many positions. That’s called weight sharing, and it helps the model recognize a feature even when it shifts around in the image. So the sentence is saying: these pictures are position-specific patterns the model learned, not clean edge filters that work everywhere.
+
+> **Making sense of the participation ratio**
+>
+> This formula estimates the **effective number of pixels (or dimensions) that meaningfully contribute**, based on their relative contributions $q_i$. Here $q_i=w_i^2$, so contributions are non-negative. It measures concentration: are contributions spread across many pixels, or dominated by a few?
+>
+> $$N_{\text{eff}} = \frac{(\sum_i q_i)^2}{\sum_i q_i^2}$$
+>
+> **Case 1: All contributions are equal.** If $q=[1,1,1,1]$, then $N_{\text{eff}}=\frac{(1+1+1+1)^2}{1^2+1^2+1^2+1^2}=\frac{16}{4}=4$. All four contribute equally, so the effective number is 4.
+>
+> **Case 2: One component dominates.** If $q=[10,0,0,0]$, then $N_{\text{eff}}=\frac{10^2}{10^2}=1$. Although there are four components, effectively only one contributes.
+>
+> **Case 3: Contributions are uneven.** If $q=[8,1,1,0]$, then $N_{\text{eff}}=\frac{10^2}{64+1+1}=\frac{100}{66}\approx1.52$. Three components are nonzero, but the first dominates, so the effective number is only about 1.52.
+>
+> The numerator squares the total contribution, while the denominator squares each contribution individually. When contributions are evenly spread, the result is larger; when a few dominate, their squares grow disproportionately and pull the result down. The formula assumes non-negative contributions, which is why it uses squared weights $q_i=w_i^2$.
+
+> **Making sense of the geometry check:** Each hidden unit has a 28×28 map of pixel weights. The notebook measures correlation between neighboring weights, then randomly shuffles the same weights and measures again. Shuffling preserves the values but scrambles their locations. Higher neighbor correlation before shuffling suggests the learned weights have spatial organization; it is a simple check, not a complete measure of geometry.
+>
+> I didn't spend much time on code below, but the results indicate the weights are not sparse, they are evenly contributing and they do have a sense of spatial understanding (the correlation experiment is something i didn't understand fully) and there are no dead neurons. 
+
 ```python
 W1 = model.W1
 pr = (W1 ** 2).sum(axis=1) ** 2 / (W1 ** 4).sum(axis=1)      # effective footprint in pixels
@@ -336,6 +366,82 @@ If hidden units were secretly class templates in disguise, each would fire mainl
 
 Below: the 30 most-active units, rows normalized to their own max. Read any row: a typical fragment lights up for **several classes** — a bottom-left curve belongs to 3s, 5s, 8s, 9s; a top arc to 2s, 7s, 0s... This sharing is the entire trick: 10 classes, each a sparse recipe over ~128 parts, instead of 10 monolithic photographs. It is also the reason Lab 1.2's "weights = contrast" story had to be rebooted: knowledge no longer lives in any single row.
 
+> This seems to be the coolest part of whole experiemt so let's spend some time on it. 
+>
+> It's asking **"Does each hidden neuron learn to recognize one particular digit, or do neurons learn reusable visual features that multiple digits can share?".** The heatmap suggests the latter.
+>
+> Let’s unpack what you’re looking at.
+>
+> **1. What does each cell represent?**
+>
+> Your network has this architecture:
+$$
+784 \rightarrow 128 \rightarrow 10
+$$
+> - 784 input pixels.
+> - 128 hidden neurons.
+> - 10 output classes (digits 0–9).
+>
+> First, you calculate the mean activation of every hidden neuron for each digit class:
+>
+> ```py
+> mean_act = np.stack([
+>    a1[y_test == c].mean(axis=0)
+>    for c in range(10)
+> ])
+> ```
+>
+> This gives a matrix of shape (10, 128).
+>
+> For example, imagine hidden neuron 34:
+>
+> | Digit | Mean activation |
+> |---:|---:|
+> | 0 | 0.2 |
+> | 1 | 0.1 |
+> | 2 | 0.8 |
+> | 3 | 0.9 |
+> | 4 | 0.3 |
+> | 5 | 0.85 |
+> | 6 | 0.2 |
+> | 7 | 0.1 |
+> | 8 | 0.9 |
+> | 9 | 0.7 |
+>
+> This neuron activates strongly for several different digits.
+>
+> That suggests it might be responding to a visual feature shared by those digits rather than recognizing one complete digit.
+>
+> **2. Why normalize each row?**
+>
+> This is the important part:
+> ```py
+> M = M / M.max(axis=1, keepdims=True)
+> ```
+>
+> Each neuron’s activations are divided by its own maximum activation across all classes. (Remember its ReLU). This means every row now has a maximum value of 1.
+>
+> We’re asking: "Relative to this neuron’s strongest response, how strongly does it respond to each digit?" (Normalization means a evenly distributed low activations is similar to evenly distributed high activations - this is one limitation of this way).
+>
+> **3. How do we interpret the heatmap?**
+> 
+> - Rows represent hidden neurons.
+> - Columns represent digit classes.
+> - Bright cells mean relatively strong activation.
+> - Dark cells mean relatively weak activation.
+>
+> Look at the first row, u124. It is bright for digit 0, but much darker for most other digits. This neuron appears relatively selective for zeros.
+>
+> Now look at u103, which the code identifies as the most ecumenical neuron. It responds strongly (above 60% of its maximum) to digits 2 through 9. It isn’t exclusively recognizing any one digit. It might be responding to some visual structure shared across those digits. The exact feature isn’t established by this heatmap alone.
+>
+> **4. What does the code mean by ecumenical and partisan?**
+>
+> These are just playful names for two extremes.
+>
+> **1. ecumenical:** A neuron which fires for multiple classes. Eg: u103 — 2s, 3s, 4s, 5s, 6s, 7s, 8s, 9s
+> 
+> **2. partisan:** A neuron which appears to fire for very few classes. Eg: u124 — only 0s.
+
 ```python
 a1 = model.forward(x_test)[1]
 mean_act = np.stack([a1[y_test == c].mean(axis=0) for c in range(10)])          # (10, 128)
@@ -377,6 +483,26 @@ print(f"most partisan unit among the 30: u{top30[solo]} — >60% only on: "
 
 A $W_1$ row is "what the neuron multiplies", but activations are what actually pass downstream. The faithful question is: **which real images make this neuron fire hardest?** For a few hand-selected units: left panel = its weight image, right = the 8 test images that maximally activate it. If the neuron means what its weights claim, the responders should all contain that fragment in place.
 
+> There are three things worth remembering.
+>
+> **1. Weight images aren’t directly interpretable**
+>
+> A weight tells us how much an input pixel contributes to a neuron’s pre-activation. But positive and negative weights interact across all 784 pixels.
+>
+> Looking at the weight image alone doesn’t necessarily reveal what the neuron detects.
+>
+> **2. Activations reveal what the neuron responds to**
+>
+> By finding real images that produce the highest activations, we can investigate the patterns that excite a neuron.
+>
+> This is a form of feature visualization.
+>
+> **3. Neurons learn reusable features, not necessarily complete classes**
+>
+> A neuron responding to both 3s and 5s is potentially detecting a shared visual structure. Other neurons respond more selectively.
+>
+> The output layer combines these activations to distinguish between the ten digits.
+
 ```python
 z1_test = model.forward(x_test)[0]     # pre-activations, (10000, 128)
 candidates = [j for j in np.argsort(pr)[:20] if j not in dead][:4]
@@ -414,6 +540,77 @@ $$x^* = \arg\max_x \; \text{(activation of interest)}$$
 **First, a control experiment that must work.** For a first-layer unit, the pre-activation is just $w \cdot x + b$, so by Cauchy–Schwarz the maximizer over unit-norm inputs is $x^* = w / \|w\|$ — *the weight image itself, exactly*. Run gradient ascent on any unit and the recovery cosine should hit 1.0. If it does, our optimizer is trustworthy, and something important follows: for layer 1, weight plots and activation maximization *are the same instrument* — the "you can't visualize weights" caution does **not** apply here.
 
 **Then, the experiment that matters.** Maximize the *output logit* of class $c$ — gradient ascent on $x$ through both layers including the ReLU (gradient: $(W_2[c] \odot \mathbb{1}[z_1>0])\,W_1$). Now the answer is no longer any weight image. What the network "dreams of" when asked for a "3" is whatever the deepest machinery assembles. For contrast, the same question posed to Lab 1.1's linear model returns its template row verbatim (reload it from `checkpoints/lab01` to compare).
+
+> We now ask the model: imagine the activation for class $c$ is highest. What input can cause it?
+>
+> We previously saw that what model learns is areas of blue and red inks. There must be some input for which the output neuron must give the highest activtion score. 
+>
+> Suppose we want to understand what our trained network considers a good representation of digit 3.
+>
+> We want to find an input image \(x\) that maximizes the output logit for class 3.
+>
+> Our network is:
+$$
+x \rightarrow W_1 \rightarrow \operatorname{ReLU} \rightarrow W_2 \rightarrow z_2
+$$
+> The output logit for class 3 depends on the entire network:
+$$
+z_{2,3}(x) =
+\sum_j W_2[3,j]\operatorname{ReLU}(W_1[j]\cdot x+b_1[j])+b_2[3]
+$$
+> Notice that this is a function of the input pixels \(x\).
+>
+> We want:
+$$
+x^* = \arg\max_x z_{2,3}(x)
+$$
+
+> **What is gradient ascent?**
+>
+> Just like we we used gradient descent to find minima of the loss function where weights were the parameters, we use the gradient ascent (walk in the direction of slope, whereas it was walk opposite to the direction of slope in case of gradient descent). We saw how activation function depends on the input x, so we maximize the activation function by varying x (weights are constant here as we are not training).
+>
+> We keep the weights fixed and adjust the input pixels to increase a particular output logit.
+$$
+x \leftarrow x+\eta\nabla_x z_{2,3}
+$$
+> The gradient tells us how changing each input pixel affects the output logit.
+>
+> For example:
+> - Gradient for pixel 1 is positive: increasing its brightness increases the logit.
+> - Gradient for pixel 2 is negative: decreasing its brightness increases the logit.
+> - Gradient for pixel 3 is zero: changing it has no local first-order effect.
+> We repeatedly make these adjustments.
+>
+> **Now, why do we need Cauchy–Schwarz?**
+>
+> Let's take the experiment of gradient ascent we discussed earlier and simplify it. Let's consider a first layer neuron, for it its trivial to know when the activation will be highest. 
+>
+> Its pre-activation is:
+$$
+z_1 = w\cdot x+b
+$$
+> We want to find the input that maximizes this.
+>
+> Because it's just a dot product, we can solve it analytically using Cauchy–Schwarz.
+>
+> The inequality tells us:
+$$
+w\cdot x \leq \|w\|\|x\|
+$$
+> If we constrain the input to have unit magnitude:
+$$
+\|x\|=1
+$$
+> The maximum occurs when the input points in exactly the same direction as the weight vector:
+$$
+x^*=\frac{w}{\|w\|}
+$$
+> That's it! We have an exact answer without needing to run gradient ascent.
+>
+> We know 2 vectors in same direction will have highest dot product
+>
+> This is a control experiment to verify that gradient ascent actually works. Before going into second layer, we take a neuron in first layer, we try to maximize its activation with both gradient ascent and Cauchy–Schwarz and we compare their cosine similarity (will be highest when 2 vectors point in same direction).
+
 
 ```python
 # --- control: gradient ascent on a first-layer unit should recover w / ||w|| exactly ---
@@ -491,6 +688,99 @@ They are *not* clean digits — they are the network's honest answer to "maximiz
 
 One more way to see the same fact — **collapse the net as if it were linear.** $T_c = \sum_j W_2[c, j]\, W_1[j]$ is "the template class $c$ would have, if the ReLU gates didn't exist". It looks vaguely digit-like because $W_2$ rows are largest on that class's parts — but it is a fiction: on real inputs the gates route different units per image — which is exactly why this net beats the linear one at all. The pictures:
 
+> 1. First row — linear model: These are the class templates. They’re naturally smooth-ish because each class is represented by one learned weight vector, which captures broad pixel patterns.
+> 
+> 2. Second row — MLP, raw dreams: These are the roughest. The optimizer is free to exploit individual pixels and combinations of hidden-unit activations. It has no explicit preference for images that look like natural handwritten digits, so it can produce noisy, high-frequency patterns that still strongly activate the target class.
+>
+> 3. Third row — MLP, smoothed dreams: These are the same activation-maximization process, but with smoothing applied after every gradient-ascent step. The 3×3 averaging filter suppresses pixel-level noise, making broader structures more visible.
+>
+> Smoothening means passing a 3x3 filter and reassigning eah pixel to average of its 9 surrounding role. 
+>
+> Consequently:
+>
+> - Isolated bright/dark pixels get softened.
+> - Small variations between neighbouring pixels get reduced.
+> - Larger, continuous structures tend to survive.
+>
+> This is called low-pass filtering: it suppresses high-frequency spatial variations while retaining broader structures.
+>
+> **How does it participate in gradient ascent?**
+>
+> Look at this line:
+>
+> ```py
+> x += step_size * g / (np.linalg.norm(g) + 1e-9)
+> ```
+>
+> This is the normal gradient-ascent update. Then:
+>
+> ```py
+> if smooth:
+>    x = (1 - smooth) * x + smooth * box3(x)
+> ```
+>
+> With smooth=0.25, this becomes:
+$$
+x_{\text{new}}=0.75x+0.25\operatorname{box3}(x)
+$$
+> We’re blending:
+>
+> - 75% of the current image.
+> - 25% of its locally averaged version.
+>
+> So every iteration does two things:
+>
+> 1. Increase the target class’s logit using gradient ascent.
+> 2. Suppress some of the high-frequency noise using smoothing.
+>
+> This continues for 1,200 iterations.
+>
+> **Why do both versions still classify correctly?**
+>
+> Your results:
+>
+> ```
+> unconstrained: each class's dream is itself classified as that class for 10 of 10
+> smoothed: each class's dream is itself classified as that class for 10 of 10
+> ```
+>
+> This is interesting! It tells us that even after suppressing pixel-level noise, the resulting images still strongly activate their intended classes.
+>
+> In other words, the model doesn’t need all those tiny pixel variations to recognize its own optimized inputs.
+>
+> The broader spatial patterns are sufficient to produce the intended classifications.
+>
+> One caveat: both versions being classified correctly doesn’t mean they achieve identical logits or probabilities. It doesn't mean they got the highest activations like the raw versions were designed to be.
+
+> **Fragments plus routing, in this example:** The first layer (`W1`) has 128 hidden units that respond to pixel patterns such as edges, curves, or strokes. The second layer (`W2`) combines those activations into class scores. These units are reusable detectors, not complete digit templates. The features and weights below are illustrative, not a description of specific neurons in this model.
+>
+> Imagine `u1` detects a top curve, `u2` a vertical stroke, and `u3` a bottom curve. Suppose their weights to class 3 are +4.0, +3.0, and +3.5:
+>
+> | Hidden unit | Weight to class 3 |
+> |---|---:|
+> | `u1` | +4.0 |
+> | `u2` | +3.0 |
+> | `u3` | +3.5 |
+>
+> If $a_1,a_2,a_3$ are their activations, their weighted contributions add to the class-3 logit:
+
+$$z_{2,3}=4a_1+3a_2+3.5a_3+b_2[3]$$
+
+> Activation maximization searches for an input $x$ that maximizes this logit, not for a human-recognizable 3. It may find unnatural, speckled pixels that activate the positively weighted detectors.
+>
+> “Painted wherever the routing weights are largest” is only a shorthand: the optimizer does not paint pixels directly from `W2`. It follows the gradient through the currently active ReLU units and `W1`:
+
+$$\nabla_x z_{2,3}=(W_2[3] \odot \mathbb{1}[z_1>0])W_1$$
+
+> The result shows how the learned detectors cooperate; it need not be a coherent prototype of the digit.
+
+> I can relate this to something I learned earlier: without a nonlinear activation, stacked neural-network layers collapse into one linear transformation, so the network cannot form complex nonlinear decision boundaries. This note is not mainly about those boundaries; it is about how the weights combine across input pixels.
+>
+> The product $W_2W_1$ has shape $(10,784)$. If we treat the input $x$ as a column vector and temporarily remove ReLU, multiplying this matrix by $x$ gives one score per class: $z_2=(W_2W_1)x+(W_2b_1+b_2)$. Each row is a class-specific weight vector over the pixels. A large dot product means the input aligns with that vector, which helps explain why the collapsed rows may roughly resemble the digits.
+>
+> The real network is different because ReLU turns some hidden units off depending on the input: $z_2=W_2\operatorname{ReLU}(W_1x+b_1)+b_2$. So $W_2W_1$ is a useful linearized view, but it ignores the input-dependent gates that contribute the network's nonlinearity.
+
+
 ```python
 T = model.W2 @ model.W1                      # (10, 784): linear-collapse "templates"
 fig, axes = plt.subplots(1, 10, figsize=(19, 2.2))
@@ -560,6 +850,71 @@ model.W2 = W2_backup
     killing all 41 at once: overall 70.3% | per class: 0:89% 1:91% 2:29% 3:69% 4:72% 5:15% 6:44% 7:93% 8:98% 9:97%
 
 
+> **What are we trying to learn?** The heatmap showed that hidden units activate for several digit classes, but activation alone does not tell us whether the classifier needs a unit. A lesion study (or ablation) tests this causally: disable a unit and measure how predictions change. The idea is similar to neuroscience experiments that temporarily disable a brain region.
+>
+> **How do we disable a unit?** In this model, `W2` has shape $(10,128)$: one row per class and one column per hidden unit. A hidden unit can still activate because of its `W1` weights and bias, so setting those incoming weights to zero would not necessarily silence it. The experiment instead zeros that unit's column in `W2`, blocking its contribution to all 10 class scores; explicitly setting its activation to zero would also work.
+>
+> **Which units do we choose?** For class $c$, the output is $z_c=\sum_j W_2[c,j]a_j+b_c$, so unit $j$ contributes $W_2[c,j]a_j$. The experiment selects the five largest $|W_2[c,j]|$. Absolute value includes both strong positive connections, which raise the class score, and strong negative ones, which lower it. This is a proxy for importance: actual contribution also depends on how much the unit activates on real images.
+>
+> For example, if these were the weights to class 5:
+>
+> | Hidden unit | Weight to class 5 |
+> |---|---:|
+> | `u10` | +0.3 |
+> | `u20` | +2.5 |
+> | `u30` | −3.1 |
+> | `u40` | +0.1 |
+> | `u50` | +4.2 |
+>
+> The largest magnitudes include both `u30` and `u50`. A strongly negative connection can matter because it suppresses class 5 when that unit activates.
+>
+> **One class at a time: digit 5.** The selected units are `u109`, `u51`, `u42`, `u61`, and `u34`. The code saves `W2`, then sets `W2[:, S] = 0.0`, removing their contributions to every class while leaving the hidden units themselves intact. On digit 5, accuracy falls to 80.7%; overall accuracy moves from 97.2% to 95.5%. This is stronger evidence than the heatmap that these units matter, but it does not mean they belong only to digit 5. Removing them also affects the other classes.
+>
+> **Why doesn’t that destroy the whole network?** Other units may provide overlapping signals, so the remaining network can still recognize many examples. The result is consistent with redundancy, though this experiment does not identify exactly which alternate units take over.
+>
+> **Now lesion the top five for every class.** Ten lists would contain 50 entries if none overlapped. But some units occur in several lists: for example, `u19` appears for classes 0 and 1, `u109` for 0 and 5, and `u34` for 5 and 6. Taking the union leaves 41 distinct units. This demonstrates shared outgoing connectivity. Together with the activation heatmap and example images, it supports the interpretation that units are reused features; the connectivity alone does not prove what visual feature each unit represents.
+>
+> Disabling those 41 columns leaves 87 of the 128 hidden units connected to the outputs. Overall accuracy becomes 70.3%, but the damage varies greatly by digit:
+>
+> | Digit | Accuracy after lesion |
+> |---:|---:|
+> | 0 | 89% |
+> | 1 | 91% |
+> | 2 | 29% |
+> | 3 | 69% |
+> | 4 | 72% |
+> | 5 | 15% |
+> | 6 | 44% |
+> | 7 | 93% |
+> | 8 | 98% |
+> | 9 | 97% |
+>
+> The effect is selective: classes 2 and 5 collapse, while 8 and 9 remain accurate. High accuracy does not mean those classes were unaffected; it only means the remaining network still classifies their test examples correctly. Overall, the lesion studies show that the model combines and reuses hidden-unit responses, and that some class behavior survives the loss of units through redundancy.
+
+> **Q&A: reading the lesion results**
+>
+> **Q1. If `u42` activates strongly for both 3s and 5s, but lesioning it hurts 3s much more, what does that say about activation versus importance?**
+>
+> Your answer has the key idea: a unit's contribution depends on both its activation and its outgoing weight, $W_2[c,j]a_j$. A high weight paired with a small activation can contribute little. The other units' activations do not rise just because we lesion `u42`—we changed `W2`, not the hidden layer. But their existing contributions may already be enough for 5s, while 3s may rely more on `u42`. Accuracy also depends on the competition among all class logits. So strong activation for two classes does not mean the unit is equally important to both.
+>
+> **Q2. Why use `model.W2[:, S] = 0` instead of `model.W2[c, S] = 0`?**
+>
+> `:` selects every output row, while `S` selects a set of hidden-unit columns. The first operation zeros those units' connections to all 10 classes, disconnecting their contributions from the whole classifier. In `model.W2[c, S] = 0`, `c` selects one class row, so it zeros only those units' connections to that class; their connections to the other nine classes remain. The first tests removing units from the classifier, while the second tests removing specific connections to one class. Zeroing a hidden unit's incoming weights alone is not equivalent because its bias could still activate it; setting its activation explicitly to zero would disable it.
+>
+> **Q3. If accuracy on 8s remains 98% after disabling all 41 selected units, does that mean none of them helped recognize 8s before?**
+>
+> No. It means the remaining network still classifies most 8s correctly. The removed units may have contributed before the lesion, while the remaining margin between the 8 logit and competing logits stays large enough. For example, a logit could fall from 12 to 7 while the strongest competing logit stays at 4: the score changed, but the prediction remains correct. Removing units can also lower competing class scores. High accuracy does not prove that no contribution was lost or that an explicit backup mechanism exists.
+>
+> **Three measurements to keep distinct:**
+>
+> | Measurement | What it tells us |
+> |---|---|
+> | Activation $a_j$ | How strongly unit $j$ responds to an input |
+> | Contribution $W_2[c,j]a_j$ | How much that response adds to or subtracts from class $c$'s logit |
+> | Lesion effect | How predictions change when the unit's contribution is removed |
+>
+> The progression is **activation → contribution → causal effect**. These are related, but they are not interchangeable: a unit may contribute to a logit without changing the predicted class when removed. You have the central idea: classification depends on combinations of hidden-unit responses, not on individual units acting alone.
+
 ## 8. Did the parts fix the Lab 1.1 confusions?
 
 Lab 1.1's failure analysis blamed "stroke-movement" pairs (5→3: 44, 2→8: 38, 4→9: 36, 9→4: 35, 5→8: 34) on there being no loop/junction detectors. So the prediction to test, pair by pair: fragment-detectors should gut 5→3 and 2→8 (pure stroke placement), while **4→9 is the pair to watch** — "is the top loop closed?" is exactly the kind of global property local fragments express worst.
@@ -584,7 +939,7 @@ print("linear model (Lab 1.1) top confusions were: 5→3:44, 2→8:38, 4→9:36,
 
 
     
-![png](03_one_hidden_layer_features_23_1.png)
+![png](03_one_hidden_layer_features_24_1.png)
     
 
 
