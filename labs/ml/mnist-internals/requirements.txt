@@ -3,3 +3,5 @@ jupyterlab==4.6.4
 matplotlib==3.11.2
 nbconvert==7.17.2
 numpy==2.5.4
+scikit-learn==1.9.1
+torch==2.9.1

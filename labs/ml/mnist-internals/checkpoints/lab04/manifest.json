@@ -1,0 +1,330 @@
+[
+  {
+    "name": "mlp_lab03_imported",
+    "step": 5616,
+    "time": "2026-11-21 14:29:08",
+    "metrics": {
+      "test_loss": 0.09783,
+      "test_acc": 0.9723
+    },
+    "arrays": {
+      "fc1_weight": [
+        128,
+        784
+      ],
+      "fc1_bias": [
+        128
+      ],
+      "fc2_weight": [
+        10,
+        128
+      ],
+      "fc2_bias": [
+        10
+      ]
+    }
+  },
+  {
+    "name": "cnn_epoch_1",
+    "step": 235,
+    "time": "2026-11-21 14:29:10",
+    "metrics": {
+      "test_loss": 0.11406,
+      "test_acc": 0.964
+    },
+    "arrays": {
+      "conv1_weight": [
+        16,
+        1,
+        3,
+        3
+      ],
+      "conv1_bias": [
+        16
+      ],
+      "conv2_weight": [
+        32,
+        16,
+        3,
+        3
+      ],
+      "conv2_bias": [
+        32
+      ],
+      "fc1_weight": [
+        128,
+        1568
+      ],
+      "fc1_bias": [
+        128
+      ],
+      "fc2_weight": [
+        10,
+        128
+      ],
+      "fc2_bias": [
+        10
+      ]
+    }
+  },
+  {
+    "name": "cnn_epoch_2",
+    "step": 470,
+    "time": "2026-11-21 14:29:11",
+    "metrics": {
+      "test_loss": 0.06562,
+      "test_acc": 0.9801
+    },
+    "arrays": {
+      "conv1_weight": [
+        16,
+        1,
+        3,
+        3
+      ],
+      "conv1_bias": [
+        16
+      ],
+      "conv2_weight": [
+        32,
+        16,
+        3,
+        3
+      ],
+      "conv2_bias": [
+        32
+      ],
+      "fc1_weight": [
+        128,
+        1568
+      ],
+      "fc1_bias": [
+        128
+      ],
+      "fc2_weight": [
+        10,
+        128
+      ],
+      "fc2_bias": [
+        10
+      ]
+    }
+  },
+  {
+    "name": "cnn_epoch_3",
+    "step": 705,
+    "time": "2026-11-21 14:29:12",
+    "metrics": {
+      "test_loss": 0.05709,
+      "test_acc": 0.982
+    },
+    "arrays": {
+      "conv1_weight": [
+        16,
+        1,
+        3,
+        3
+      ],
+      "conv1_bias": [
+        16
+      ],
+      "conv2_weight": [
+        32,
+        16,
+        3,
+        3
+      ],
+      "conv2_bias": [
+        32
+      ],
+      "fc1_weight": [
+        128,
+        1568
+      ],
+      "fc1_bias": [
+        128
+      ],
+      "fc2_weight": [
+        10,
+        128
+      ],
+      "fc2_bias": [
+        10
+      ]
+    }
+  },
+  {
+    "name": "cnn_epoch_4",
+    "step": 940,
+    "time": "2026-11-21 14:29:13",
+    "metrics": {
+      "test_loss": 0.04484,
+      "test_acc": 0.9846
+    },
+    "arrays": {
+      "conv1_weight": [
+        16,
+        1,
+        3,
+        3
+      ],
+      "conv1_bias": [
+        16
+      ],
+      "conv2_weight": [
+        32,
+        16,
+        3,
+        3
+      ],
+      "conv2_bias": [
+        32
+      ],
+      "fc1_weight": [
+        128,
+        1568
+      ],
+      "fc1_bias": [
+        128
+      ],
+      "fc2_weight": [
+        10,
+        128
+      ],
+      "fc2_bias": [
+        10
+      ]
+    }
+  },
+  {
+    "name": "cnn_epoch_5",
+    "step": 1175,
+    "time": "2026-11-21 14:29:14",
+    "metrics": {
+      "test_loss": 0.04167,
+      "test_acc": 0.9857
+    },
+    "arrays": {
+      "conv1_weight": [
+        16,
+        1,
+        3,
+        3
+      ],
+      "conv1_bias": [
+        16
+      ],
+      "conv2_weight": [
+        32,
+        16,
+        3,
+        3
+      ],
+      "conv2_bias": [
+        32
+      ],
+      "fc1_weight": [
+        128,
+        1568
+      ],
+      "fc1_bias": [
+        128
+      ],
+      "fc2_weight": [
+        10,
+        128
+      ],
+      "fc2_bias": [
+        10
+      ]
+    }
+  },
+  {
+    "name": "cnn_epoch_6",
+    "step": 1410,
+    "time": "2026-11-21 14:29:15",
+    "metrics": {
+      "test_loss": 0.03868,
+      "test_acc": 0.9858
+    },
+    "arrays": {
+      "conv1_weight": [
+        16,
+        1,
+        3,
+        3
+      ],
+      "conv1_bias": [
+        16
+      ],
+      "conv2_weight": [
+        32,
+        16,
+        3,
+        3
+      ],
+      "conv2_bias": [
+        32
+      ],
+      "fc1_weight": [
+        128,
+        1568
+      ],
+      "fc1_bias": [
+        128
+      ],
+      "fc2_weight": [
+        10,
+        128
+      ],
+      "fc2_bias": [
+        10
+      ]
+    }
+  },
+  {
+    "name": "shift_experiment",
+    "step": null,
+    "time": "2026-11-21 14:29:17",
+    "metrics": {},
+    "arrays": {
+      "shifts": [
+        7
+      ],
+      "mlp_accuracy": [
+        7
+      ],
+      "cnn_accuracy": [
+        7
+      ]
+    }
+  },
+  {
+    "name": "representation_analysis",
+    "step": null,
+    "time": "2026-11-21 14:29:23",
+    "metrics": {},
+    "arrays": {
+      "test_indices": [
+        2000
+      ],
+      "labels": [
+        2000
+      ],
+      "mlp_tsne": [
+        2000,
+        2
+      ],
+      "cnn_tsne": [
+        2000,
+        2
+      ],
+      "probe_names": [
+        3
+      ],
+      "probe_accuracy": [
+        3
+      ]
+    }
+  }
+]
