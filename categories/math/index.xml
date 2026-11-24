@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Math on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/categories/math/</link><description>Recent content in Math on Sanketh's Blog</description><generator>Hugo -- 0.170.1</generator><language>en-us</language><lastBuildDate>Tue, 24 Nov 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/categories/math/index.xml" rel="self" type="application/rss+xml"/><item><title>Eigenvectors — which directions does a matrix preserve?</title><link>https://sankethbk.github.io/blog/posts/math/01-eigenvectors/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/math/01-eigenvectors/</guid><description>&lt;p&gt;Suppose a two-neuron linear layer takes an input
+$v$
+and returns
+$Av$
+. You already know how to compute the output for one input. Can you find two inputs whose behavior tells you what happens to &lt;em&gt;every&lt;/em&gt; input?&lt;/p&gt;
+&lt;h2 id="try-the-axes-then-the-diagonals"&gt;Try the axes, then the diagonals&lt;/h2&gt;
+&lt;p&gt;Take this matrix and treat inputs as column vectors.&lt;/p&gt;
+$$
+A=\begin{bmatrix}10&amp;8\\8&amp;10\end{bmatrix}.
+$$
+&lt;p&gt;An input pointing right,
+$(1,0)$
+, becomes
+$(10,8)$
+. The input axis has tilted. Try stepping along both input coordinates equally. Multiplying
+$(1,1)$
+gives
+$(18,18)$
+. Try increasing the first coordinate while decreasing the second. Multiplying
+$(1,-1)$
+gives
+$(2,-2)$
+. Each diagonal maps back onto its own line.&lt;/p&gt;</description></item><item><title>SVD — how much does a rectangular matrix stretch each direction?</title><link>https://sankethbk.github.io/blog/posts/math/02-singular-value-decomposition/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/math/02-singular-value-decomposition/</guid><description>&lt;p&gt;A neural network weight matrix can map 32 input features to 96 outputs. Asking whether its output points along its input makes little sense when the two live in different spaces. We can still ask a concrete question. Among unit-length inputs, which one produces the longest output?&lt;/p&gt;
+&lt;h2 id="trace-one-rectangular-matrix"&gt;Trace one rectangular matrix&lt;/h2&gt;
+&lt;p&gt;Use four observations with two features and temporarily think of their data matrix as a linear map from two numbers to four.&lt;/p&gt;</description></item><item><title>PCA — which line best represents a cloud of points?</title><link>https://sankethbk.github.io/blog/posts/math/03-principal-component-analysis/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/math/03-principal-component-analysis/</guid><description>&lt;p&gt;Imagine you can store only one number per observation with two features. You get to choose a common reference point and a line through it. For each observation you store its signed distance &lt;em&gt;along&lt;/em&gt; the line. Which line lets you reconstruct the original points with the least total squared error?&lt;/p&gt;
+&lt;h2 id="start-with-the-cloud-then-choose-its-origin"&gt;Start with the cloud, then choose its origin&lt;/h2&gt;
+&lt;p&gt;Take the points
+$(7,4),(6,5),(3,2),(4,1)$
+. Their mean is
+$\mu=(5,3)$
+. Subtract it from every row and you get the matrix
+$X$
+from the &lt;a href="https://sankethbk.github.io/blog/posts/math/02-singular-value-decomposition/"&gt;SVD note&lt;/a&gt;. Centering is what makes the question about variation &lt;em&gt;around the mean&lt;/em&gt;. Translate the whole cloud ten units to the right and the centered matrix stays the same. With raw coordinates the distance to the origin would also influence the chosen direction.&lt;/p&gt;</description></item></channel></rss>

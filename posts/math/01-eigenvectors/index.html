@@ -1,0 +1,166 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Eigenvectors — which directions does a matrix preserve? | Sanketh's Blog</title><meta name=keywords content="linear-algebra,eigenvectors"><meta name=description content="Suppose a two-neuron linear layer takes an input 
+$v$
+
+ and returns 
+$Av$
+
+. You already know how to compute the output for one input. Can you find two inputs whose behavior tells you what happens to every input?
+Try the axes, then the diagonals
+Take this matrix and treat inputs as column vectors.
+
+$$
+A=\begin{bmatrix}10&8\\8&10\end{bmatrix}.
+$$
+
+An input pointing right, 
+$(1,0)$
+
+, becomes 
+$(10,8)$
+
+. The input axis has tilted. Try stepping along both input coordinates equally. Multiplying 
+$(1,1)$
+
+ gives 
+$(18,18)$
+
+. Try increasing the first coordinate while decreasing the second. Multiplying 
+$(1,-1)$
+
+ gives 
+$(2,-2)$
+
+. Each diagonal maps back onto its own line."><meta name=author content><link rel=canonical href=https://sankethbk.github.io/blog/posts/math/01-eigenvectors/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.a7100ced1662b06824a54ff97bb59f1d1070a2db645a1d0a8d848e4ffd63ac7a.css integrity="sha256-pxAM7RZisGgkpU/5e7WfHRBwottkWh0KjYSOT/1jrHo=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/math/01-eigenvectors/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/math/01-eigenvectors/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="Eigenvectors — which directions does a matrix preserve?"><meta property="og:description" content="Suppose a two-neuron linear layer takes an input $v$ and returns $Av$ . You already know how to compute the output for one input. Can you find two inputs whose behavior tells you what happens to every input?
+Try the axes, then the diagonals Take this matrix and treat inputs as column vectors.
+$$ A=\begin{bmatrix}10&amp;8\\8&amp;10\end{bmatrix}. $$ An input pointing right, $(1,0)$ , becomes $(10,8)$ . The input axis has tilted. Try stepping along both input coordinates equally. Multiplying $(1,1)$ gives $(18,18)$ . Try increasing the first coordinate while decreasing the second. Multiplying $(1,-1)$ gives $(2,-2)$ . Each diagonal maps back onto its own line."><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2026-11-24T00:00:00+00:00"><meta property="article:modified_time" content="2026-11-24T00:00:00+00:00"><meta property="article:tag" content="Linear-Algebra"><meta property="article:tag" content="Eigenvectors"><meta name=twitter:card content="summary"><meta name=twitter:title content="Eigenvectors — which directions does a matrix preserve?"><meta name=twitter:description content="Suppose a two-neuron linear layer takes an input 
+$v$
+
+ and returns 
+$Av$
+
+. You already know how to compute the output for one input. Can you find two inputs whose behavior tells you what happens to every input?
+Try the axes, then the diagonals
+Take this matrix and treat inputs as column vectors.
+
+$$
+A=\begin{bmatrix}10&8\\8&10\end{bmatrix}.
+$$
+
+An input pointing right, 
+$(1,0)$
+
+, becomes 
+$(10,8)$
+
+. The input axis has tilted. Try stepping along both input coordinates equally. Multiplying 
+$(1,1)$
+
+ gives 
+$(18,18)$
+
+. Try increasing the first coordinate while decreasing the second. Multiplying 
+$(1,-1)$
+
+ gives 
+$(2,-2)$
+
+. Each diagonal maps back onto its own line."><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"Math from first principles","item":"https://sankethbk.github.io/blog/posts/math/"},{"@type":"ListItem","position":3,"name":"Eigenvectors — which directions does a matrix preserve?","item":"https://sankethbk.github.io/blog/posts/math/01-eigenvectors/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Eigenvectors — which directions does a matrix preserve?","name":"Eigenvectors — which directions does a matrix preserve?","description":"Suppose a two-neuron linear layer takes an input $v$ and returns $Av$ . You already know how to compute the output for one input. Can you find two inputs whose behavior tells you what happens to every input?\nTry the axes, then the diagonals Take this matrix and treat inputs as column vectors.\n$$ A=\\begin{bmatrix}10\u00268\\\\8\u002610\\end{bmatrix}. $$ An input pointing right, $(1,0)$ , becomes $(10,8)$ . The input axis has tilted. Try stepping along both input coordinates equally. Multiplying $(1,1)$ gives $(18,18)$ . Try increasing the first coordinate while decreasing the second. Multiplying $(1,-1)$ gives $(2,-2)$ . Each diagonal maps back onto its own line.\n","keywords":["linear-algebra","eigenvectors"],"articleBody":"Suppose a two-neuron linear layer takes an input $v$ and returns $Av$ . You already know how to compute the output for one input. Can you find two inputs whose behavior tells you what happens to every input?\nTry the axes, then the diagonals Take this matrix and treat inputs as column vectors.\n$$ A=\\begin{bmatrix}10\u00268\\\\8\u002610\\end{bmatrix}. $$ An input pointing right, $(1,0)$ , becomes $(10,8)$ . The input axis has tilted. Try stepping along both input coordinates equally. Multiplying $(1,1)$ gives $(18,18)$ . Try increasing the first coordinate while decreasing the second. Multiplying $(1,-1)$ gives $(2,-2)$ . Each diagonal maps back onto its own line.\nAn eigenvector is any nonzero vector $v$ satisfying $Av=\\lambda v$ . Its eigenvalue $\\lambda$ is the multiplier. A negative multiplier reverses the arrow. A zero multiplier sends it to the origin. Scaling the starting vector leaves its eigenvalue unchanged, which is why we can choose convenient unit-length representatives.\nFind those directions without guessing Rearrange to $(A-\\lambda I)v=0$ . An invertible matrix would force $v=0$ , so we look for values that make $A-\\lambda I$ singular. For this two-by-two matrix its determinant is\n$$ (10-\\lambda)^2-8^2=0. $$ This gives $\\lambda=18$ or $2$ . Substitute 18 into the first row of the equation and you get $-8v_1+8v_2=0$ , hence $v_1=v_2$ . Substituting 2 gives $8v_1+8v_2=0$ , hence $v_1=-v_2$ . Dividing each direction by its length gives\n$$ q_1=\\tfrac{1}{\\sqrt 2}(1,1)^\\top,\\qquad q_2=\\tfrac{1}{\\sqrt 2}(1,-1)^\\top. $$ Their dot product is zero and each has length one. Such a basis is orthonormal. For any input $x$ , the dot product $q_i^\\top x$ measures its signed coordinate along $q_i$ .\nRebuild the action on an ordinary input For $x=(2,0)^\\top$ , both coordinates in the new basis are $\\sqrt 2$ . Stretch one by 18 and the other by 2. Converting back gives $18(1,1)^\\top+2(1,-1)^\\top=(20,16)^\\top$ . Check that against direct multiplication.\nPut the unit vectors in the columns of $Q$ and the multipliers on the diagonal of $\\Lambda$ . The calculation you just did is the eigendecomposition\n$$ Ax=Q\\Lambda Q^\\top x. $$ Reading right to left, $Q^\\top$ finds coordinates, $\\Lambda$ scales them, and $Q$ rebuilds the output. Real symmetric matrices such as this one always have an orthonormal eigenbasis. A general square matrix may lack one. For example, a 90-degree rotation has no real eigenvector because it turns every nonzero arrow off its original line.\nWhy this comes up in ML Suppose $X$ holds observations in its rows. Then $A=X^\\top X$ is square and symmetric even when $X$ is rectangular. Also $v^\\top A v=\\|Xv\\|^2\\geq0$ . For a unit eigenvector this quantity is exactly its eigenvalue. This explains why the eigenvalues of this particular kind of matrix are nonnegative and why a large one identifies a direction along which $X$ has a large effect.\nTry before continuing. For input $(1,0)^\\top$ , predict which diagonal contributes more to the output. If both eigenvalues were 2, what would happen to every input direction? Continue to SVD\n","wordCount":"486","inLanguage":"en","datePublished":"2026-11-24T00:00:00Z","dateModified":"2026-11-24T00:00:00Z","mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/math/01-eigenvectors/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload='renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1}],throwOnError:!1})'></script><script type=module>
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+  document.querySelectorAll('pre > code.language-mermaid').forEach((codeEl) => {
+    const host = codeEl.closest('div.highlight') || codeEl.parentElement;
+    const pre = document.createElement('pre');
+    pre.className = 'mermaid';
+    pre.textContent = codeEl.textContent;
+    host.replaceWith(pre);
+  });
+  mermaid.run({ querySelector: '.mermaid' });
+</script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">Eigenvectors — which directions does a matrix preserve?</h1><div class=post-meta><span title='2026-11-24 00:00:00 +0000 UTC'>November 24, 2026</span>&nbsp;·&nbsp;3 min&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/math/01-eigenvectors/index.md rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#try-the-axes-then-the-diagonals aria-label="Try the axes, then the diagonals">Try the axes, then the diagonals</a></li><li><a href=#find-those-directions-without-guessing aria-label="Find those directions without guessing">Find those directions without guessing</a></li><li><a href=#rebuild-the-action-on-an-ordinary-input aria-label="Rebuild the action on an ordinary input">Rebuild the action on an ordinary input</a></li><li><a href=#why-this-comes-up-in-ml aria-label="Why this comes up in ML">Why this comes up in ML</a></li></ul></div></details></div><div class=post-content><p>Suppose a two-neuron linear layer takes an input
+$v$
+and returns
+$Av$
+. You already know how to compute the output for one input. Can you find two inputs whose behavior tells you what happens to <em>every</em> input?</p><h2 id=try-the-axes-then-the-diagonals>Try the axes, then the diagonals<a hidden class=anchor aria-hidden=true href=#try-the-axes-then-the-diagonals>#</a></h2><p>Take this matrix and treat inputs as column vectors.</p>$$
+A=\begin{bmatrix}10&8\\8&10\end{bmatrix}.
+$$<p>An input pointing right,
+$(1,0)$
+, becomes
+$(10,8)$
+. The input axis has tilted. Try stepping along both input coordinates equally. Multiplying
+$(1,1)$
+gives
+$(18,18)$
+. Try increasing the first coordinate while decreasing the second. Multiplying
+$(1,-1)$
+gives
+$(2,-2)$
+. Each diagonal maps back onto its own line.</p><p>An <strong>eigenvector</strong> is any nonzero vector
+$v$
+satisfying
+$Av=\lambda v$
+. Its <strong>eigenvalue</strong>
+$\lambda$
+is the multiplier. A negative multiplier reverses the arrow. A zero multiplier sends it to the origin. Scaling the starting vector leaves its eigenvalue unchanged, which is why we can choose convenient unit-length representatives.</p><h2 id=find-those-directions-without-guessing>Find those directions without guessing<a hidden class=anchor aria-hidden=true href=#find-those-directions-without-guessing>#</a></h2><p>Rearrange to
+$(A-\lambda I)v=0$
+. An invertible matrix would force
+$v=0$
+, so we look for values that make
+$A-\lambda I$
+singular. For this two-by-two matrix its determinant is</p>$$
+(10-\lambda)^2-8^2=0.
+$$<p>This gives
+$\lambda=18$
+or
+$2$
+. Substitute 18 into the first row of the equation and you get
+$-8v_1+8v_2=0$
+, hence
+$v_1=v_2$
+. Substituting 2 gives
+$8v_1+8v_2=0$
+, hence
+$v_1=-v_2$
+. Dividing each direction by its length gives</p>$$
+q_1=\tfrac{1}{\sqrt 2}(1,1)^\top,\qquad q_2=\tfrac{1}{\sqrt 2}(1,-1)^\top.
+$$<p>Their dot product is zero and each has length one. Such a basis is <strong>orthonormal</strong>. For any input
+$x$
+, the dot product
+$q_i^\top x$
+measures its signed coordinate along
+$q_i$
+.</p><h2 id=rebuild-the-action-on-an-ordinary-input>Rebuild the action on an ordinary input<a hidden class=anchor aria-hidden=true href=#rebuild-the-action-on-an-ordinary-input>#</a></h2><p>For
+$x=(2,0)^\top$
+, both coordinates in the new basis are
+$\sqrt 2$
+. Stretch one by 18 and the other by 2. Converting back gives
+$18(1,1)^\top+2(1,-1)^\top=(20,16)^\top$
+. Check that against direct multiplication.</p><p>Put the unit vectors in the columns of
+$Q$
+and the multipliers on the diagonal of
+$\Lambda$
+. The calculation you just did is the <strong>eigendecomposition</strong></p>$$
+Ax=Q\Lambda Q^\top x.
+$$<p>Reading right to left,
+$Q^\top$
+finds coordinates,
+$\Lambda$
+scales them, and
+$Q$
+rebuilds the output. Real <strong>symmetric</strong> matrices such as this one always have an orthonormal eigenbasis. A general square matrix may lack one. For example, a 90-degree rotation has no real eigenvector because it turns every nonzero arrow off its original line.</p><h2 id=why-this-comes-up-in-ml>Why this comes up in ML<a hidden class=anchor aria-hidden=true href=#why-this-comes-up-in-ml>#</a></h2><p>Suppose
+$X$
+holds observations in its rows. Then
+$A=X^\top X$
+is square and symmetric even when
+$X$
+is rectangular. Also
+$v^\top A v=\|Xv\|^2\geq0$
+. For a unit eigenvector this quantity is exactly its eigenvalue. This explains why the eigenvalues of this particular kind of matrix are nonnegative and why a large one identifies a direction along which
+$X$
+has a large effect.</p><p><strong>Try before continuing.</strong> For input
+$(1,0)^\top$
+, predict which diagonal contributes more to the output. If both eigenvalues were 2, what would happen to every input direction? <a href=/blog/posts/math/02-singular-value-decomposition/>Continue to SVD</a></p></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/linear-algebra/>Linear-Algebra</a></li><li><a href=https://sankethbk.github.io/blog/tags/eigenvectors/>Eigenvectors</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
