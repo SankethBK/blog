@@ -1,0 +1,276 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Lab 3.1: Can One Attention Head Learn to Look Up an Answer? | Sanketh's Blog</title><meta name=keywords content="ml,lab,attention,transformer,llm"><meta name=description content="Lab 3.1: Can One Attention Head Learn to Look Up an Answer?
+This is the first LLM internals lab. We’ll open up one operation used in decoder-only Transformers and see whether it can learn to retrieve a value from a prompt. In the Lab 2.3 on LSTMs, information had to travel through each recurrent step. Here the query can directly read from earlier positions.
+1. Calculate one attention row by hand
+For each position, the query 
+$q_i$
+
+ scores the visible keys 
+$k_j$
+
+. Softmax turns those scores into coefficients 
+$a_{ij}$
+
+, and the output is 
+$sum_j a_{ij}v_j$
+
+. The matrices that project inputs into 
+$Q$
+
+, 
+$K$
+
+ and 
+$V$
+
+ are parameters. The coefficients 
+$a_{ij}$
+
+ are recomputed for every input."><meta name=author content><link rel=canonical href=https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-1-one-head-content-lookup/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.a7100ced1662b06824a54ff97bb59f1d1070a2db645a1d0a8d848e4ffd63ac7a.css integrity="sha256-pxAM7RZisGgkpU/5e7WfHRBwottkWh0KjYSOT/1jrHo=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-1-one-head-content-lookup/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-1-one-head-content-lookup/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="Lab 3.1: Can One Attention Head Learn to Look Up an Answer?"><meta property="og:description" content="Lab 3.1: Can One Attention Head Learn to Look Up an Answer? This is the first LLM internals lab. We’ll open up one operation used in decoder-only Transformers and see whether it can learn to retrieve a value from a prompt. In the Lab 2.3 on LSTMs, information had to travel through each recurrent step. Here the query can directly read from earlier positions.
+1. Calculate one attention row by hand For each position, the query $q_i$ scores the visible keys $k_j$ . Softmax turns those scores into coefficients $a_{ij}$ , and the output is $sum_j a_{ij}v_j$ . The matrices that project inputs into $Q$ , $K$ and $V$ are parameters. The coefficients $a_{ij}$ are recomputed for every input."><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2026-11-24T00:00:00+05:30"><meta property="article:modified_time" content="2026-11-24T00:00:00+05:30"><meta property="article:tag" content="Ml"><meta property="article:tag" content="Lab"><meta property="article:tag" content="Attention"><meta property="article:tag" content="Transformer"><meta property="article:tag" content="Llm"><meta name=twitter:card content="summary"><meta name=twitter:title content="Lab 3.1: Can One Attention Head Learn to Look Up an Answer?"><meta name=twitter:description content="Lab 3.1: Can One Attention Head Learn to Look Up an Answer?
+This is the first LLM internals lab. We’ll open up one operation used in decoder-only Transformers and see whether it can learn to retrieve a value from a prompt. In the Lab 2.3 on LSTMs, information had to travel through each recurrent step. Here the query can directly read from earlier positions.
+1. Calculate one attention row by hand
+For each position, the query 
+$q_i$
+
+ scores the visible keys 
+$k_j$
+
+. Softmax turns those scores into coefficients 
+$a_{ij}$
+
+, and the output is 
+$sum_j a_{ij}v_j$
+
+. The matrices that project inputs into 
+$Q$
+
+, 
+$K$
+
+ and 
+$V$
+
+ are parameters. The coefficients 
+$a_{ij}$
+
+ are recomputed for every input."><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"Lab 3.1: Can One Attention Head Learn to Look Up an Answer?","item":"https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-1-one-head-content-lookup/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Lab 3.1: Can One Attention Head Learn to Look Up an Answer?","name":"Lab 3.1: Can One Attention Head Learn to Look Up an Answer?","description":"Lab 3.1: Can One Attention Head Learn to Look Up an Answer? This is the first LLM internals lab. We’ll open up one operation used in decoder-only Transformers and see whether it can learn to retrieve a value from a prompt. In the Lab 2.3 on LSTMs, information had to travel through each recurrent step. Here the query can directly read from earlier positions.\n1. Calculate one attention row by hand For each position, the query $q_i$ scores the visible keys $k_j$ . Softmax turns those scores into coefficients $a_{ij}$ , and the output is $sum_j a_{ij}v_j$ . The matrices that project inputs into $Q$ , $K$ and $V$ are parameters. The coefficients $a_{ij}$ are recomputed for every input.\n","keywords":["ml","lab","attention","transformer","llm"],"articleBody":"Lab 3.1: Can One Attention Head Learn to Look Up an Answer? This is the first LLM internals lab. We’ll open up one operation used in decoder-only Transformers and see whether it can learn to retrieve a value from a prompt. In the Lab 2.3 on LSTMs, information had to travel through each recurrent step. Here the query can directly read from earlier positions.\n1. Calculate one attention row by hand For each position, the query $q_i$ scores the visible keys $k_j$ . Softmax turns those scores into coefficients $a_{ij}$ , and the output is $sum_j a_{ij}v_j$ . The matrices that project inputs into $Q$ , $K$ and $V$ are parameters. The coefficients $a_{ij}$ are recomputed for every input.\nUse four tokens with two coordinates each. Let $Q=K=X$ and let $V$ double the first coordinate and quadruple the second. For the second token, $q=[0,1]$ . Its dot products with the first two keys are $0$ and $1$ . Divide by $sqrt{2}$ , mask the two future positions before softmax, and you get about $[0.330,0.670,0,0]$ . Mixing the first two value vectors gives about $[0.660,2.679]$ .\nimport math import sys from pathlib import Path import matplotlib.pyplot as plt import torch from IPython.display import Image, display from torch import nn from torch.nn import functional as F sys.path.insert(0, str(Path(\"../lm-internals\").resolve())) from lm_lab import load_ckpt, save_ckpt torch.manual_seed(31) torch.set_num_threads(1) CKPT = Path(\"checkpoints/lab31\") FIGS = Path(\"figures/lab31\") FIGS.mkdir(parents=True, exist_ok=True) def causal_attention(q, k, v): length = q.size(-2) future = torch.ones(length, length, dtype=torch.bool, device=q.device).triu(1) scores = q @ k.transpose(-2, -1) / math.sqrt(q.size(-1)) weights = scores.masked_fill(future, -torch.inf).softmax(dim=-1) return weights @ v, weights x = torch.tensor([[1., 0.], [0., 1.], [1., 1.], [-1., 1.]]) value_projection = torch.diag(torch.tensor([2., 4.])) out, weights = causal_attention(x, x, x @ value_projection) scale = math.exp(1 / math.sqrt(2)) expected = torch.tensor([2 / (1 + scale), 4 * scale / (1 + scale)]) torch.testing.assert_close(out[1], expected) assert torch.count_nonzero(weights.triu(1)) == 0 edited = x.clone() edited[-1] = torch.tensor([2., -3.]) edited_out, _ = causal_attention(edited, edited, edited @ value_projection) torch.testing.assert_close(out[:-1], edited_out[:-1]) assert not torch.allclose(out[-1], edited_out[-1]) print(\"Second row:\", weights[1].tolist()) print(\"Second output:\", out[1].tolist()) print(\"Changing the last token changed its own output and left earlier outputs fixed.\") Second row: [0.3302384614944458, 0.6697615385055542, 0.0, 0.0] Second output: [0.6604769229888916, 2.679046154022217] Changing the last token changed its own output and left earlier outputs fixed. That last property is prefix invariance. With fixed weights and position indices, a causal decoder gives a prefix the same outputs when you append more tokens. In a later lab we’ll use that property to reuse old keys and values during generation.\n2. Teach the head to retrieve by content Given red=8 blue=2 green=0 ASK-blue, predict 2 at the query position. Each color–digit pair is one token, so a single position can provide both a key for matching and a value to read. The order of the pairs changes, and every color can hold every digit. The head has no positional embeddings because the answer depends on the color queried.\nWe hold out whole red/blue/green digit triples whose sum is divisible by five, along with all their orderings and queries. This tests new combinations of familiar tokens. The training loop uses cross-entropy only at the query position. Every projection and the embedding table are learned through autograd.\nCOLORS = (\"red\", \"blue\", \"green\") ORDERS = torch.tensor([[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]) TRIPLES = torch.cartesian_prod(*(torch.arange(10) for _ in COLORS)) held_out = TRIPLES.sum(dim=-1) % 5 == 0 training_triples = TRIPLES[~held_out] test_triples = TRIPLES[held_out] def make_prompts(digits, order, query): pairs = 10 * order + digits.gather(1, order) tokens = torch.cat([pairs, (30 + query)[:, None]], dim=1) targets = digits.gather(1, query[:, None]).squeeze(1) return tokens, targets class LookupHead(nn.Module): def __init__(self): super().__init__() self.embedding = nn.Embedding(33, 16) self.query = nn.Linear(16, 16, bias=False) self.key = nn.Linear(16, 16, bias=False) self.value = nn.Linear(16, 16, bias=False) self.readout = nn.Linear(16, 10) def forward(self, tokens, uniform=False): x = self.embedding(tokens) values = self.value(x) mixed, weights = causal_attention(self.query(x), self.key(x), values) # Every token is visible to the final query, including the query itself. query_mix = values.mean(dim=1) if uniform else mixed[:, -1] return self.readout(query_mix), weights[:, -1] model = LookupHead() initial_state = {name: tensor.detach().numpy().copy() for name, tensor in model.state_dict().items()} optimizer = torch.optim.Adam(model.parameters(), lr=0.01) loss_trace = [] steps = 300 for _ in range(steps): digits = training_triples[torch.randint(len(training_triples), (128,))] order = ORDERS[torch.randint(len(ORDERS), (128,))] query = torch.randint(len(COLORS), (128,)) tokens, targets = make_prompts(digits, order, query) logits, _ = model(tokens) loss = F.cross_entropy(logits, targets) optimizer.zero_grad() loss.backward() optimizer.step() loss_trace.append(loss.item()) case = torch.cartesian_prod(torch.arange(len(test_triples)), torch.arange(len(ORDERS)), torch.arange(len(COLORS))) tokens, targets = make_prompts(test_triples[case[:, 0]], ORDERS[case[:, 1]], case[:, 2]) model.eval() with torch.no_grad(): logits, _ = model(tokens) uniform_logits, _ = model(tokens, uniform=True) accuracy = (logits.argmax(dim=-1) == targets).float().mean().item() uniform_accuracy = (uniform_logits.argmax(dim=-1) == targets).float().mean().item() print(f\"Test prompts: {len(tokens):,}\") print(f\"Learned attention: {accuracy:.2%} | Uniform attention: {uniform_accuracy:.2%}\") Test prompts: 3,600 Learned attention: 100.00% | Uniform attention: 40.67% 3. Follow the answer when the prompt changes Before running the cell, predict what happens when we change the query, edit the requested digit, or edit an unrelated digit. Which changes should move the attention? Which should move the answer? Every prompt below is drawn from the held-out split.\nThe uniform-attention run above is an ablation. It replaces the final query’s learned weighted sum with a plain average of the same value vectors, keeping the trained readout fixed. It measures how much this trained model depends on its learned weighting. The input edits below change a whole token, so they can affect both its key and its value.\ndef token_label(token): if token \u003e= 30: return f\"ASK-{COLORS[token - 30]}\" return f\"{COLORS[token // 10]}={token % 10}\" # Adding five modulo ten keeps an edited triple in the test split. digits = torch.tensor([[8, 2, 0], [8, 2, 0], [8, 7, 0], [3, 2, 0]]) queries = torch.tensor([1, 0, 1, 1]) assert (digits.sum(dim=-1) % 5 == 0).all() prompts, answers = make_prompts(digits, ORDERS[0].expand(len(digits), -1), queries) initial = LookupHead() initial.load_state_dict({name: torch.from_numpy(array) for name, array in initial_state.items()}) with torch.no_grad(): _, before = initial(prompts[:1]) logits, after = model(prompts) predicted = logits.argmax(dim=-1) scenarios = [\"Original\", \"Switch query\", \"Edit requested digit\", \"Edit distractor\"] for scenario, prompt, prediction, answer in zip(scenarios, prompts, predicted, answers): text = \" \".join(token_label(token) for token in prompt.tolist()) print(f\"{scenario:20s} {text:34s} → {prediction.item()} (target {answer.item()})\") fig, axes = plt.subplots(3, 2, figsize=(10, 7), layout=\"constrained\") rows = [(\"Before training\", prompts[0], before[0], None)] rows += [(label, prompt, weights, prediction.item()) for label, prompt, weights, prediction in zip(scenarios, prompts, after, predicted)] for ax, (label, prompt, weights, prediction) in zip(axes.flat, rows): ax.bar(range(len(prompt)), weights.numpy(), color=\"#3568a9\") ax.set_xticks(range(len(prompt)), [token_label(token) for token in prompt.tolist()]) ax.set_ylim(0, 1.05) ax.set_ylabel(\"Attention weight\") title = label if prediction is None else f\"{label} · predicted {prediction}\" ax.set_title(title, loc=\"left\") axes.flat[-1].set_axis_off() plot_path = FIGS / \"query_attention.png\" fig.savefig(plot_path, dpi=150) plt.close(fig) display(Image(filename=str(plot_path))) Original red=8 blue=2 green=0 ASK-blue → 2 (target 2) Switch query red=8 blue=2 green=0 ASK-red → 8 (target 8) Edit requested digit red=8 blue=7 green=0 ASK-blue → 7 (target 7) Edit distractor red=3 blue=2 green=0 ASK-blue → 2 (target 2) Compare the original prompt and the distractor edit. Did the output stay fixed even if some attention weights moved? Then compare the original and requested-digit edit. What does that pair tell you that the plot alone could never tell you? The uniform average still gets information from every token. Why might its accuracy be higher than guessing a digit uniformly?\nSave and reload Save the starting weights and trained weights, then check that reloading the checkpoint gives the same logits on the four probe prompts.\nsave_ckpt(CKPT, \"lookup_initial\", step=0, **initial_state) final_state = {name: tensor.detach().numpy() for name, tensor in model.state_dict().items()} path = save_ckpt(CKPT, \"lookup_trained\", step=steps, metrics={\"test_accuracy\": accuracy, \"uniform_accuracy\": uniform_accuracy}, train_loss=torch.tensor(loss_trace).numpy(), **final_state) saved = load_ckpt(path) saved.pop(\"train_loss\") restored = LookupHead() restored.load_state_dict({name: torch.from_numpy(array) for name, array in saved.items()}) with torch.no_grad(): restored_logits, _ = restored(prompts) torch.testing.assert_close(restored_logits, logits) print(\"Reloaded checkpoint reproduces the probe logits.\") Reloaded checkpoint reproduces the probe logits. The next lab will reuse the causal head inside a decoder block and predict a next character at every position of a training sequence.\nReproduce From the repository root, run cd labs/ml/llm-internals and open 01_one_head_content_lookup.ipynb in Jupyter using the shared MNIST environment. The notebook uses CPU and generates its own data.\n","wordCount":"1320","inLanguage":"en","datePublished":"2026-11-24T00:00:00+05:30","dateModified":"2026-11-24T00:00:00+05:30","mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-1-one-head-content-lookup/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload='renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1}],throwOnError:!1})'></script><script type=module>
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+  document.querySelectorAll('pre > code.language-mermaid').forEach((codeEl) => {
+    const host = codeEl.closest('div.highlight') || codeEl.parentElement;
+    const pre = document.createElement('pre');
+    pre.className = 'mermaid';
+    pre.textContent = codeEl.textContent;
+    host.replaceWith(pre);
+  });
+  mermaid.run({ querySelector: '.mermaid' });
+</script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">Lab 3.1: Can One Attention Head Learn to Look Up an Answer?</h1><div class=post-meta><span title='2026-11-24 00:00:00 +0530 +0530'>November 24, 2026</span>&nbsp;·&nbsp;7 min&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/ml/labs/2026-11-24-lab-3-1-one-head-content-lookup/index.md rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#lab-31-can-one-attention-head-learn-to-look-up-an-answer aria-label="Lab 3.1: Can One Attention Head Learn to Look Up an Answer?">Lab 3.1: Can One Attention Head Learn to Look Up an Answer?</a><ul><li><a href=#1-calculate-one-attention-row-by-hand aria-label="1. Calculate one attention row by hand">1. Calculate one attention row by hand</a></li><li><a href=#2-teach-the-head-to-retrieve-by-content aria-label="2. Teach the head to retrieve by content">2. Teach the head to retrieve by content</a></li><li><a href=#3-follow-the-answer-when-the-prompt-changes aria-label="3. Follow the answer when the prompt changes">3. Follow the answer when the prompt changes</a></li><li><a href=#save-and-reload aria-label="Save and reload">Save and reload</a><ul><li><a href=#reproduce aria-label=Reproduce>Reproduce</a></li></ul></li></ul></li></ul></div></details></div><div class=post-content><h1 id=lab-31-can-one-attention-head-learn-to-look-up-an-answer>Lab 3.1: Can One Attention Head Learn to Look Up an Answer?<a hidden class=anchor aria-hidden=true href=#lab-31-can-one-attention-head-learn-to-look-up-an-answer>#</a></h1><p>This is the first LLM internals lab. We’ll open up one operation used in decoder-only Transformers and see whether it can learn to retrieve a value from a prompt. In the Lab 2.3 on LSTMs, information had to travel through each recurrent step. Here the query can directly read from earlier positions.</p><h2 id=1-calculate-one-attention-row-by-hand>1. Calculate one attention row by hand<a hidden class=anchor aria-hidden=true href=#1-calculate-one-attention-row-by-hand>#</a></h2><p>For each position, the query
+$q_i$
+scores the visible keys
+$k_j$
+. Softmax turns those scores into coefficients
+$a_{ij}$
+, and the output is
+$sum_j a_{ij}v_j$
+. The matrices that project inputs into
+$Q$
+,
+$K$
+and
+$V$
+are parameters. The coefficients
+$a_{ij}$
+are recomputed for every input.</p><p>Use four tokens with two coordinates each. Let
+$Q=K=X$
+and let
+$V$
+double the first coordinate and quadruple the second. For the second token,
+$q=[0,1]$
+. Its dot products with the first two keys are
+$0$
+and
+$1$
+. Divide by
+$sqrt{2}$
+, mask the two future positions before softmax, and you get about
+$[0.330,0.670,0,0]$
+. Mixing the first two value vectors gives about
+$[0.660,2.679]$
+.</p><pre tabindex=0><code>import math
+import sys
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import torch
+from IPython.display import Image, display
+from torch import nn
+from torch.nn import functional as F
+
+sys.path.insert(0, str(Path(&#34;../lm-internals&#34;).resolve()))
+from lm_lab import load_ckpt, save_ckpt
+
+torch.manual_seed(31)
+torch.set_num_threads(1)
+CKPT = Path(&#34;checkpoints/lab31&#34;)
+FIGS = Path(&#34;figures/lab31&#34;)
+FIGS.mkdir(parents=True, exist_ok=True)
+
+def causal_attention(q, k, v):
+    length = q.size(-2)
+    future = torch.ones(length, length, dtype=torch.bool, device=q.device).triu(1)
+    scores = q @ k.transpose(-2, -1) / math.sqrt(q.size(-1))
+    weights = scores.masked_fill(future, -torch.inf).softmax(dim=-1)
+    return weights @ v, weights
+
+x = torch.tensor([[1., 0.], [0., 1.], [1., 1.], [-1., 1.]])
+value_projection = torch.diag(torch.tensor([2., 4.]))
+out, weights = causal_attention(x, x, x @ value_projection)
+
+scale = math.exp(1 / math.sqrt(2))
+expected = torch.tensor([2 / (1 + scale), 4 * scale / (1 + scale)])
+torch.testing.assert_close(out[1], expected)
+assert torch.count_nonzero(weights.triu(1)) == 0
+
+edited = x.clone()
+edited[-1] = torch.tensor([2., -3.])
+edited_out, _ = causal_attention(edited, edited, edited @ value_projection)
+torch.testing.assert_close(out[:-1], edited_out[:-1])
+assert not torch.allclose(out[-1], edited_out[-1])
+print(&#34;Second row:&#34;, weights[1].tolist())
+print(&#34;Second output:&#34;, out[1].tolist())
+print(&#34;Changing the last token changed its own output and left earlier outputs fixed.&#34;)
+</code></pre><pre><code>Second row: [0.3302384614944458, 0.6697615385055542, 0.0, 0.0]
+Second output: [0.6604769229888916, 2.679046154022217]
+Changing the last token changed its own output and left earlier outputs fixed.
+</code></pre><p>That last property is <strong>prefix invariance</strong>. With fixed weights and position indices, a causal decoder gives a prefix the same outputs when you append more tokens. In a later lab we’ll use that property to reuse old keys and values during generation.</p><h2 id=2-teach-the-head-to-retrieve-by-content>2. Teach the head to retrieve by content<a hidden class=anchor aria-hidden=true href=#2-teach-the-head-to-retrieve-by-content>#</a></h2><p>Given <code>red=8 blue=2 green=0 ASK-blue</code>, predict <code>2</code> at the query position. Each color–digit pair is one token, so a single position can provide both a key for matching and a value to read. The order of the pairs changes, and every color can hold every digit. The head has no positional embeddings because the answer depends on the color queried.</p><p>We hold out whole red/blue/green digit triples whose sum is divisible by five, along with all their orderings and queries. This tests new combinations of familiar tokens. The training loop uses cross-entropy only at the query position. Every projection and the embedding table are learned through autograd.</p><pre tabindex=0><code>COLORS = (&#34;red&#34;, &#34;blue&#34;, &#34;green&#34;)
+ORDERS = torch.tensor([[0, 1, 2], [0, 2, 1], [1, 0, 2],
+                       [1, 2, 0], [2, 0, 1], [2, 1, 0]])
+TRIPLES = torch.cartesian_prod(*(torch.arange(10) for _ in COLORS))
+held_out = TRIPLES.sum(dim=-1) % 5 == 0
+training_triples = TRIPLES[~held_out]
+test_triples = TRIPLES[held_out]
+
+def make_prompts(digits, order, query):
+    pairs = 10 * order + digits.gather(1, order)
+    tokens = torch.cat([pairs, (30 + query)[:, None]], dim=1)
+    targets = digits.gather(1, query[:, None]).squeeze(1)
+    return tokens, targets
+
+class LookupHead(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.embedding = nn.Embedding(33, 16)
+        self.query = nn.Linear(16, 16, bias=False)
+        self.key = nn.Linear(16, 16, bias=False)
+        self.value = nn.Linear(16, 16, bias=False)
+        self.readout = nn.Linear(16, 10)
+
+    def forward(self, tokens, uniform=False):
+        x = self.embedding(tokens)
+        values = self.value(x)
+        mixed, weights = causal_attention(self.query(x), self.key(x), values)
+        # Every token is visible to the final query, including the query itself.
+        query_mix = values.mean(dim=1) if uniform else mixed[:, -1]
+        return self.readout(query_mix), weights[:, -1]
+
+model = LookupHead()
+initial_state = {name: tensor.detach().numpy().copy()
+                 for name, tensor in model.state_dict().items()}
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+loss_trace = []
+steps = 300
+
+for _ in range(steps):
+    digits = training_triples[torch.randint(len(training_triples), (128,))]
+    order = ORDERS[torch.randint(len(ORDERS), (128,))]
+    query = torch.randint(len(COLORS), (128,))
+    tokens, targets = make_prompts(digits, order, query)
+    logits, _ = model(tokens)
+    loss = F.cross_entropy(logits, targets)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    loss_trace.append(loss.item())
+
+case = torch.cartesian_prod(torch.arange(len(test_triples)),
+                            torch.arange(len(ORDERS)), torch.arange(len(COLORS)))
+tokens, targets = make_prompts(test_triples[case[:, 0]], ORDERS[case[:, 1]], case[:, 2])
+model.eval()
+with torch.no_grad():
+    logits, _ = model(tokens)
+    uniform_logits, _ = model(tokens, uniform=True)
+
+accuracy = (logits.argmax(dim=-1) == targets).float().mean().item()
+uniform_accuracy = (uniform_logits.argmax(dim=-1) == targets).float().mean().item()
+print(f&#34;Test prompts: {len(tokens):,}&#34;)
+print(f&#34;Learned attention: {accuracy:.2%} | Uniform attention: {uniform_accuracy:.2%}&#34;)
+</code></pre><pre><code>Test prompts: 3,600
+Learned attention: 100.00% | Uniform attention: 40.67%
+</code></pre><h2 id=3-follow-the-answer-when-the-prompt-changes>3. Follow the answer when the prompt changes<a hidden class=anchor aria-hidden=true href=#3-follow-the-answer-when-the-prompt-changes>#</a></h2><p>Before running the cell, predict what happens when we change the query, edit the requested digit, or edit an unrelated digit. Which changes should move the attention? Which should move the answer? Every prompt below is drawn from the held-out split.</p><p>The uniform-attention run above is an <strong>ablation</strong>. It replaces the final query’s learned weighted sum with a plain average of the same value vectors, keeping the trained readout fixed. It measures how much this trained model depends on its learned weighting. The input edits below change a whole token, so they can affect both its key and its value.</p><pre tabindex=0><code>def token_label(token):
+    if token &gt;= 30:
+        return f&#34;ASK-{COLORS[token - 30]}&#34;
+    return f&#34;{COLORS[token // 10]}={token % 10}&#34;
+
+# Adding five modulo ten keeps an edited triple in the test split.
+digits = torch.tensor([[8, 2, 0], [8, 2, 0], [8, 7, 0], [3, 2, 0]])
+queries = torch.tensor([1, 0, 1, 1])
+assert (digits.sum(dim=-1) % 5 == 0).all()
+prompts, answers = make_prompts(digits, ORDERS[0].expand(len(digits), -1), queries)
+
+initial = LookupHead()
+initial.load_state_dict({name: torch.from_numpy(array) for name, array in initial_state.items()})
+with torch.no_grad():
+    _, before = initial(prompts[:1])
+    logits, after = model(prompts)
+
+predicted = logits.argmax(dim=-1)
+scenarios = [&#34;Original&#34;, &#34;Switch query&#34;, &#34;Edit requested digit&#34;, &#34;Edit distractor&#34;]
+for scenario, prompt, prediction, answer in zip(scenarios, prompts, predicted, answers):
+    text = &#34; &#34;.join(token_label(token) for token in prompt.tolist())
+    print(f&#34;{scenario:20s} {text:34s} → {prediction.item()} (target {answer.item()})&#34;)
+
+fig, axes = plt.subplots(3, 2, figsize=(10, 7), layout=&#34;constrained&#34;)
+rows = [(&#34;Before training&#34;, prompts[0], before[0], None)]
+rows += [(label, prompt, weights, prediction.item())
+         for label, prompt, weights, prediction in zip(scenarios, prompts, after, predicted)]
+
+for ax, (label, prompt, weights, prediction) in zip(axes.flat, rows):
+    ax.bar(range(len(prompt)), weights.numpy(), color=&#34;#3568a9&#34;)
+    ax.set_xticks(range(len(prompt)), [token_label(token) for token in prompt.tolist()])
+    ax.set_ylim(0, 1.05)
+    ax.set_ylabel(&#34;Attention weight&#34;)
+    title = label if prediction is None else f&#34;{label} · predicted {prediction}&#34;
+    ax.set_title(title, loc=&#34;left&#34;)
+axes.flat[-1].set_axis_off()
+plot_path = FIGS / &#34;query_attention.png&#34;
+fig.savefig(plot_path, dpi=150)
+plt.close(fig)
+display(Image(filename=str(plot_path)))
+</code></pre><pre><code>Original             red=8 blue=2 green=0 ASK-blue      → 2 (target 2)
+Switch query         red=8 blue=2 green=0 ASK-red       → 8 (target 8)
+Edit requested digit red=8 blue=7 green=0 ASK-blue      → 7 (target 7)
+Edit distractor      red=3 blue=2 green=0 ASK-blue      → 2 (target 2)
+</code></pre><p><img alt=png loading=lazy src=/blog/posts/ml/labs/2026-11-24-lab-3-1-one-head-content-lookup/01_one_head_content_lookup_5_1.png></p><p>Compare the original prompt and the distractor edit. Did the output stay fixed even if some attention weights moved? Then compare the original and requested-digit edit. What does that pair tell you that the plot alone could never tell you? The uniform average still gets information from every token. Why might its accuracy be higher than guessing a digit uniformly?</p><h2 id=save-and-reload>Save and reload<a hidden class=anchor aria-hidden=true href=#save-and-reload>#</a></h2><p>Save the starting weights and trained weights, then check that reloading the checkpoint gives the same logits on the four probe prompts.</p><pre tabindex=0><code>save_ckpt(CKPT, &#34;lookup_initial&#34;, step=0, **initial_state)
+final_state = {name: tensor.detach().numpy() for name, tensor in model.state_dict().items()}
+path = save_ckpt(CKPT, &#34;lookup_trained&#34;, step=steps,
+                 metrics={&#34;test_accuracy&#34;: accuracy, &#34;uniform_accuracy&#34;: uniform_accuracy},
+                 train_loss=torch.tensor(loss_trace).numpy(), **final_state)
+
+saved = load_ckpt(path)
+saved.pop(&#34;train_loss&#34;)
+restored = LookupHead()
+restored.load_state_dict({name: torch.from_numpy(array) for name, array in saved.items()})
+with torch.no_grad():
+    restored_logits, _ = restored(prompts)
+torch.testing.assert_close(restored_logits, logits)
+print(&#34;Reloaded checkpoint reproduces the probe logits.&#34;)
+</code></pre><pre><code>Reloaded checkpoint reproduces the probe logits.
+</code></pre><p>The next lab will reuse the causal head inside a decoder block and predict a next character at every position of a training sequence.</p><h3 id=reproduce>Reproduce<a hidden class=anchor aria-hidden=true href=#reproduce>#</a></h3><p>From the repository root, run <code>cd labs/ml/llm-internals</code> and open
+<code>01_one_head_content_lookup.ipynb</code> in Jupyter using the shared MNIST environment.
+The notebook uses CPU and generates its own data.</p></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/ml/>Ml</a></li><li><a href=https://sankethbk.github.io/blog/tags/lab/>Lab</a></li><li><a href=https://sankethbk.github.io/blog/tags/attention/>Attention</a></li><li><a href=https://sankethbk.github.io/blog/tags/transformer/>Transformer</a></li><li><a href=https://sankethbk.github.io/blog/tags/llm/>Llm</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>

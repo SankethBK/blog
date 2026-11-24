@@ -1,4 +1,120 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Ml on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/categories/ml/</link><description>Recent content in Ml on Sanketh's Blog</description><generator>Hugo -- 0.170.1</generator><language>en-us</language><lastBuildDate>Sat, 21 Nov 2026 00:00:00 +0530</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/categories/ml/index.xml" rel="self" type="application/rss+xml"/><item><title>Decoding Strategies: Greedy, Temperature, Top-k, Top-p, and Beam Search</title><link>https://sankethbk.github.io/blog/posts/ml/2026-11-21-5-decoding-strategies-from-logits-to-a-generated-answer/</link><pubDate>Sat, 21 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/2026-11-21-5-decoding-strategies-from-logits-to-a-generated-answer/</guid><description>&lt;h1 id="decoding-strategies-greedy-temperature-top-k-top-p-and-beam-search"&gt;Decoding Strategies: Greedy, Temperature, Top-k, Top-p, and Beam Search&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Ml on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/categories/ml/</link><description>Recent content in Ml on Sanketh's Blog</description><generator>Hugo -- 0.170.1</generator><language>en-us</language><lastBuildDate>Tue, 24 Nov 2026 00:00:00 +0530</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/categories/ml/index.xml" rel="self" type="application/rss+xml"/><item><title>Lab 3.1: Can One Attention Head Learn to Look Up an Answer?</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-1-one-head-content-lookup/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-1-one-head-content-lookup/</guid><description>&lt;h1 id="lab-31-can-one-attention-head-learn-to-look-up-an-answer"&gt;Lab 3.1: Can One Attention Head Learn to Look Up an Answer?&lt;/h1&gt;
+&lt;p&gt;This is the first LLM internals lab. We’ll open up one operation used in decoder-only Transformers and see whether it can learn to retrieve a value from a prompt. In the Lab 2.3 on LSTMs, information had to travel through each recurrent step. Here the query can directly read from earlier positions.&lt;/p&gt;
+&lt;h2 id="1-calculate-one-attention-row-by-hand"&gt;1. Calculate one attention row by hand&lt;/h2&gt;
+&lt;p&gt;For each position, the query
+$q_i$
+scores the visible keys
+$k_j$
+. Softmax turns those scores into coefficients
+$a_{ij}$
+, and the output is
+$sum_j a_{ij}v_j$
+. The matrices that project inputs into
+$Q$
+,
+$K$
+and
+$V$
+are parameters. The coefficients
+$a_{ij}$
+are recomputed for every input.&lt;/p&gt;</description></item><item><title>Lab 3.10 — How does a pretrained model adapt?</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-10-full-fine-tuning/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-10-full-fine-tuning/</guid><description>&lt;h1 id="lab-310--how-does-a-pretrained-model-adapt"&gt;Lab 3.10 — How does a pretrained model adapt?&lt;/h1&gt;
+&lt;p&gt;Continue training the small dense base on uppercase dialogue. This deliberate change makes adaptation measurable using the same character vocabulary. Keep the final tenth of the corpus for evaluation.&lt;/p&gt;
+&lt;h2 id="fine-tune-on-a-controlled-change"&gt;Fine-tune on a controlled change&lt;/h2&gt;
+&lt;p&gt;Use 120 batches from a fresh slice of the text. Score uppercase held-out windows before the first update and every twenty updates. Predict what happens to the model’s preference for lowercase continuations.&lt;/p&gt;</description></item><item><title>Lab 3.11 — Can a rank-four adapter learn the same task?</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-11-lora/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-11-lora/</guid><description>&lt;h1 id="lab-311--can-a-rank-four-adapter-learn-the-same-task"&gt;Lab 3.11 — Can a rank-four adapter learn the same task?&lt;/h1&gt;
+&lt;p&gt;Return to the exact pre-adaptation weights. Reuse the full-tuning data, batch order, learning rate and update budget. Change which parameters may move.&lt;/p&gt;
+&lt;h2 id="factor-the-update"&gt;Factor the update&lt;/h2&gt;
+&lt;p&gt;For a frozen projection W, use W + BA. A maps input features into four coordinates and B maps those coordinates to output features. Initialize B to zero so the first forward pass matches the base. Which factor gets a nonzero gradient on the very first step?&lt;/p&gt;</description></item><item><title>Lab 3.12 — Which expert gets the token and the gradient?</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-12-mixture-of-experts/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-12-mixture-of-experts/</guid><description>&lt;h1 id="lab-312--which-expert-gets-the-token-and-the-gradient"&gt;Lab 3.12 — Which expert gets the token and the gradient?&lt;/h1&gt;
+&lt;p&gt;Branch from the dense Lab 3.9 checkpoint. Replace the final block’s MLP with four equally wide experts. Each token visits one expert. Compare two training runs with exactly the same initial weights and batches.&lt;/p&gt;
+&lt;h2 id="route-and-dispatch"&gt;Route and dispatch&lt;/h2&gt;
+&lt;p&gt;A router produces four probabilities per token. We send the token to its top expert and multiply its output by the selected probability, which lets the task loss train the router. Copy the dense MLP into each expert to control initialization. The gate multiplier changes the initial output even with identical copies.&lt;/p&gt;</description></item><item><title>Lab 3.2 — From one attention head to a tiny decoder</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-2-tiny-decoder/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-2-tiny-decoder/</guid><description>&lt;h1 id="lab-32--from-one-attention-head-to-a-tiny-decoder"&gt;Lab 3.2 — From one attention head to a tiny decoder&lt;/h1&gt;
+&lt;p&gt;Lab 3.1 asked for one answer at the final position. Here every character asks a question. Given everything visible from my position, which character comes next?&lt;/p&gt;
+&lt;h2 id="1-turn-one-line-into-many-predictions"&gt;1. Turn one line into many predictions&lt;/h2&gt;
+&lt;p&gt;Slide the target one place to the left. For the five-character snippet &lt;code&gt;ROMEO&lt;/code&gt;, the inputs are &lt;code&gt;ROME&lt;/code&gt; and the targets are &lt;code&gt;OMEO&lt;/code&gt;. The row at M can read R, O and M. It gets a reward for assigning probability to E. &lt;strong&gt;Teacher forcing&lt;/strong&gt; supplies the real preceding characters during training. The causal mask lets us score all four rows in one forward pass.&lt;/p&gt;</description></item><item><title>Lab 3.3 — How does one model produce different continuations?</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-3-decoding/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-3-decoding/</guid><description>&lt;h1 id="lab-33--how-does-one-model-produce-different-continuations"&gt;Lab 3.3 — How does one model produce different continuations?&lt;/h1&gt;
+&lt;p&gt;Open the trained character decoder from Lab 3.2. We&amp;rsquo;ll run it once on &lt;code&gt;ROM&lt;/code&gt;, save the last row of logits, and see how many choices we can make from that single row. Only in the last experiment will we feed a chosen character back into the model.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;from pathlib import Path
+import sys
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from IPython.display import Image, display
+from tiny_decoder import TinyDecoder
+sys.path.insert(0, str(Path(&amp;#34;../lm-internals&amp;#34;).resolve()))
+from lm_lab import load_ckpt, save_ckpt
+torch.set_num_threads(1)
+source = Path(&amp;#34;checkpoints/lab32/tiny_decoder.npz&amp;#34;)
+saved = load_ckpt(source)
+alphabet = saved[&amp;#34;alphabet&amp;#34;].tolist()
+index = {ch: i for i, ch in enumerate(alphabet)}
+limit = int(saved[&amp;#34;context_length&amp;#34;])
+model = TinyDecoder(len(alphabet), limit, int(saved[&amp;#34;width&amp;#34;]))
+model.load_state_dict({k: torch.from_numpy(saved[k]) for k in model.state_dict()})
+model.eval()
+@torch.inference_mode()
+def next_logits(prefix):
+ids = torch.tensor([[index[ch] for ch in prefix[-limit:]]])
+return model(ids)[0, -1]
+def leaders(probs, count=3):
+values, ids = probs.topk(count)
+return [(alphabet[i], round(v.item(), 4)) for v, i in zip(values, ids)]
+logits = next_logits(&amp;#34;ROM&amp;#34;)
+base = logits.softmax(0)
+print(&amp;#34;After ROM:&amp;#34;, leaders(base))
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;After ROM: [('E', 0.6191), ('I', 0.2238), (':', 0.0573)]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="1-stay-at-one-position"&gt;1. Stay at one position&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Greedy decoding&lt;/strong&gt; chooses the largest logit. &lt;strong&gt;Sampling&lt;/strong&gt; draws a character with probability proportional to
+$\exp(z_i/T)$
+, where
+$z_i$
+is its logit and
+$T$
+is a positive temperature. Dividing by
+$T$
+changes the gaps between logits. For example, the odds of E relative to I are
+$\exp((z_E-z_I)/T)$
+. Halving the temperature squares those odds.&lt;/p&gt;</description></item><item><title>Lab 3.4 — When can a decoder reuse its past?</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-4-kv-cache/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-4-kv-cache/</guid><description>&lt;h1 id="lab-34--when-can-a-decoder-reuse-its-past"&gt;Lab 3.4 — When can a decoder reuse its past?&lt;/h1&gt;
+&lt;p&gt;Use the exact Lab 3.2 checkpoint. A cache should change how much work we do while preserving every next-character score. What assumption breaks when the 32-character window slides?&lt;/p&gt;
+&lt;h2 id="prefill-once-then-append"&gt;Prefill once, then append&lt;/h2&gt;
+&lt;p&gt;A prefix supplies keys and values at every visible position. One new query only needs its own projection plus those stored rows. Its position index starts at the current cache length. The prefill call still needs a triangular mask because it contains several queries.&lt;/p&gt;</description></item><item><title>Lab 3.5 — How does text become GPT-2 token IDs?</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-5-byte-pair-encoding/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-5-byte-pair-encoding/</guid><description>&lt;h1 id="lab-35--how-does-text-become-gpt-2-token-ids"&gt;Lab 3.5 — How does text become GPT-2 token IDs?&lt;/h1&gt;
+&lt;p&gt;A character occupied one embedding row in Lab 3.2. Byte-pair encoding (BPE) starts from bytes and learns reusable pieces. Follow one merge before inspecting a real vocabulary.&lt;/p&gt;
+&lt;h2 id="train-three-merges-on-banana"&gt;Train three merges on banana&lt;/h2&gt;
+&lt;p&gt;Count adjacent pairs, merge the most frequent non-overlapping occurrences from left to right, then recount. Ties here follow first occurrence. Predict which pair wins the first tie and how many tokens disappear.&lt;/p&gt;</description></item><item><title>Lab 3.6 — Can two attention heads fit in one projection?</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-6-multi-head-attention/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-6-multi-head-attention/</guid><description>&lt;h1 id="lab-36--can-two-attention-heads-fit-in-one-projection"&gt;Lab 3.6 — Can two attention heads fit in one projection?&lt;/h1&gt;
+&lt;p&gt;Compute two independent attention maps the slow way, then reproduce them with packed tensors. Both implementations use the same random parameters.&lt;/p&gt;
+&lt;h2 id="split-the-feature-axis"&gt;Split the feature axis&lt;/h2&gt;
+&lt;p&gt;With width eight and two heads, each query has four features per head. The softmax runs over source positions separately for each head. Predict the shapes before reading the output.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;import torch
+import numpy as np
+import matplotlib.pyplot as plt
+from torch import nn
+from llm_lab.experiments import record, show
+torch.manual_seed(34)
+torch.set_num_threads(1)
+from llm_lab.gpt import Attention
+head = Attention(8, 2)
+x = torch.randn(1, 5, 8)
+maps, parts = [], []
+q, k, v = head.c_attn(x).chunk(3, -1)
+for qi, ki, vi in zip(q.chunk(2,-1), k.chunk(2,-1), v.chunk(2,-1)):
+scores = qi @ ki.transpose(-1,-2) / 2
+weights = scores.masked_fill(torch.ones(5,5).bool().triu(1), -torch.inf).softmax(-1)
+maps.append(weights.detach()[0])
+parts.append(weights @ vi)
+manual = head.c_proj(torch.cat(parts, -1))
+torch.testing.assert_close(manual, head(x))
+print(&amp;#34;Head maps, joined output:&amp;#34;, maps[0].shape, manual.shape)
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;Head maps, joined output: torch.Size([5, 5]) torch.Size([1, 5, 8])
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="remove-one-head-before-mixing"&gt;Remove one head before mixing&lt;/h2&gt;
+&lt;p&gt;The output projection can send each head’s features to every residual coordinate. Predict whether zeroing the first head can change the last four output coordinates. These random heads let us test the algebra without attributing semantic roles to them.&lt;/p&gt;</description></item><item><title>Lab 3.7 — Where do the parameters in GPT-2 go?</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-7-miniature-gpt/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-7-miniature-gpt/</guid><description>&lt;h1 id="lab-37--where-do-the-parameters-in-gpt-2-go"&gt;Lab 3.7 — Where do the parameters in GPT-2 go?&lt;/h1&gt;
+&lt;p&gt;Assemble a two-block miniature with the same ordering as GPT-2. Read llm_lab/gpt.py alongside the trace. The residual stream keeps its width through every block.&lt;/p&gt;
+&lt;h2 id="follow-the-final-token-through-two-blocks"&gt;Follow the final token through two blocks&lt;/h2&gt;
+&lt;p&gt;Each block first normalizes its input and adds an attention update. It normalizes the new stream and adds a feedforward update with a fourfold hidden expansion and GELU activation. The final normalization and a dot product with the token embedding table produce vocabulary scores.&lt;/p&gt;</description></item><item><title>Lab 3.8 — Can our decoder reproduce GPT-2 small?</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-8-gpt2-checkpoint/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-8-gpt2-checkpoint/</guid><description>&lt;h1 id="lab-38--can-our-decoder-reproduce-gpt-2-small"&gt;Lab 3.8 — Can our decoder reproduce GPT-2 small?&lt;/h1&gt;
+&lt;p&gt;Load the published GPT-2 small weights into the Lab 3.7 architecture. Compare the same prompt against the Hugging Face implementation at each block boundary in float32 on CPU.&lt;/p&gt;
+&lt;h2 id="map-the-checkpoint"&gt;Map the checkpoint&lt;/h2&gt;
+&lt;p&gt;GPT-2 stores its projection matrices in input-by-output order. PyTorch Linear expects output-by-input order. Even the square attention output matrix needs transposing. LayerNorm scales and embedding tables already match. The reference loader below uses the original layout.&lt;/p&gt;</description></item><item><title>Lab 3.9 — What does one training update do?</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-9-dense-training/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-9-dense-training/</guid><description>&lt;h1 id="lab-39--what-does-one-training-update-do"&gt;Lab 3.9 — What does one training update do?&lt;/h1&gt;
+&lt;p&gt;Start with a tiny randomly initialized GPT, check a gradient by two routes, overfit one batch, then train a fresh copy on character windows. The saved base is the common starting point for the next labs.&lt;/p&gt;
+&lt;h2 id="one-batch-two-ways-to-accumulate-a-gradient"&gt;One batch, two ways to accumulate a gradient&lt;/h2&gt;
+&lt;p&gt;Averaging equally sized microbatch losses gives the full-batch mean. Take one optimizer step only after both backward calls. AdamW tracks first and second gradient moments and applies decoupled weight decay. Watch what happens when it sees the same eight windows repeatedly.&lt;/p&gt;</description></item><item><title>Decoding Strategies: Greedy, Temperature, Top-k, Top-p, and Beam Search</title><link>https://sankethbk.github.io/blog/posts/ml/2026-11-21-5-decoding-strategies-from-logits-to-a-generated-answer/</link><pubDate>Sat, 21 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/2026-11-21-5-decoding-strategies-from-logits-to-a-generated-answer/</guid><description>&lt;h1 id="decoding-strategies-greedy-temperature-top-k-top-p-and-beam-search"&gt;Decoding Strategies: Greedy, Temperature, Top-k, Top-p, and Beam Search&lt;/h1&gt;
 &lt;p&gt;The &lt;a href="https://sankethbk.github.io/blog/posts/ml/2026-11-10-4-kv-cache-making-autoregressive-generation-practical"&gt;KV-cache note&lt;/a&gt; made the generation loop practical: prefill the prompt, keep each layer&amp;rsquo;s keys and values, and run only the newest token through the model at every decode step. But it deliberately skipped the final decision in that loop.&lt;/p&gt;
 &lt;p&gt;After the final Transformer layer and language-model head, we have one logit per vocabulary token. Which token do we actually put into the answer?&lt;/p&gt;</description></item><item><title>Lab 1.4: Weight Sharing — From Position-Anchored Parts to Convolutional Features</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-21-lab-4-weight-sharing-and-representations/</link><pubDate>Sat, 21 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-21-lab-4-weight-sharing-and-representations/</guid><description>&lt;h1 id="lab-14-weight-sharing--from-position-anchored-parts-to-convolutional-features"&gt;Lab 1.4: Weight Sharing — From Position-Anchored Parts to Convolutional Features&lt;/h1&gt;
 &lt;p&gt;&lt;strong&gt;MNIST internals series.&lt;/strong&gt; &lt;a href="https://sankethbk.github.io/blog/posts/ml/labs/2026-10-19-lab-1-mnist-from-pixels-to-neural-network/"&gt;Lab 1.1&lt;/a&gt; gave us class templates. &lt;a href="https://sankethbk.github.io/blog/posts/ml/labs/2026-10-19-lab-2-continual-learning-1-2-then-3/"&gt;Lab 1.2&lt;/a&gt; watched them reorganize. &lt;a href="https://sankethbk.github.io/blog/posts/ml/labs/2026-10-27-lab-3-from-templates-to-features/"&gt;Lab 1.3&lt;/a&gt; added a hidden layer and the templates dissolved into shared, position-anchored stroke fragments.&lt;/p&gt;

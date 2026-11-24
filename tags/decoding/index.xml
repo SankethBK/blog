@@ -1,3 +1,46 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Decoding on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/decoding/</link><description>Recent content in Decoding on Sanketh's Blog</description><generator>Hugo -- 0.170.1</generator><language>en-us</language><lastBuildDate>Sat, 21 Nov 2026 00:00:00 +0530</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/decoding/index.xml" rel="self" type="application/rss+xml"/><item><title>Decoding Strategies: Greedy, Temperature, Top-k, Top-p, and Beam Search</title><link>https://sankethbk.github.io/blog/posts/ml/2026-11-21-5-decoding-strategies-from-logits-to-a-generated-answer/</link><pubDate>Sat, 21 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/2026-11-21-5-decoding-strategies-from-logits-to-a-generated-answer/</guid><description>&lt;h1 id="decoding-strategies-greedy-temperature-top-k-top-p-and-beam-search"&gt;Decoding Strategies: Greedy, Temperature, Top-k, Top-p, and Beam Search&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Decoding on Sanketh's Blog</title><link>https://sankethbk.github.io/blog/tags/decoding/</link><description>Recent content in Decoding on Sanketh's Blog</description><generator>Hugo -- 0.170.1</generator><language>en-us</language><lastBuildDate>Tue, 24 Nov 2026 00:00:00 +0530</lastBuildDate><atom:link href="https://sankethbk.github.io/blog/tags/decoding/index.xml" rel="self" type="application/rss+xml"/><item><title>Lab 3.3 — How does one model produce different continuations?</title><link>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-3-decoding/</link><pubDate>Tue, 24 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/labs/2026-11-24-lab-3-3-decoding/</guid><description>&lt;h1 id="lab-33--how-does-one-model-produce-different-continuations"&gt;Lab 3.3 — How does one model produce different continuations?&lt;/h1&gt;
+&lt;p&gt;Open the trained character decoder from Lab 3.2. We&amp;rsquo;ll run it once on &lt;code&gt;ROM&lt;/code&gt;, save the last row of logits, and see how many choices we can make from that single row. Only in the last experiment will we feed a chosen character back into the model.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;from pathlib import Path
+import sys
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from IPython.display import Image, display
+from tiny_decoder import TinyDecoder
+sys.path.insert(0, str(Path(&amp;#34;../lm-internals&amp;#34;).resolve()))
+from lm_lab import load_ckpt, save_ckpt
+torch.set_num_threads(1)
+source = Path(&amp;#34;checkpoints/lab32/tiny_decoder.npz&amp;#34;)
+saved = load_ckpt(source)
+alphabet = saved[&amp;#34;alphabet&amp;#34;].tolist()
+index = {ch: i for i, ch in enumerate(alphabet)}
+limit = int(saved[&amp;#34;context_length&amp;#34;])
+model = TinyDecoder(len(alphabet), limit, int(saved[&amp;#34;width&amp;#34;]))
+model.load_state_dict({k: torch.from_numpy(saved[k]) for k in model.state_dict()})
+model.eval()
+@torch.inference_mode()
+def next_logits(prefix):
+ids = torch.tensor([[index[ch] for ch in prefix[-limit:]]])
+return model(ids)[0, -1]
+def leaders(probs, count=3):
+values, ids = probs.topk(count)
+return [(alphabet[i], round(v.item(), 4)) for v, i in zip(values, ids)]
+logits = next_logits(&amp;#34;ROM&amp;#34;)
+base = logits.softmax(0)
+print(&amp;#34;After ROM:&amp;#34;, leaders(base))
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;After ROM: [('E', 0.6191), ('I', 0.2238), (':', 0.0573)]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="1-stay-at-one-position"&gt;1. Stay at one position&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Greedy decoding&lt;/strong&gt; chooses the largest logit. &lt;strong&gt;Sampling&lt;/strong&gt; draws a character with probability proportional to
+$\exp(z_i/T)$
+, where
+$z_i$
+is its logit and
+$T$
+is a positive temperature. Dividing by
+$T$
+changes the gaps between logits. For example, the odds of E relative to I are
+$\exp((z_E-z_I)/T)$
+. Halving the temperature squares those odds.&lt;/p&gt;</description></item><item><title>Decoding Strategies: Greedy, Temperature, Top-k, Top-p, and Beam Search</title><link>https://sankethbk.github.io/blog/posts/ml/2026-11-21-5-decoding-strategies-from-logits-to-a-generated-answer/</link><pubDate>Sat, 21 Nov 2026 00:00:00 +0530</pubDate><guid>https://sankethbk.github.io/blog/posts/ml/2026-11-21-5-decoding-strategies-from-logits-to-a-generated-answer/</guid><description>&lt;h1 id="decoding-strategies-greedy-temperature-top-k-top-p-and-beam-search"&gt;Decoding Strategies: Greedy, Temperature, Top-k, Top-p, and Beam Search&lt;/h1&gt;
 &lt;p&gt;The &lt;a href="https://sankethbk.github.io/blog/posts/ml/2026-11-10-4-kv-cache-making-autoregressive-generation-practical"&gt;KV-cache note&lt;/a&gt; made the generation loop practical: prefill the prompt, keep each layer&amp;rsquo;s keys and values, and run only the newest token through the model at every decode step. But it deliberately skipped the final decision in that loop.&lt;/p&gt;
 &lt;p&gt;After the final Transformer layer and language-model head, we have one logit per vocabulary token. Which token do we actually put into the answer?&lt;/p&gt;</description></item></channel></rss>
