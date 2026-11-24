@@ -1,0 +1,70 @@
+[
+  {
+    "name": "lookup_initial",
+    "step": 0,
+    "time": "2026-11-24 21:28:26",
+    "metrics": {},
+    "arrays": {
+      "embedding.weight": [
+        33,
+        16
+      ],
+      "query.weight": [
+        16,
+        16
+      ],
+      "key.weight": [
+        16,
+        16
+      ],
+      "value.weight": [
+        16,
+        16
+      ],
+      "readout.weight": [
+        10,
+        16
+      ],
+      "readout.bias": [
+        10
+      ]
+    }
+  },
+  {
+    "name": "lookup_trained",
+    "step": 300,
+    "time": "2026-11-24 21:28:26",
+    "metrics": {
+      "test_accuracy": 1.0,
+      "uniform_accuracy": 0.40666666626930237
+    },
+    "arrays": {
+      "train_loss": [
+        300
+      ],
+      "embedding.weight": [
+        33,
+        16
+      ],
+      "query.weight": [
+        16,
+        16
+      ],
+      "key.weight": [
+        16,
+        16
+      ],
+      "value.weight": [
+        16,
+        16
+      ],
+      "readout.weight": [
+        10,
+        16
+      ],
+      "readout.bias": [
+        10
+      ]
+    }
+  }
+]

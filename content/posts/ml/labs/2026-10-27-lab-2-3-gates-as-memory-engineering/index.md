@@ -591,7 +591,7 @@ print(f"\nblame at 30-back vs 5-back: LSTM-c {dc_blame[d30] / dc_blame[d5]:.3f} 
 
 **One optimizer nuance, for the record.** Even a good lever needs signal resolution: the same forget bias that won at batch 128 / lr 1e-3 wobbled to ~0.3 under batch 64 / lr 2e-3 — a per-coordinate Adam step on a thin, noisy gradient estimate. Part of the RNN's surprising short-gap record is optimizer, not architecture: Adam amplifies faint-but-coherent signals by design, and Lab 2.2's measured decay attacked *magnitude*, not *direction*. Attention, next lab, attacks both at once — it reads by content instead of carrying by state.
 
-**Honest ceiling:** a perfectly trained LSTM still reads its history serially and spends gate bandwidth deciding what deserves a slot. Nothing inside lets it *jump to the position that matters*. Retrieval by content — no carriage required — is Lab 2.4's attention.
+**Honest ceiling:** a perfectly trained LSTM still reads its history serially and spends gate bandwidth deciding what deserves a slot. Nothing inside lets it *jump to the position that matters*. Retrieval by content — no carriage required — is Lab 3.1's attention.
 
 **Reading:**
 1. Hochreiter & Schmidhuber, [*Long Short-Term Memory*](https://www.mitpressjournals.org/doi/10.1162/neco.1997.9.8.1735) (1997) — the carousel, now that we've measured it.
@@ -600,7 +600,7 @@ print(f"\nblame at 30-back vs 5-back: LSTM-c {dc_blame[d30] / dc_blame[d5]:.3f} 
 4. Arjovsky et al., [*Unitary Evolution RNNs*](https://arxiv.org/abs/1511.06464) — copy-task setup incl. the curriculum our hero used.
 5. Olah, [Understanding LSTM Networks](https://colah.github.io/posts/2015-08-Understanding-LSTMs/) — the standard picture.
 
-**Next (Lab 2.4):** attention from raw tensors — Q/K/V by hand on a 4-token toy, then causal self-attention on Shakespeare, retrieval instead of carriage.
+**Next (Lab 3.1):** the [LLM internals series]({{< relref "posts/ml/labs/2026-11-24-lab-3-1-one-head-content-lookup/index.md" >}}) starts with a four-token causal attention calculation and a learned lookup task.
 
 ---
 

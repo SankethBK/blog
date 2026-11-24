@@ -1,0 +1,2 @@
+-r ../lm-internals/requirements.txt
+torch==2.9.1

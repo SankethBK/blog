@@ -21,6 +21,9 @@ The answer we will earn, not admire:
 
 Prereqs: the [embeddings theory note](/posts/ml/2026-09-14-4-embeddings-from-one-hot-to-learned-representations) (one-hot → learned table) — we take it from there.
 
+> Our goal is to understand how words acquire meaningful vector representations without explicitly teaching a model what those words mean. We generate a small corpus with deliberately planted relationships (gender, social tiers, and semantic groups), then train SGNS to distinguish words that appear together from randomly sampled pairs. By examining the learned embeddings, we want to see whether words sharing similar contexts end up with similar vectors, allowing us to recover the relationships we planted using only co-occurrence statistics.
+
+
 ## 0. A language whose grammar we control
 
 Real corpora (Wikipedia, Shakespeare) are where these ideas get impressive, but they're where they get *unverifiable* — you argue from vibes about what the vectors captured. So our corpus is a **generated microworld**: royalties, commoners, professions, and fruit, with pieces of structure planted deliberately:
@@ -29,6 +32,144 @@ Real corpora (Wikipedia, Shakespeare) are where these ideas get impressive, but 
 - a gender axis carried **only** by pronoun co-occurrence: male words appear with *he/his/him*, female with *she/her*;
 - professions that (by default) co-occur with both genders' pronouns at 50/50 — this will matter in §8;
 - an unrelated island: fruit.
+
+> Real corpora make it harder to establish exactly what a model ought to learn. By generating our own corpus with known relationships, we can test whether the model recovers those relationships rather than merely interpreting interesting-looking results.
+>
+> 
+> We generate the corpora such that there are 2 axes of relationship
+>
+> | | Male | Female |
+> |---|---|---|
+> | Royalty | king, prince, duke, lord | queen, princess, duchess, lady |
+> | Commoners | man, boy, father, son | woman, girl, mother, daughter |
+>
+> We make these groups distinguishable through sentences
+>
+> **Royalty:**
+>
+> - the king rules the kingdom
+> - the queen wears a crown
+>
+> **Commoners:**
+>
+> - the man walks by the river
+> - the woman works in the field
+>
+> Gender is indicated by pronouns in sentences of both social status, so we expect the model to figure out the similarity between king and farmer. 
+>
+> Another interesting experiment done is profession doesn't necessarily always convey gender. eg: doctor, nurse (some do like fireman, ... but this is broad topic). We study the model behaviour by first keeping corpus as equal number of sentences suggesting both genders for a profession and by giving skewed gender ratio for same profession.
+>
+> ### What is SGNS (Skip Gram with Negative Sampling)
+>
+> Skip-Gram with Negative Sampling (SGNS) is the foundational architecture behind Word2Vec that turns text into geometric vectors. Instead of using complex deep learning, it simplifies the problem into a fast, binary classification task: predicting whether two words are likely to appear near each other.
+>
+> (Disclaimer: SGNS in its original form is an outdated idea as modern LLM's train embeddings as parameters of models)
+>
+> #### The Core Objective of Skip-Gram
+> 
+> The standard Skip-Gram architecture flips traditional language modeling on its head. Instead of using surrounding words to predict a target word, it takes a **target word** and tries to predict its **context words** (the words within a nearby window).
+>
+> Consider a sentence from our corpus: "the king wears his crown"
+>
+> Let’s choose king as the center word. With a context window of 2, we obtain:
+>
+> ```
+> (king, the)
+> (king, wears)
+> (king, his)
+> ```
+> These are called positive pairs because the words actually appeared near each other.
+>
+> Now imagine we have two embedding tables:
+>
+> - **E**: One vector for each word when used as a center word.
+> - **U**: One vector for each word when used as a context word.
+>
+> Both tables initially contain random or zero-initialized values, depending on the table. Suppose we examine: (king,crown) We retrieve two vectors:
+> 
+> $E_{king}=[0.2,0.5,-0.1]$
+> 
+> $U_{crown}=[0.4,0.6,0.2]$
+> 
+> Then calculate their dot product: $s=E_{king}\cdot U_{crown}$
+>
+> We already know dot product is high when vectors point close to each other. We expect words in similar context to have high dot produt and words with unrelated context low. 
+>
+> The goal is to make the dot product high for word pairs that genuinely occur together. So if king frequently appears near crown, training should encourage their vectors to have a high dot product. Notice that we’re comparing a vector from **E** with one from **U**, not comparing two vectors from the same table.
+>
+> ### Negative Sampling: Teach the network what doesn’t belong
+>
+> One problem is if we only encourage observed pairs to have high dot products, the network could simply increase scores for everything.
+>
+> We need examples of pairs that shouldn’t receive high scores. So for our positive pair: (king, crown)  → positive
+>
+> We randomly sample other context words:
+>
+> ```
+> (king, banana) → negative
+> (king, sweet)  → negative
+> (king, river)  → negative
+> ```
+>
+> These are negative samples. We didn’t necessarily verify that these pairs never occur. We simply sampled them as artificial negative examples.
+>
+> Now the training objective becomes:
+>
+> | Pair | Desired dot product |
+> |---|---|
+> | king, crown | High |
+> | king, banana | Low |
+> | king, sweet | Low |
+> | king, river | Low |
+>
+> That’s essentially SGNS! Increase scores for observed pairs. Decrease scores for sampled negative pairs.
+>
+> ### Training the SGNS 
+>
+> Unlike an LLM that reads left-to-right to guess what word comes next, SGNS is doing something completely different. It is playing a "guessing game" about context matching.
+>
+> #### 1. What is the Input to the Network?
+>
+> The input is a single, isolated word (the center/target word), completely stripped of its surrounding sentence. To feed it into the network, we turn it into a One-Hot Vector of size V (where V is the total number of unique words in your vocabulary).
+>
+> #### 2. What Does the Network Actually Do? (Step-by-Step)
+>
+> The network's entire job is to take that input vector and evaluate it against two different pools of words simultaneously: one real neighbor (positive) and a few random strangers (negatives).
+>
+> ##### Step A: The Vector Extraction (The "Hidden" Layer)
+>
+> The one-hot vector x is multiplied by the first weight matrix, W (the Center Embedding Table). Because x is all zeros except for a single 1 at index 1, this multiplication acts like a sniper rifle—it zeroes out everything else and pulls out exactly one dense row vector.
+>
+> Let’s say it pulls out the 3D vector for king: $v_{\text{king}}=[0.2,0.5,-0.1]$
+>
+> ##### Step B: The Slicing of the Output Matrix
+>
+> Next, the network looks at its second weight matrix, W' (the Context Embedding Table).
+> Instead of looking at the whole vocabulary, the network slices out only the specific rows it needs for this specific training step:
+>
+> 1. **The Positive Row:** The vector for the word that actually appeared near "king" in the text (e.g., "crown").
+> 2. **The Negative Rows:** The vectors for K random words pulled from the dictionary that didn't appear nearby (e.g., "river", "banana").
+>
+> ##### Step C: The Dot Product Duel
+>
+> The network now computes independent dot products between your center vector (\(v_{\text{king}}\)) and each of those sliced context vectors.
+$$
+ \text{Score}_{\text{crown}}=v_{\text{king}}\cdot u_{\text{crown}}
+ \text{Score}_{\text{river}}=v_{\text{king}}\cdot u_{\text{river}}
+$$
+> ##### Step D: The Sigmoid Squashing (The Output)
+>
+> Finally, the network passes each raw score through a Sigmoid function (σ). This squashes the numbers so they fall strictly between 0 and 1, turning them into probabilities.
+> - $\sigma(\text{Score}_{\text{crown}}) = \textbf{0.72}$ (The model thinks there is a 72% chance these two belong together).
+> - $\sigma(\text{Score}_{\text{river}}) = \textbf{0.41}$ (The model thinks there is a 41% chance these two belong together).
+>
+> #### 3. What is the Network's Ultimate Goal?
+>
+> The network compares those outputs to the ground truth labels:
+> - For the real neighbor (king + crown), the target label is 1.
+> - For the random intruder (king + river), the target label is 0.
+> The network computes the error (e.g., for crown: 0.72 - 1 = -0.28) and uses backpropagation to adjust the weights.
+
 
 If SGNS works at all, the vectors should recover *exactly this* structure — no more, no less. When it doesn't, that's data too.
 
@@ -73,6 +214,47 @@ print(f"\nmost frequent: {[(vocab[i], int(freq[i])) for i in np.argsort(freq)[::
 Firth (1957): *"You shall know a word by the company it keeps."* Take that literally: the "meaning" of a word is its distribution of neighboring words. Below — every word that ever sits within a window of ±2 of `king` and of `queen`, counted:
 
 Two things you can already see with your eyes, before any math: their context distributions **mirror each other** (same throne, same rules, same castle), and the difference is carried by a tiny set of context words (*his vs her*, *he vs she*). Everything the embeddings learn later is a compression of facts like these into geometry.
+
+> This code is a hands-on demonstration of the Distributional Hypothesis using a tiny python script to generate actual data. It shows how language data is preprocessed and converted into pairs before it is ever fed into the SGNS neural network architecture you mapped out earlier.
+>
+> #### 1. Subsampling: Solving the "Too Many 'The's" Problem
+>
+> The first block implements a critical trick from the original Word2Vec paper called Subsampling frequent words.
+> - **The Issue:** High-frequency words like the, and, and of provide almost zero semantic value. If the model spends all its time learning that king appears near the, it wastes training cycles.
+> - **The Code's Fix:** It calculates a keeping probability (keep) for every word based on its corpus-wide frequency (f).
+>	- the is hyper-frequent, so it gets a low survival rate: only an 18.2% chance of staying.
+>	- king is rarer, so it gets an 89.6% chance of staying.
+> - **The Result:** The script instantly shrinks the dataset from 62,613 tokens down to 42,663 tokens by selectively deleting boring words while preserving informative ones.
+>
+> #### 2. Generating the Skip-Gram Pairs
+>
+> Once the boring words are scrubbed, the code sets a sliding context window of ±2 to harvest the actual training data.
+> - **The Mechanism:** It iterates through the text, treats each word as a center, and grabs its neighbors.
+> - The Output: It spits out an array of 102,444 raw (Center, Context) positive pairs.
+>	- If the text was ["king", "wears", "crown"], it logs (king, wears) and (king, crown).
+>	- These pairs form the exact input stream that will eventually be fed into the input layer of the SGNS neural network.
+>
+> #### 3. The Mirror in the Output Data
+>
+> The final print statements are the punchline of your entire "Embeddings are mirrors" thesis. The script looks up the most frequent neighbors (company) for both king and queen in the dataset, revealing this:
+>
+> 
+> | Rank | Company 'king' keeps | Company 'queen' keeps | The Geometric Consequence |
+> | ---: | --- | --- | --- |
+> | 1 | the (195) | the (206) | Shared structural baseline |
+> | 2 | sees (86) | sees (76) | Shared action / proximity |
+> | 3 | meets (78) | meets (74) | Shared action / proximity |
+> | 4 | and (76) | and (69) | Shared syntax |
+> | 5 | his (60) | her (66) | The Axis of Separation (Gender Bias) |
+> | ... | guards (41), crown (32) | guards (40), crown (40) | Identical environmental placement |
+>
+> #### The Big Takeaway
+>
+> This script proves your point: the math hasn't happened yet, but the geometry is already pre-written in the text. 
+> 
+> Because king and queen have almost identical numbers for sees, meets, guards, and crown, a neural network forced to maximize their dot products will naturally map them to almost the exact same neighborhood in vector space.
+> 
+> The only force pulling them apart geometrically will be the vectors for his and her. The embedding space doesn't invent gender or power structures; it is simply forced to build a map that accommodates this statistical ledger perfectly.
 
 ```python
 WINDOW = 2
@@ -131,6 +313,71 @@ $$\mathrm{PMI}(w, c) = \log \frac{p(w, c)}{p(w)\,p(c)}$$
 
 "How much more often do $w$ and $c$ co-occur than if they were independent?" — ~0 for `the` (it co-occurs at the base rate), strongly positive for *king/throne*. This 85×85 matrix is the complete distributional summary of the corpus. Compute it in closed form and keep it: **it is the answer key** for what SGNS is about to learn (Levy & Goldberg, 2014 — §5).
 
+> ### 1. Pointwise Mutual Information (PMI): Scaling for Information
+>
+> Raw counts lie to us because frequent words like the dominate by sheer volume. To correct this, the code implements **PMI**, which asks a much smarter question: Is this co-occurrence a meaningful pairing, or is it just random statistical noise?
+>
+> - The Math: $\text{PMI}(w, c) = \log \frac{p(w, c)}{p(w)p(c)}$
+>   - If words are completely independent, $p(w,c) = p(w)p(c)$, meaning the fraction equals 1, and $log(1) = 0$.
+>   - If words appear together way more than expected by pure chance, the PMI score shoots up into positive numbers
+>
+> #### 1. The Denominator: p(w) × p(c) (The "Expectation")
+>
+> This calculates how often the two words would meet by pure random chance if you threw them into a blender and pulled out pairs blindly.
+> - Suppose the word apple makes up 1% of your dataset (p(w) = 0.01).
+> - Suppose the word the makes up 30% of your dataset (p(c) = 0.30).
+> - If language were completely random, the probability of them landing next to each other is just their frequencies multiplied: \(0.01 \times 0.30 = \mathbf{0.003}\) (a 0.3% chance).
+>
+> #### 2. The Numerator: p(w, c) (The "Reality")
+>
+> This is how often the two words actually sat next to each other in the real text.
+> - You count the pairs in your dataset. You find that apple and the actually appear together 0.3% of the time $p(w,c) = \mathbf{0.003}$.
+>
+> ### PMI is Equivalent to SGNS 
+>
+> That realization is precisely why the Levy & Goldberg paper shook the NLP world in 2014. They proved that you don't actually need a neural network to get these exact word vectors. You can skip the entire training loop, gradient descent, backpropagation, and epochs entirely.
+>
+> Instead, you can just do classical linear algebra on a laptop in a few seconds using Singular Value Decomposition (SVD) to factorize that exact matrix. Training SGNS to completion is mathematically equivalent to taking a massive PMI matrix (shifted by a constant log factor based on your number of negative samples, $log K$) and performing Matrix Factorization on it.
+>
+> #### 1. What does "Matrix Factorization" mean here?
+>
+> Think of it like factoring a large number: $15 = 3 \times 5$. In geometry, your Shifted PMI Matrix is a massive, flat square table (let's say $85 \times 85$ for your corpus, or $100,000 \times 100,000$ for a real one).
+> Matrix Factorization splits that single giant table into two long, skinny matrices:
+> - Matrix E (Center Embeddings): Size $V \times D$ (e.g., $100,000 \times 300$)
+> - Matrix U (Context Embeddings): Size $D \times V$ (e.g., $300 \times 100,000$)
+>
+> When you multiply a row of E by a column of U, the dot product spits out a single number. The factorization algorithm forces that number to be as close as possible to the exact value in the Shifted PMI Matrix.
+>
+> #### 2. What is the "Shifted log K" part?
+>
+> When you train SGNS, you aren't just looking at positive pairs; you are sampling $K$ negative words. Levy and Goldberg proved that this sampling acts as a mathematical penalty. It shifts the baseline threshold for what counts as a "meaningful" relationship.
+>
+> The exact matrix the neural network is secretly trying to recreate is:
+>
+$$
+\text{Target\ Matrix}=\mathrm{PMI}(w,c)-\log K
+$$
+> - If you use $K=1$ negative sample, $\log(1) = 0$. The network tries to match the pure PMI matrix exactly.
+> - If you use $K=5$ negative samples, $\log(5) \approx 1.6$. The network subtracts 1.6 from every cell. This forces the network to be much more conservative, requiring a much higher co-occurrence rate before it grants words a high dot product score.
+>
+> #### 3. If we can just calculate it, why do we bother training the neural network?
+>
+> If calculating the PMI matrix and factorizing it via SVD is instantaneous for your 85-word vocabulary, why did Google use a neural network (Word2Vec) on their massive datasets?
+>
+> It comes down to a massive engineering bottleneck: Memory vs. Time.
+>
+> **The Matrix Problem (SVD):**
+>
+> If your vocabulary has $1,000,000$ unique words, your PMI matrix is $1,000,000 \times 1,000,000$.
+> - That table holds 1 trillion cells.
+> - Storing that matrix in a computer's RAM requires 4 Terabytes of memory just to hold the baseline truth before you even start the math. Most computers will instantly crash.
+>
+> **The SGNS Neural Net Solution:**
+>
+> The neural network approach bypasses the giant table entirely.
+> - It only holds Matrix E and Matrix U in memory (which take up very little space, e.g., $1,000,000 \times 300 \times 2 \approx$ only a few hundred Megabytes).
+> - It streams the text line-by-line, sentence-by-sentence. It looks at a single pair, does a tiny adjustment, and moves on
+
 ```python
 C = np.zeros((V, V))
 np.add.at(C, (pairs[:, 0], pairs[:, 1]), 1.0)
@@ -161,6 +408,8 @@ print("PMI('the', ·):    every finite context sits near 0 — max |PMI| =",
     PMI('apple', ·):   [('eats', 2.3), ('grows', 2.24), ('a', 2.22), ('is', 2.17), ('peels', 2.17), ('sweet', 1.96), ('in', 1.74), ('orchard', 0.15), ('the', -0.4), ('daughter', -0.45)]
     PMI('the', ·):    every finite context sits near 0 — max |PMI| = 4.428
 
+
+> The results show  When king appears in the text, it is paired with words like meets, guards, and castle at a rate significantly higher than random chance. When king appears in the text, it is paired with words like meets, guards, and castle at a rate significantly higher than random chance.
 
 ## 3. SGNS from scratch
 
@@ -378,6 +627,63 @@ save_fig(fig, FIGS / "pca_before_after.png"); plt.show()
     
 ![png](01_how_word_vectors_learn_to_mean_13_1.png)
     
+
+> The plots show how a 16-dimensional space transforms from complete, random chaos into structured semantic neighborhoods using Principal Component Analysis (PCA) to flatten the dimensions into a readable 2D map.
+>
+> ### 1. Reading the Image: Before vs. After
+>
+> Look closely at how the colored dots regroup after SGNS training:
+> - **Before Training (Left Plot):** Words are scattered completely at random. apple sits next to duke, girl is isolated at the bottom, and teacher is out on the far left. The network has no map of the world yet.
+> - **After SGNS Training (Right Plot):** The text statistics have exploded into clusters based purely on their color-coded roles:
+>    - **Orange Cluster (Far Right):** apple, plum, orange, pear, and banana have collapsed into a hyper-dense neighborhood. Why? Because they all share context words like eats, grows, and peels.
+>    - **Green Cluster (Left Center):** Professions like teacher, doctor, baker, and sailor pack together.
+>    - **Blue Cluster (Top Center):** Commoners like boy, girl, father, mother, and daughter group cleanly.
+>    - R**ed Cluster (Bottom Center):** Royalty like king, queen, lord, and duke form their own exclusive neighborhood.
+>
+> ### 1. Reading the Image: Before vs. After
+>
+> Look closely at how the colored dots regroup after SGNS training:
+> - **Before Training (Left Plot):** Words are scattered completely at random. apple sits next to duke, girl is isolated at the bottom, and teacher is out on the far left. The network has no map of the world yet.
+> - **After SGNS Training (Right Plot):** The text statistics have exploded into clusters based purely on their color-coded roles:
+>	- **Orange Cluster (Far Right):** apple, plum, orange, pear, and banana have collapsed into a hyper-dense neighborhood. Why? Because they all share context words like eats, grows, and peels.
+>	- **Green Cluster (Left Center):** Professions like teacher, doctor, baker, and sailor pack together.
+>	- **Blue Cluster (Top Center):** Commoners like boy, girl, father, mother, and daughter group cleanly.
+>	- **Red Cluster (Bottom Center):** Royalty like king, queen, lord, and duke form their own exclusive neighborhood.
+>
+> ### 2. Reading the Text Output: The Nearest Neighbors
+>
+> The code uses **Cosine Similarity** (by normalizing the vectors with normed(E) and taking the dot product) to print out the exact nearest words in the true 16D space.
+>
+> ```
+> neighbors of king:  [('lord', 0.995), ('duke', 0.994), ('prince', 0.994), ..., ('queen', 0.793)]
+> neighbors of queen: [('princess', 0.996), ('lady', 0.994), ('duchess', 0.992), ..., ('king', 0.793)]
+> ```
+> 
+> - Notice that king is tightly bound (~0.99) to masculine royalty (lord, duke, prince).
+> - queen is tightly bound (~0.99) to feminine royalty (princess, lady, duchess).
+> - But king and queen only share a similarity of 0.793 with each other.
+> - Why? Remember Section 1's count matrix. They share the same castle, crown, and guards (which groups them in the same red zone), but king exclusively hangs out with his/he and queen hangs out with her/she. That text asymmetry is the exact force pulling them slightly apart into masculine and feminine sub-clusters within the red zone.
+>
+> **Apple: Complete Domain Isolation**
+>
+> ```
+> neighbors of apple: [('plum', 0.997), ('pear', 0.994), ('orange', 0.992)...]
+> ```
+>
+> Because fruit tokens have zero statistical overlap with terms like court, kingdom, or wage, they are cast out to the far right of the geometry. They share almost 1.0 similarity with each other, but effectively 0.0 with the rest of the vocabulary.
+>
+> **The: The Spatial Baseline**
+>
+> ```
+> neighbors of the: [('today', 0.392), ('at', 0.35)... max similarity is weak]
+> ```
+>
+> As predicted by the PMI table, the word the doesn't group strongly with anyone. Its highest similarity is a noisy 0.392. It hangs out loosely in the unassigned grey "neutral zone" because the mathematical framework successfully stripped it of its ability to warp the geometry.
+>
+> The model was never taught what gender is, what a job is, or what things are edible. It was simply given a string of characters and told to play a true/false guessing game on pairs. The categorical structure we observe didn't come from a mind; it was mechanically extracted from the text and projected into space.
+
+
+> If we compare this output with the PMI table above, we see they're quite different. The reason is they are 2 kinds of relationships: one is what a word hangs out with (First order relationship: for eg: (king, crown)). Another is what words are similar (in a way they blong to same class, for eg: (king, prince)) these are called second order relationships. What the graph showed is second order relationship and PMI showed first order. 
 
 
 ## 5. The reveal: SGNS is a count-matrix factorization in a trench coat

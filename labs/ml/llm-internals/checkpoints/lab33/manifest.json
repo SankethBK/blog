@@ -1,0 +1,37 @@
+[
+  {
+    "name": "decoding_trace",
+    "step": null,
+    "time": "2026-11-24 21:36:17",
+    "metrics": {
+      "draws_per_temperature": 1000,
+      "fork_step": 1
+    },
+    "arrays": {
+      "alphabet": [
+        65
+      ],
+      "temperatures": [
+        3
+      ],
+      "probabilities": [
+        3,
+        65
+      ],
+      "counts": [
+        3,
+        65
+      ],
+      "branches": [
+        2
+      ],
+      "before": [
+        65
+      ],
+      "after": [
+        2,
+        65
+      ]
+    }
+  }
+]

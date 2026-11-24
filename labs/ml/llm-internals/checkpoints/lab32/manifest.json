@@ -1,0 +1,79 @@
+[
+  {
+    "name": "tiny_decoder",
+    "step": 600,
+    "time": "2026-11-24 21:31:50",
+    "metrics": {
+      "bigram_nats": 2.4807395935058594,
+      "decoder_nats": 2.1739392280578613
+    },
+    "arrays": {
+      "alphabet": [
+        65
+      ],
+      "context_length": [],
+      "width": [],
+      "token.weight": [
+        65,
+        48
+      ],
+      "position.weight": [
+        32,
+        48
+      ],
+      "norm1.weight": [
+        48
+      ],
+      "norm1.bias": [
+        48
+      ],
+      "qkv.weight": [
+        144,
+        48
+      ],
+      "qkv.bias": [
+        144
+      ],
+      "attn_out.weight": [
+        48,
+        48
+      ],
+      "attn_out.bias": [
+        48
+      ],
+      "norm2.weight": [
+        48
+      ],
+      "norm2.bias": [
+        48
+      ],
+      "ff.0.weight": [
+        96,
+        48
+      ],
+      "ff.0.bias": [
+        96
+      ],
+      "ff.2.weight": [
+        48,
+        96
+      ],
+      "ff.2.bias": [
+        48
+      ],
+      "readout.0.weight": [
+        48
+      ],
+      "readout.0.bias": [
+        48
+      ],
+      "readout.1.weight": [
+        65,
+        48
+      ],
+      "readout.1.bias": [
+        65
+      ]
+    }
+  }
+]
