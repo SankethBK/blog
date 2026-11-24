@@ -1,0 +1,20 @@
+[
+  {
+    "name": "routing_comparison",
+    "step": null,
+    "time": "2026-11-24 21:50:39",
+    "metrics": {},
+    "arrays": {
+      "loads": [
+        2,
+        4
+      ],
+      "scores": [
+        2
+      ],
+      "coefficients": [
+        2
+      ]
+    }
+  }
+]

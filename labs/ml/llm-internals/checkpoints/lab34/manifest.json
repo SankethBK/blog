@@ -1,0 +1,17 @@
+[
+  {
+    "name": "cache_trace",
+    "step": null,
+    "time": "2026-11-24 21:50:05",
+    "metrics": {},
+    "arrays": {
+      "errors": [
+        29
+      ],
+      "slide_error": [],
+      "positions": [
+        2
+      ]
+    }
+  }
+]

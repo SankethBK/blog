@@ -1,0 +1,31 @@
+[
+  {
+    "name": "adapters",
+    "step": null,
+    "time": "2026-11-24 21:50:34",
+    "metrics": {},
+    "arrays": {
+      "scores": [
+        7
+      ],
+      "trainable": [],
+      "state_bytes": [],
+      "h.0.attn.c_attn.A.weight": [
+        4,
+        32
+      ],
+      "h.0.attn.c_attn.B.weight": [
+        96,
+        4
+      ],
+      "h.1.attn.c_attn.A.weight": [
+        4,
+        32
+      ],
+      "h.1.attn.c_attn.B.weight": [
+        96,
+        4
+      ]
+    }
+  }
+]

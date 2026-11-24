@@ -1,0 +1,110 @@
+[
+  {
+    "name": "dense_base",
+    "step": null,
+    "time": "2026-11-24 21:54:01",
+    "metrics": {},
+    "arrays": {
+      "alphabet": [
+        65
+      ],
+      "validation": [
+        9
+      ],
+      "wte.weight": [
+        65,
+        32
+      ],
+      "wpe.weight": [
+        32,
+        32
+      ],
+      "h.0.ln_1.weight": [
+        32
+      ],
+      "h.0.ln_1.bias": [
+        32
+      ],
+      "h.0.attn.c_attn.weight": [
+        96,
+        32
+      ],
+      "h.0.attn.c_attn.bias": [
+        96
+      ],
+      "h.0.attn.c_proj.weight": [
+        32,
+        32
+      ],
+      "h.0.attn.c_proj.bias": [
+        32
+      ],
+      "h.0.ln_2.weight": [
+        32
+      ],
+      "h.0.ln_2.bias": [
+        32
+      ],
+      "h.0.mlp.c_fc.weight": [
+        128,
+        32
+      ],
+      "h.0.mlp.c_fc.bias": [
+        128
+      ],
+      "h.0.mlp.c_proj.weight": [
+        32,
+        128
+      ],
+      "h.0.mlp.c_proj.bias": [
+        32
+      ],
+      "h.1.ln_1.weight": [
+        32
+      ],
+      "h.1.ln_1.bias": [
+        32
+      ],
+      "h.1.attn.c_attn.weight": [
+        96,
+        32
+      ],
+      "h.1.attn.c_attn.bias": [
+        96
+      ],
+      "h.1.attn.c_proj.weight": [
+        32,
+        32
+      ],
+      "h.1.attn.c_proj.bias": [
+        32
+      ],
+      "h.1.ln_2.weight": [
+        32
+      ],
+      "h.1.ln_2.bias": [
+        32
+      ],
+      "h.1.mlp.c_fc.weight": [
+        128,
+        32
+      ],
+      "h.1.mlp.c_fc.bias": [
+        128
+      ],
+      "h.1.mlp.c_proj.weight": [
+        32,
+        128
+      ],
+      "h.1.mlp.c_proj.bias": [
+        32
+      ],
+      "ln_f.weight": [
+        32
+      ],
+      "ln_f.bias": [
+        32
+      ]
+    }
+  }
+]
