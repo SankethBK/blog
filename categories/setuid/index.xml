@@ -3,10 +3,4 @@
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;-rwsr-xr-x &lt;span style="color:#ae81ff"&gt;1&lt;/span&gt; root root &lt;span style="color:#ae81ff"&gt;67816&lt;/span&gt; Aug &lt;span style="color:#ae81ff"&gt;1&lt;/span&gt; 20:00 /bin/su
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="types-of-permissions-and-actions"&gt;Types of permissions and actions&lt;/h3&gt;
 &lt;h2 id="1-the-three-types-of-users-who"&gt;1. The Three Types of Users (Who)&lt;/h2&gt;
-&lt;p&gt;Linux divides the entire universe of users into three distinct categories. Permissions are always listed in this exact order:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Owner (User): The specific person who owns the file (usually the creator).&lt;/li&gt;
-&lt;li&gt;Group: A defined collection of users who share access (e.g., a &amp;ldquo;developers&amp;rdquo; or &amp;ldquo;finance&amp;rdquo; group).&lt;/li&gt;
-&lt;li&gt;Others: Everyone else on the system who is not the owner and not in the group.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The owner and group are stored in inode.&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;Linux divides the entire universe of users into three distinct categories. Permissions are always listed in this exact order:&lt;/p&gt;</description></item></channel></rss>

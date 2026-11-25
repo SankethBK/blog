@@ -2,22 +2,4 @@
 $v$
 and returns
 $Av$
-. You already know how to compute the output for one input. Can you find two inputs whose behavior tells you what happens to &lt;em&gt;every&lt;/em&gt; input?&lt;/p&gt;
-&lt;h2 id="try-the-axes-then-the-diagonals"&gt;Try the axes, then the diagonals&lt;/h2&gt;
-&lt;p&gt;Take this matrix and treat inputs as column vectors.&lt;/p&gt;
-$$
-A=\begin{bmatrix}10&amp;8\\8&amp;10\end{bmatrix}.
-$$
-&lt;p&gt;An input pointing right,
-$(1,0)$
-, becomes
-$(10,8)$
-. The input axis has tilted. Try stepping along both input coordinates equally. Multiplying
-$(1,1)$
-gives
-$(18,18)$
-. Try increasing the first coordinate while decreasing the second. Multiplying
-$(1,-1)$
-gives
-$(2,-2)$
-. Each diagonal maps back onto its own line.&lt;/p&gt;</description></item></channel></rss>
+. You already know how to compute the output for one input. Can you find two inputs whose behavior tells you what happens to &lt;em&gt;every&lt;/em&gt; input?&lt;/p&gt;</description></item></channel></rss>

@@ -8,11 +8,4 @@
 &lt;li&gt;Library (libc) addresses randomized&lt;/li&gt;
 &lt;li&gt;Code addresses randomized (with PIE)&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;The dilemma:&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;You can overflow a buffer and control the return address (this is again assuming we somehow defeated the canary)&lt;/li&gt;
-&lt;li&gt;But you don&amp;rsquo;t know WHERE to point it (shellcode location unknown)&lt;/li&gt;
-&lt;li&gt;Even ROP gadget addresses are randomized&lt;/li&gt;
-&lt;li&gt;You need to LEAK memory addresses first!&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Format string vulnerabilities are one of the most powerful information leak primitives.&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;&lt;strong&gt;The dilemma:&lt;/strong&gt;&lt;/p&gt;</description></item></channel></rss>

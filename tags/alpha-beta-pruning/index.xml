@@ -4,20 +4,4 @@
 &lt;p&gt;A chess engine is solving:&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;“Given a position, what move leads to the best possible future?”&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;But the engine cannot know the future, so it simulates it.&lt;/p&gt;
-&lt;p&gt;This simulation is called search.&lt;/p&gt;
-&lt;h3 id="the-game-tree"&gt;The Game Tree&lt;/h3&gt;
-&lt;p&gt;Every legal move creates a new position.
-From that position, the opponent also has moves.&lt;/p&gt;
-&lt;p&gt;This forms a tree:&lt;/p&gt;
-&lt;pre tabindex="0"&gt;&lt;code&gt;Position
-├── Move A
-│ ├── Opp Move A1
-│ │ ├── Move A1a
-│ │ └── Move A1b
-│ └── Opp Move A2
-│ └── ...
-└── Move B
-└── ...
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This is called the game tree.&lt;/p&gt;</description></item></channel></rss>
+&lt;/blockquote&gt;</description></item></channel></rss>

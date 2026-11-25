@@ -67,7 +67,4 @@
 &lt;p&gt;&lt;strong&gt;Question&lt;/strong&gt;: &lt;code&gt;flag&lt;/code&gt; is declared as &lt;code&gt;long flag;&lt;/code&gt; (not an array), so what does &lt;code&gt;&amp;amp;flag + index&lt;/code&gt; mean?&lt;/p&gt;</description></item><item><title>CTF – 1 : Matryoshka</title><link>https://sankethbk.github.io/blog/posts/reverse-engineering/ctf/2025-11-01-ctf-1/</link><pubDate>Sat, 01 Nov 2025 00:00:00 +0000</pubDate><guid>https://sankethbk.github.io/blog/posts/reverse-engineering/ctf/2025-11-01-ctf-1/</guid><description>&lt;h1 id="reverse-engineering-and-ctf-challenge-notes"&gt;Reverse Engineering and CTF Challenge Notes&lt;/h1&gt;
 &lt;p&gt;Reverse engineering is the process of understanding how software works &lt;strong&gt;without access to its original source code&lt;/strong&gt;.&lt;br&gt;
 In security challenges (CTFs), the goal is often to recover hidden data or logic by dissecting a binary.&lt;br&gt;
-This walkthrough documents my first attempt at such a challenge, focusing on &lt;em&gt;ELF-based reverse engineering&lt;/em&gt; and the reasoning process behind each step.&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id="1-static-analysis"&gt;1. Static Analysis&lt;/h2&gt;
-&lt;p&gt;Static analysis means inspecting the binary &lt;strong&gt;without running it&lt;/strong&gt;.&lt;/p&gt;</description></item></channel></rss>
+This walkthrough documents my first attempt at such a challenge, focusing on &lt;em&gt;ELF-based reverse engineering&lt;/em&gt; and the reasoning process behind each step.&lt;/p&gt;</description></item></channel></rss>

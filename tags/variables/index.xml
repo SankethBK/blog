@@ -27,17 +27,4 @@
 &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
-&lt;p&gt;Rust&amp;rsquo;s core promise: &lt;strong&gt;memory safety at compile time, with no garbage collector.&lt;/strong&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id="2-variables--mutability"&gt;2. Variables &amp;amp; Mutability&lt;/h2&gt;
-&lt;ul&gt;
-&lt;li&gt;Variables are &lt;strong&gt;immutable by default&lt;/strong&gt; in Rust.&lt;/li&gt;
-&lt;li&gt;You must explicitly opt into mutation with &lt;code&gt;mut&lt;/code&gt;.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-rust" data-lang="rust"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; x &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;5&lt;/span&gt;; &lt;span style="color:#75715e"&gt;// immutable — cannot be reassigned
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#75715e"&gt;// x = 6; // ❌ compile error
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;let&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;mut&lt;/span&gt; y &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;5&lt;/span&gt;; &lt;span style="color:#75715e"&gt;// mutable
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;y &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#ae81ff"&gt;6&lt;/span&gt;; &lt;span style="color:#75715e"&gt;// ✅ fine
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id="shadowing"&gt;Shadowing&lt;/h3&gt;
-&lt;p&gt;You can redeclare a variable with &lt;code&gt;let&lt;/code&gt; in the same scope — this is called &lt;strong&gt;shadowing&lt;/strong&gt;:&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;Rust&amp;rsquo;s core promise: &lt;strong&gt;memory safety at compile time, with no garbage collector.&lt;/strong&gt;&lt;/p&gt;</description></item></channel></rss>

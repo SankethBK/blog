@@ -1,0 +1,139 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>AdamW — What Happens to One Weight After Backprop? | Sanketh's Blog</title><meta name=keywords content="ml,training,optimization,adamw,gradients"><meta name=description content="AdamW — What Happens to One Weight After Backprop?
+The PagedAttention note ended by asking what state you need once the weights themselves can move. The training note already gave you a gradient for every parameter. Pick one weight. Its gradient was positive on the previous batch and is negative on this one. Can AdamW still decrease the weight?"><meta name=author content><link rel=canonical href=https://sankethbk.github.io/blog/posts/ml/2026-11-24-9-adamw/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.a7100ced1662b06824a54ff97bb59f1d1070a2db645a1d0a8d848e4ffd63ac7a.css integrity="sha256-pxAM7RZisGgkpU/5e7WfHRBwottkWh0KjYSOT/1jrHo=" rel="preload stylesheet" as=style><link rel=icon href=https://sankethbk.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://sankethbk.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://sankethbk.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://sankethbk.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://sankethbk.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://sankethbk.github.io/blog/posts/ml/2026-11-24-9-adamw/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://sankethbk.github.io/blog/posts/ml/2026-11-24-9-adamw/"><meta property="og:site_name" content="Sanketh's Blog"><meta property="og:title" content="AdamW — What Happens to One Weight After Backprop?"><meta property="og:description" content="AdamW — What Happens to One Weight After Backprop? The PagedAttention note ended by asking what state you need once the weights themselves can move. The training note already gave you a gradient for every parameter. Pick one weight. Its gradient was positive on the previous batch and is negative on this one. Can AdamW still decrease the weight?"><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2026-11-24T00:02:00+05:30"><meta property="article:modified_time" content="2026-11-24T00:02:00+05:30"><meta property="article:tag" content="Ml"><meta property="article:tag" content="Training"><meta property="article:tag" content="Optimization"><meta property="article:tag" content="Adamw"><meta property="article:tag" content="Gradients"><meta name=twitter:card content="summary"><meta name=twitter:title content="AdamW — What Happens to One Weight After Backprop?"><meta name=twitter:description content="AdamW — What Happens to One Weight After Backprop?
+The PagedAttention note ended by asking what state you need once the weights themselves can move. The training note already gave you a gradient for every parameter. Pick one weight. Its gradient was positive on the previous batch and is negative on this one. Can AdamW still decrease the weight?"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://sankethbk.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"AdamW — What Happens to One Weight After Backprop?","item":"https://sankethbk.github.io/blog/posts/ml/2026-11-24-9-adamw/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"AdamW — What Happens to One Weight After Backprop?","name":"AdamW — What Happens to One Weight After Backprop?","description":"AdamW — What Happens to One Weight After Backprop? The PagedAttention note ended by asking what state you need once the weights themselves can move. The training note already gave you a gradient for every parameter. Pick one weight. Its gradient was positive on the previous batch and is negative on this one. Can AdamW still decrease the weight?\n","keywords":["ml","training","optimization","adamw","gradients"],"articleBody":"AdamW — What Happens to One Weight After Backprop? The PagedAttention note ended by asking what state you need once the weights themselves can move. The training note already gave you a gradient for every parameter. Pick one weight. Its gradient was positive on the previous batch and is negative on this one. Can AdamW still decrease the weight?\n1. What survives from one batch to the next? Let $w_0$ be the starting weight. At update number $t$ , let $g_t$ be the derivative of the current batch’s mean loss with respect to the weight, evaluated at $w_{t-1}$ . Both are scalars. With ordinary gradient descent and positive learning rate $\\eta$ , you would subtract $\\eta g_t$ . Knowing today’s gradient and weight would be enough.\nAdam keeps two running estimates for that coordinate. The first moment $m_t$ tracks the signed gradient. The second raw moment $v_t$ tracks its square. A large negative gradient contributes positively to the second estimate. Squaring before averaging lets you see a history of large gradients even if their signs cancel.\nLet $\\beta_1$ and $\\beta_2$ be scalar retention fractions between zero inclusive and one exclusive. Starting with $m_0=v_0=0$ , update them once per optimizer step:\n$$ m_t=\\beta_1 m_{t-1}+(1-\\beta_1)g_t,\\qquad v_t=\\beta_2 v_{t-1}+(1-\\beta_2)g_t^2. $$ For a parameter matrix $W$ with $r$ rows and $c$ columns, its gradient and both moment arrays all have shape $(r,c)$ . Squaring, dividing, and taking square roots are elementwise. Each weight has its own history. Even a single projection matrix therefore needs two parameter-sized arrays of optimizer state during training. Adam paper\n2. Why correct the first few steps? Try a constant gradient of 2 with $\\beta_1=0.5$ . The running estimate reads 1, then 1.5, then 1.75. None of your batches produced a gradient below 2. Those small estimates come from the choice to initialize history at zero.\nAfter $t$ steps the observed gradients have total coefficient $1-\\beta_1^t$ in $m_t$ . Divide by this mass. Do the same with the second estimate using its own retention factor. The corrected estimates are\n$$ \\hat m_t=\\frac{m_t}{1-\\beta_1^t},\\qquad \\hat v_t=\\frac{v_t}{1-\\beta_2^t}. $$ For a constant gradient these recover its value and square on the very first step. For varying gradients they give normalized, exponentially weighted averages. The adaptive direction is $\\hat m_t/(\\sqrt{\\hat v_t}+\\epsilon)$ , where $\\epsilon$ is a small positive scalar that stabilizes division near zero. Its numerator remembers direction. Its denominator sets the scale using the recent root-mean-square gradient.\n3. Put weight decay on its own path Let $\\lambda$ be the weight-decay coefficient. AdamW applies a proportional shrink to the old weight and subtracts the adaptive update:\n$$ w_t=(1-\\eta\\lambda)w_{t-1} -\\eta\\frac{\\hat m_t}{\\sqrt{\\hat v_t}+\\epsilon}. $$ Why give the shrink its own path? In ordinary gradient descent, adding an L2 penalty $\\lambda w^2/2$ to the loss adds $\\lambda w$ to the gradient. Algebraically you get the same shrink factor. If you feed $g_t+\\lambda w_{t-1}$ into Adam’s moment estimates, that penalty also changes the running direction and the denominator. Two weights with the same current value but different gradient histories can then experience different effective regularization. AdamW makes the fractional shrink $\\eta\\lambda$ explicit for every weight in the decay group. Decoupled Weight Decay Regularization\nbatch gradient ---- first and second moments ---- adaptive step ---+ | old weight -------- proportional shrink ---------------------------+--- updated weight 4. Follow two updates with pencil and paper Start at $w_0=1$ . Choose $\\eta=0.1$ , $\\lambda=0.1$ , and $\\beta_1=\\beta_2=0.5$ to keep the arithmetic visible. Take $\\epsilon=10^{-8}$ and round the displayed values. Supply two measured batch gradients, $g_1=2$ and $g_2=-0.5$ .\nFirst batch. The raw moments are $m_1=1$ and $v_1=2$ . Dividing both by $1-0.5=0.5$ gives $\\hat m_1=2$ and $\\hat v_1=4$ . The adaptive direction is approximately $2/\\sqrt4=1$ . The old weight shrinks to $0.99$ , then the adaptive step subtracts $0.1$ . You end at $w_1\\approx0.89$ .\nSecond batch. Before calculating, predict the sign of $m_2$ . Half of the old moment survives. The new negative gradient contributes only $-0.25$ . Together they give\n$$ m_2=0.5(1)+0.5(-0.5)=0.25,\\qquad v_2=0.5(2)+0.5(-0.5)^2=1.125. $$ The correction divisor is now $1-0.5^2=0.75$ . You get $\\hat m_2=1/3$ and $\\hat v_2=1.5$ . The shrink takes $0.89$ to $0.8811$ . The adaptive step subtracts another $0.1(1/3)/\\sqrt{1.5}\\approx0.02722$ , leaving $w_2\\approx0.85388$ .\nGo back to the opening question. Even with decay switched off, the adaptive part of this second step would still decrease the weight. Today’s gradient reversed, but its magnitude was too small to reverse the first moment. You can now predict the exact negative gradient that would have made the adaptive part zero on step two.\n5. What counts as one step? Suppose a batch is too large to fit in memory. You compute gradients on two equal-sized microbatches at the same weights. If each loss is a mean, give each half weight before accumulating gradients. You now have the full-batch mean gradient. Advance the optimizer once: one increment of $t$ , one update of each moment and one application of decay. With deterministic per-example computation this reproduces a full-batch step up to numerical rounding.\nCalling the optimizer after the first microbatch creates a different experiment. The second gradient is now evaluated at different weights and your moment estimates have advanced twice. With unequal numbers of contributing tokens, weight each microbatch mean by its fraction of the total contributing tokens. Equal weighting would give a short microbatch too much influence.\n6. Pause theory here Lab 3.9 — dense training exercises the full-batch versus accumulated-gradient comparison. When you reach it, pick one projection weight and record its gradient, its two moments, and its value before and after the step. For an even smaller exercise, feed the two scalar gradients above directly to AdamW. Predict the second weight before inspecting it.\nOne question to carry into training schedules: if you halve the learning rate halfway through training, which two terms of the weight update change immediately, and which stored quantities retain their history?\n","wordCount":"974","inLanguage":"en","datePublished":"2026-11-24T00:02:00+05:30","dateModified":"2026-11-24T00:02:00+05:30","mainEntityOfPage":{"@type":"WebPage","@id":"https://sankethbk.github.io/blog/posts/ml/2026-11-24-9-adamw/"},"publisher":{"@type":"Organization","name":"Sanketh's Blog","logo":{"@type":"ImageObject","url":"https://sankethbk.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://sankethbk.github.io/blog/ accesskey=h title="Sanketh's Blog (Alt + H)">Sanketh's Blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js onload='renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1}],throwOnError:!1})'></script><script type=module>
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+  document.querySelectorAll('pre > code.language-mermaid').forEach((codeEl) => {
+    const host = codeEl.closest('div.highlight') || codeEl.parentElement;
+    const pre = document.createElement('pre');
+    pre.className = 'mermaid';
+    pre.textContent = codeEl.textContent;
+    host.replaceWith(pre);
+  });
+  mermaid.run({ querySelector: '.mermaid' });
+</script><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">AdamW — What Happens to One Weight After Backprop?</h1><div class=post-meta><span title='2026-11-24 00:02:00 +0530 +0530'>November 24, 2026</span>&nbsp;·&nbsp;5 min&nbsp;|&nbsp;<a href=https://github.com/SankethBK/blog/edit/main/content/posts/ml/2026-11-24-9-adamw.markdown rel="noopener noreferrer edit" target=_blank>Suggest Changes</a></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#adamw--what-happens-to-one-weight-after-backprop aria-label="AdamW — What Happens to One Weight After Backprop?">AdamW — What Happens to One Weight After Backprop?</a><ul><li><a href=#1-what-survives-from-one-batch-to-the-next aria-label="1. What survives from one batch to the next?">1. What survives from one batch to the next?</a></li><li><a href=#2-why-correct-the-first-few-steps aria-label="2. Why correct the first few steps?">2. Why correct the first few steps?</a></li><li><a href=#3-put-weight-decay-on-its-own-path aria-label="3. Put weight decay on its own path">3. Put weight decay on its own path</a></li><li><a href=#4-follow-two-updates-with-pencil-and-paper aria-label="4. Follow two updates with pencil and paper">4. Follow two updates with pencil and paper</a></li><li><a href=#5-what-counts-as-one-step aria-label="5. What counts as one step?">5. What counts as one step?</a></li><li><a href=#6-pause-theory-here aria-label="6. Pause theory here">6. Pause theory here</a></li></ul></li></ul></div></details></div><div class=post-content><h1 id=adamw--what-happens-to-one-weight-after-backprop>AdamW — What Happens to One Weight After Backprop?<a hidden class=anchor aria-hidden=true href=#adamw--what-happens-to-one-weight-after-backprop>#</a></h1><p>The <a href=/blog/posts/ml/2026-11-24-8-paged-attention/>PagedAttention note</a> ended by asking what state you need once the weights themselves can move. The <a href=/blog/posts/ml/2026-09-20-3-training-a-language-model-end-to-end/>training note</a> already gave you a gradient for every parameter. Pick one weight. Its gradient was positive on the previous batch and is negative on this one. Can AdamW still <em>decrease</em> the weight?</p><h2 id=1-what-survives-from-one-batch-to-the-next>1. What survives from one batch to the next?<a hidden class=anchor aria-hidden=true href=#1-what-survives-from-one-batch-to-the-next>#</a></h2><p>Let
+$w_0$
+be the starting weight. At update number
+$t$
+, let
+$g_t$
+be the derivative of the current batch&rsquo;s mean loss with respect to the weight, evaluated at
+$w_{t-1}$
+. Both are scalars. With ordinary gradient descent and positive learning rate
+$\eta$
+, you would subtract
+$\eta g_t$
+. Knowing today&rsquo;s gradient and weight would be enough.</p><p>Adam keeps two running estimates for that coordinate. The <strong>first moment</strong>
+$m_t$
+tracks the signed gradient. The <strong>second raw moment</strong>
+$v_t$
+tracks its square. A large negative gradient contributes positively to the second estimate. Squaring before averaging lets you see a history of large gradients even if their signs cancel.</p><p>Let
+$\beta_1$
+and
+$\beta_2$
+be scalar retention fractions between zero inclusive and one exclusive. Starting with
+$m_0=v_0=0$
+, update them once per optimizer step:</p>$$
+m_t=\beta_1 m_{t-1}+(1-\beta_1)g_t,\qquad
+v_t=\beta_2 v_{t-1}+(1-\beta_2)g_t^2.
+$$<p>For a parameter matrix
+$W$
+with
+$r$
+rows and
+$c$
+columns, its gradient and both moment arrays all have shape
+$(r,c)$
+. Squaring, dividing, and taking square roots are elementwise. Each weight has its own history. Even a single projection matrix therefore needs two parameter-sized arrays of optimizer state during training. <a href=https://arxiv.org/abs/1412.6980>Adam paper</a></p><h2 id=2-why-correct-the-first-few-steps>2. Why correct the first few steps?<a hidden class=anchor aria-hidden=true href=#2-why-correct-the-first-few-steps>#</a></h2><p>Try a constant gradient of 2 with
+$\beta_1=0.5$
+. The running estimate reads 1, then 1.5, then 1.75. None of your batches produced a gradient below 2. Those small estimates come from the choice to initialize history at zero.</p><p>After
+$t$
+steps the observed gradients have total coefficient
+$1-\beta_1^t$
+in
+$m_t$
+. Divide by this mass. Do the same with the second estimate using its own retention factor. The corrected estimates are</p>$$
+\hat m_t=\frac{m_t}{1-\beta_1^t},\qquad
+\hat v_t=\frac{v_t}{1-\beta_2^t}.
+$$<p>For a constant gradient these recover its value and square on the very first step. For varying gradients they give normalized, exponentially weighted averages. The adaptive direction is
+$\hat m_t/(\sqrt{\hat v_t}+\epsilon)$
+, where
+$\epsilon$
+is a small positive scalar that stabilizes division near zero. Its numerator remembers direction. Its denominator sets the scale using the recent root-mean-square gradient.</p><h2 id=3-put-weight-decay-on-its-own-path>3. Put weight decay on its own path<a hidden class=anchor aria-hidden=true href=#3-put-weight-decay-on-its-own-path>#</a></h2><p>Let
+$\lambda$
+be the weight-decay coefficient. AdamW applies a proportional shrink to the old weight and subtracts the adaptive update:</p>$$
+w_t=(1-\eta\lambda)w_{t-1}
+-\eta\frac{\hat m_t}{\sqrt{\hat v_t}+\epsilon}.
+$$<p>Why give the shrink its own path? In ordinary gradient descent, adding an L2 penalty
+$\lambda w^2/2$
+to the loss adds
+$\lambda w$
+to the gradient. Algebraically you get the same shrink factor. If you feed
+$g_t+\lambda w_{t-1}$
+into Adam&rsquo;s moment estimates, that penalty also changes the running direction and the denominator. Two weights with the same current value but different gradient histories can then experience different effective regularization. AdamW makes the fractional shrink
+$\eta\lambda$
+explicit for every weight in the decay group. <a href=https://arxiv.org/abs/1711.05101>Decoupled Weight Decay Regularization</a></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-text data-lang=text><span style=display:flex><span>batch gradient ---- first and second moments ---- adaptive step ---+
+</span></span><span style=display:flex><span>                                                                   |
+</span></span><span style=display:flex><span>old weight -------- proportional shrink ---------------------------+--- updated weight
+</span></span></code></pre></div><h2 id=4-follow-two-updates-with-pencil-and-paper>4. Follow two updates with pencil and paper<a hidden class=anchor aria-hidden=true href=#4-follow-two-updates-with-pencil-and-paper>#</a></h2><p>Start at
+$w_0=1$
+. Choose
+$\eta=0.1$
+,
+$\lambda=0.1$
+, and
+$\beta_1=\beta_2=0.5$
+to keep the arithmetic visible. Take
+$\epsilon=10^{-8}$
+and round the displayed values. Supply two measured batch gradients,
+$g_1=2$
+and
+$g_2=-0.5$
+.</p><p><strong>First batch.</strong> The raw moments are
+$m_1=1$
+and
+$v_1=2$
+. Dividing both by
+$1-0.5=0.5$
+gives
+$\hat m_1=2$
+and
+$\hat v_1=4$
+. The adaptive direction is approximately
+$2/\sqrt4=1$
+. The old weight shrinks to
+$0.99$
+, then the adaptive step subtracts
+$0.1$
+. You end at
+$w_1\approx0.89$
+.</p><p><strong>Second batch.</strong> Before calculating, predict the sign of
+$m_2$
+. Half of the old moment survives. The new negative gradient contributes only
+$-0.25$
+. Together they give</p>$$
+m_2=0.5(1)+0.5(-0.5)=0.25,\qquad
+v_2=0.5(2)+0.5(-0.5)^2=1.125.
+$$<p>The correction divisor is now
+$1-0.5^2=0.75$
+. You get
+$\hat m_2=1/3$
+and
+$\hat v_2=1.5$
+. The shrink takes
+$0.89$
+to
+$0.8811$
+. The adaptive step subtracts another
+$0.1(1/3)/\sqrt{1.5}\approx0.02722$
+, leaving
+$w_2\approx0.85388$
+.</p><p>Go back to the opening question. Even with decay switched off, the adaptive part of this second step would still decrease the weight. Today&rsquo;s gradient reversed, but its magnitude was too small to reverse the first moment. You can now predict the exact negative gradient that would have made the adaptive part zero on step two.</p><h2 id=5-what-counts-as-one-step>5. What counts as one step?<a hidden class=anchor aria-hidden=true href=#5-what-counts-as-one-step>#</a></h2><p>Suppose a batch is too large to fit in memory. You compute gradients on two equal-sized microbatches at the same weights. If each loss is a mean, give each half weight before accumulating gradients. You now have the full-batch mean gradient. Advance the optimizer once: one increment of
+$t$
+, one update of each moment and one application of decay. With deterministic per-example computation this reproduces a full-batch step up to numerical rounding.</p><p>Calling the optimizer after the first microbatch creates a different experiment. The second gradient is now evaluated at different weights and your moment estimates have advanced twice. With unequal numbers of contributing tokens, weight each microbatch mean by its fraction of the total contributing tokens. Equal weighting would give a short microbatch too much influence.</p><h2 id=6-pause-theory-here>6. Pause theory here<a hidden class=anchor aria-hidden=true href=#6-pause-theory-here>#</a></h2><p><strong>Lab 3.9 — dense training</strong> exercises the full-batch versus accumulated-gradient comparison. When you reach it, pick one projection weight and record its gradient, its two moments, and its value before and after the step. For an even smaller exercise, feed the two scalar gradients above directly to AdamW. Predict the second weight before inspecting it.</p><p>One question to carry into training schedules: if you halve the learning rate halfway through training, which two terms of the weight update change immediately, and which stored quantities retain their history?</p></div><footer class=post-footer><ul class=post-tags><li><a href=https://sankethbk.github.io/blog/tags/ml/>Ml</a></li><li><a href=https://sankethbk.github.io/blog/tags/training/>Training</a></li><li><a href=https://sankethbk.github.io/blog/tags/optimization/>Optimization</a></li><li><a href=https://sankethbk.github.io/blog/tags/adamw/>Adamw</a></li><li><a href=https://sankethbk.github.io/blog/tags/gradients/>Gradients</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2026 <a href=https://sankethbk.github.io/blog/>Sanketh's Blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
