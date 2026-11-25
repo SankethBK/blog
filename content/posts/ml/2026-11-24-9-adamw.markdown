@@ -1,0 +1,84 @@
+---
+title: "AdamW — What Happens to One Weight After Backprop?"
+date: 2026-11-24T00:02:00+05:30
+categories: ["ml"]
+tags: ["ml", "training", "optimization", "adamw", "gradients"]
+---
+
+# AdamW — What Happens to One Weight After Backprop?
+
+The [PagedAttention note]({{< relref "posts/ml/2026-11-24-8-paged-attention.markdown" >}}) ended by asking what state you need once the weights themselves can move. The [training note]({{< relref "posts/ml/2026-09-20-3-training-a-language-model-end-to-end.markdown" >}}) already gave you a gradient for every parameter. Pick one weight. Its gradient was positive on the previous batch and is negative on this one. Can AdamW still *decrease* the weight?
+
+## 1. What survives from one batch to the next?
+
+Let $w_0$ be the starting weight. At update number $t$, let $g_t$ be the derivative of the current batch's mean loss with respect to the weight, evaluated at $w_{t-1}$. Both are scalars. With ordinary gradient descent and positive learning rate $\eta$, you would subtract $\eta g_t$. Knowing today's gradient and weight would be enough.
+
+Adam keeps two running estimates for that coordinate. The **first moment** $m_t$ tracks the signed gradient. The **second raw moment** $v_t$ tracks its square. A large negative gradient contributes positively to the second estimate. Squaring before averaging lets you see a history of large gradients even if their signs cancel.
+
+Let $\beta_1$ and $\beta_2$ be scalar retention fractions between zero inclusive and one exclusive. Starting with $m_0=v_0=0$, update them once per optimizer step:
+
+$$
+m_t=\beta_1 m_{t-1}+(1-\beta_1)g_t,\qquad
+v_t=\beta_2 v_{t-1}+(1-\beta_2)g_t^2.
+$$
+
+For a parameter matrix $W$ with $r$ rows and $c$ columns, its gradient and both moment arrays all have shape $(r,c)$. Squaring, dividing, and taking square roots are elementwise. Each weight has its own history. Even a single projection matrix therefore needs two parameter-sized arrays of optimizer state during training. [Adam paper](https://arxiv.org/abs/1412.6980)
+
+## 2. Why correct the first few steps?
+
+Try a constant gradient of 2 with $\beta_1=0.5$. The running estimate reads 1, then 1.5, then 1.75. None of your batches produced a gradient below 2. Those small estimates come from the choice to initialize history at zero.
+
+After $t$ steps the observed gradients have total coefficient $1-\beta_1^t$ in $m_t$. Divide by this mass. Do the same with the second estimate using its own retention factor. The corrected estimates are
+
+$$
+\hat m_t=\frac{m_t}{1-\beta_1^t},\qquad
+\hat v_t=\frac{v_t}{1-\beta_2^t}.
+$$
+
+For a constant gradient these recover its value and square on the very first step. For varying gradients they give normalized, exponentially weighted averages. The adaptive direction is $\hat m_t/(\sqrt{\hat v_t}+\epsilon)$, where $\epsilon$ is a small positive scalar that stabilizes division near zero. Its numerator remembers direction. Its denominator sets the scale using the recent root-mean-square gradient.
+
+## 3. Put weight decay on its own path
+
+Let $\lambda$ be the weight-decay coefficient. AdamW applies a proportional shrink to the old weight and subtracts the adaptive update:
+
+$$
+w_t=(1-\eta\lambda)w_{t-1}
+       -\eta\frac{\hat m_t}{\sqrt{\hat v_t}+\epsilon}.
+$$
+
+Why give the shrink its own path? In ordinary gradient descent, adding an L2 penalty $\lambda w^2/2$ to the loss adds $\lambda w$ to the gradient. Algebraically you get the same shrink factor. If you feed $g_t+\lambda w_{t-1}$ into Adam's moment estimates, that penalty also changes the running direction and the denominator. Two weights with the same current value but different gradient histories can then experience different effective regularization. AdamW makes the fractional shrink $\eta\lambda$ explicit for every weight in the decay group. [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101)
+
+```text
+batch gradient ---- first and second moments ---- adaptive step ---+
+                                                                   |
+old weight -------- proportional shrink ---------------------------+--- updated weight
+```
+
+## 4. Follow two updates with pencil and paper
+
+Start at $w_0=1$. Choose $\eta=0.1$, $\lambda=0.1$, and $\beta_1=\beta_2=0.5$ to keep the arithmetic visible. Take $\epsilon=10^{-8}$ and round the displayed values. Supply two measured batch gradients, $g_1=2$ and $g_2=-0.5$.
+
+**First batch.** The raw moments are $m_1=1$ and $v_1=2$. Dividing both by $1-0.5=0.5$ gives $\hat m_1=2$ and $\hat v_1=4$. The adaptive direction is approximately $2/\sqrt4=1$. The old weight shrinks to $0.99$, then the adaptive step subtracts $0.1$. You end at $w_1\approx0.89$.
+
+**Second batch.** Before calculating, predict the sign of $m_2$. Half of the old moment survives. The new negative gradient contributes only $-0.25$. Together they give
+
+$$
+m_2=0.5(1)+0.5(-0.5)=0.25,\qquad
+v_2=0.5(2)+0.5(-0.5)^2=1.125.
+$$
+
+The correction divisor is now $1-0.5^2=0.75$. You get $\hat m_2=1/3$ and $\hat v_2=1.5$. The shrink takes $0.89$ to $0.8811$. The adaptive step subtracts another $0.1(1/3)/\sqrt{1.5}\approx0.02722$, leaving $w_2\approx0.85388$.
+
+Go back to the opening question. Even with decay switched off, the adaptive part of this second step would still decrease the weight. Today's gradient reversed, but its magnitude was too small to reverse the first moment. You can now predict the exact negative gradient that would have made the adaptive part zero on step two.
+
+## 5. What counts as one step?
+
+Suppose a batch is too large to fit in memory. You compute gradients on two equal-sized microbatches at the same weights. If each loss is a mean, give each half weight before accumulating gradients. You now have the full-batch mean gradient. Advance the optimizer once: one increment of $t$, one update of each moment and one application of decay. With deterministic per-example computation this reproduces a full-batch step up to numerical rounding.
+
+Calling the optimizer after the first microbatch creates a different experiment. The second gradient is now evaluated at different weights and your moment estimates have advanced twice. With unequal numbers of contributing tokens, weight each microbatch mean by its fraction of the total contributing tokens. Equal weighting would give a short microbatch too much influence.
+
+## 6. Pause theory here
+
+**Lab 3.9 — dense training** exercises the full-batch versus accumulated-gradient comparison. When you reach it, pick one projection weight and record its gradient, its two moments, and its value before and after the step. For an even smaller exercise, feed the two scalar gradients above directly to AdamW. Predict the second weight before inspecting it.
+
+One question to carry into training schedules: if you halve the learning rate halfway through training, which two terms of the weight update change immediately, and which stored quantities retain their history?

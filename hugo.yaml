@@ -2,6 +2,7 @@ baseURL: "https://sankethbk.github.io/blog/"
 languageCode: "en-us"
 title: "Sanketh's Blog"
 theme: "PaperMod"
+summaryLength: 30
 
 markup:
   goldmark:

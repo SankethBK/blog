@@ -506,7 +506,7 @@ These are not interchangeable implementation details. They change the proposal m
 
 So far, the inference notes have followed one request: cache its past, choose its next token, and accelerate its serial decode with speculation. A serving system rarely handles one request at a time, though.
 
-The next systems note is **continuous batching**: how many requests with different prompt lengths, decode progress, cache sizes, and finishing times share the same GPU without making every request wait for the slowest fixed batch.
+The next systems note is [continuous batching]({{< relref "posts/ml/2026-11-24-7-continuous-batching.markdown" >}}): how many requests with different prompt lengths, decode progress, cache sizes, and finishing times share the same GPU without making every request wait for the slowest fixed batch.
 
 **Reading:**
 
