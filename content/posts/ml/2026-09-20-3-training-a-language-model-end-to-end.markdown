@@ -226,6 +226,7 @@ One detail worth knowing by name: the LM head matrix $W_{\text{out}}$ is convent
 >
 > So the model doesn't get confused or update "twice" sequentially. It takes the error signal from its output predictions, adds it to the error signal from its input representation, and applies that unified adjustment to the matrix all at once.
 >
+> Back here after sometime: I realize i was partially wrong with above question. We do use E twice, but in theory, but the input is not entire E matrix, its only selected rows of it. So the chain rule problem is not as big as it seems. But the logical use of same weights at 2 places is still a valid thought.
 > 
 > **3. Serving two purposes: Won't this cause an issue?**
 > 
